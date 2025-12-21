@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeatHarmony</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round|Material+Icons+Outlined" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#8A8E75",
+              secondary: "#D5C7AD",
+              accent: "#BEC5A4",
+              "background-light": "#F1EAD8",
+              "background-lighter": "#F9F7F2",
+              "background-dark": "#2C2925",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#3A3632",
+              "text-main": "#68604D",
+              "text-light": "#F1EAD8",
+              "accent-beige": "#D5C7AD",
+            },
+            fontFamily: {
+              display: ["'Playfair Display'", "serif"],
+              body: ["'Lato'", "sans-serif"],
+              serif: ["'Cormorant Garamond'", "serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+              'xl': '1rem',
+              '2xl': '1.5rem',
+              '3xl': '2rem',
+            },
+            boxShadow: {
+              'soft': '0 10px 40px -10px rgba(104, 96, 77, 0.1)',
+              'glow': '0 0 20px rgba(138, 142, 117, 0.3)',
+            }
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #D5C7AD;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #8A8E75;
+      }
+      
+      .pattern-grid {
+        background-image: radial-gradient(#D5C7AD 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .dark .pattern-grid {
+        background-image: radial-gradient(#4b5563 1px, transparent 1px);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+  <body class="bg-background-lighter dark:bg-background-dark text-text-main dark:text-text-light font-body transition-colors duration-300">
+    <div id="root"></div>
+  </body>
+</html>
