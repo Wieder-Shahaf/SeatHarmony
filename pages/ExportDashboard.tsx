@@ -61,7 +61,7 @@ const ExportDashboard: React.FC = () => {
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-md p-6 border border-secondary/20 dark:border-gray-700 flex flex-col">
             <div className="flex justify-between items-center mb-4">
               <h3 className="flex items-center gap-2 font-display text-xl text-text-main dark:text-gray-200">
-                 <span className="material-icons-round text-lg">visibility</span> Floor Plan Preview
+                <span className="material-icons-round text-lg">visibility</span> Floor Plan Preview
               </h3>
               <a href="#" className="text-sm text-primary hover:text-accent font-medium">View Full Screen</a>
             </div>
@@ -77,7 +77,7 @@ const ExportDashboard: React.FC = () => {
               Preview generated on <span className="font-semibold">Oct 24, 2023 at 2:30 PM</span>. Includes 18 round tables and a head table.
             </p>
           </div>
-          
+
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-md p-6 border border-secondary/20 dark:border-gray-700 flex flex-col">
             <h3 className="flex items-center gap-2 font-display text-xl text-text-main dark:text-gray-200 mb-4">
               <span className="material-icons-round text-lg">settings</span> Export Settings

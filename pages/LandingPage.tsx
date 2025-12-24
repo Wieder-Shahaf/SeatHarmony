@@ -56,12 +56,14 @@ const LandingPage: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     setPendingFile(null); // Clear any pending file if manually clicking
-    setShowInstructions(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const proceedToFileSelection = () => {
     setShowInstructions(false);
-    
+
     if (pendingFile) {
       // If a file was dropped, process it now
       validateAndProcessFile(pendingFile);
@@ -84,7 +86,7 @@ const LandingPage: React.FC = () => {
       "Uncle Bob,Groom's Extended Family"
     ];
     const csvContent = [headers, ...rows].join("\n");
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -96,11 +98,11 @@ const LandingPage: React.FC = () => {
   };
 
   const suggestedCategories = [
-    "Groom's Parents", "Bride's Parents", "Groom's Siblings", "Bride's Siblings", 
-    "Grandparents", "Groom's Extended Family", "Bride's Extended Family", 
-    "Mutual Friends", "Groom's College Friends", "Bride's College Friends", 
-    "Groom's Childhood Friends", "Bride's Childhood Friends", 
-    "Groom's Work Colleagues", "Bride's Work Colleagues", 
+    "Groom's Parents", "Bride's Parents", "Groom's Siblings", "Bride's Siblings",
+    "Grandparents", "Groom's Extended Family", "Bride's Extended Family",
+    "Mutual Friends", "Groom's College Friends", "Bride's College Friends",
+    "Groom's Childhood Friends", "Bride's Childhood Friends",
+    "Groom's Work Colleagues", "Bride's Work Colleagues",
     "Neighbors", "Wedding Party", "Officiant"
   ];
 
@@ -113,7 +115,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Hero Content */}
-      <div className="max-w-4xl w-full text-center mt-24 md:mt-32 mb-12 animate-[fadeInUp_1s_ease-out]">
+      <div className="max-w-4xl w-full text-center mt-5 md:mt-5 mb-4 animate-[fadeInUp_1s_ease-out]">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 dark:bg-surface-dark/60 border border-secondary/30 backdrop-blur-sm mb-6">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
           <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary">
@@ -124,31 +126,39 @@ const LandingPage: React.FC = () => {
           Create harmonious seating plans <br className="hidden md:block" />
           <span className="italic text-primary">without the stress.</span>
         </h1>
-        <p className="text-lg md:text-xl text-text-main/80 dark:text-text-light/80 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg md:text-xl text-text-main/80 dark:text-text-light/80 max-w-2xl mx-auto leading-relaxed mb-3">
           Upload your guest list and let our intelligent algorithm design the perfect layout for social harmony.
         </p>
+
+        <button
+          onClick={() => setShowInstructions(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-secondary text-text-main dark:text-text-light text-sm font-medium hover:bg-secondary/10 transition-all shadow-sm hover:shadow-md"
+        >
+          <span className="material-icons-round text-base text-primary">lightbulb</span>
+          How it Works
+        </button>
       </div>
 
       {/* Upload Card */}
       <div className="w-full max-w-2xl mx-auto mb-20 relative z-10">
-        <div 
+        <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={handleUploadAreaClick}
-          className={`group relative bg-white dark:bg-surface-dark rounded-3xl p-8 md:p-12 shadow-soft border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer ${
-            isDragging 
-              ? 'border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]' 
-              : 'border-accent-beige dark:border-gray-600 hover:border-primary dark:hover:border-primary'
-          }`}
+          className={`group relative bg-white dark:bg-surface-dark rounded-3xl p-8 md:p-12 shadow-soft border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer ${isDragging
+            ? 'border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]'
+            : 'border-accent-beige dark:border-gray-600 hover:border-primary dark:hover:border-primary'
+            }`}
         >
           {/* Hidden File Input */}
-          <input 
-            type="file" 
+          <input
+            type="file"
+            id="file-upload-input"
             ref={fileInputRef}
             onChange={handleFileInputChange}
             accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-            style={{ display: 'none' }}
+            className="hidden"
           />
 
           <div className={`absolute inset-0 bg-primary/5 rounded-3xl transition-opacity pointer-events-none ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>
@@ -163,14 +173,13 @@ const LandingPage: React.FC = () => {
               Drag & drop your Excel or CSV file here to get started, or click the button below.
             </p>
             <div className="pt-4 w-full max-w-xs relative z-20">
-              <button 
-                type="button"
-                onClick={handleUploadAreaClick}
-                className="w-full flex items-center justify-center gap-2 bg-text-main dark:bg-accent-beige text-white dark:text-text-main font-bold py-3 px-6 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all shadow-md"
+              <label
+                htmlFor="file-upload-input"
+                className="w-full flex items-center justify-center gap-2 bg-text-main dark:bg-accent-beige text-white dark:text-text-main font-bold py-3 px-6 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all shadow-md cursor-pointer"
               >
                 <span className="material-icons-outlined text-lg">folder_open</span>
                 <span>Choose File</span>
-              </button>
+              </label>
             </div>
             <p className="text-xs text-text-main/40 dark:text-text-light/40 mt-4">
               Supports .xlsx, .xls, .csv up to 10MB
@@ -228,7 +237,7 @@ const LandingPage: React.FC = () => {
           </p>
         </div>
       </div>
-      
+
       {/* Footer */}
       <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-8 bg-white/40 dark:bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -252,14 +261,14 @@ const LandingPage: React.FC = () => {
               <h2 className="flex items-center gap-2 font-display text-2xl md:text-3xl text-text-main dark:text-white">
                 <span className="material-icons-round text-primary">edit_note</span> Prepare Your Guest List
               </h2>
-              <button 
-                onClick={() => setShowInstructions(false)} 
+              <button
+                onClick={() => setShowInstructions(false)}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="material-icons-round text-gray-500 dark:text-gray-400">close</span>
               </button>
             </div>
-            
+
             {/* Scrollable Content */}
             <div className="p-6 md:p-10 overflow-y-auto custom-scrollbar bg-white dark:bg-surface-dark">
               <div className="text-center mb-10">
@@ -325,7 +334,7 @@ const LandingPage: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-lg flex gap-3 items-start">
                     <span className="material-icons-round text-amber-500 text-lg mt-0.5">lightbulb</span>
                     <p className="text-xs text-amber-800 dark:text-amber-200"><strong>Tip:</strong> Ensure your column headers are exactly "Name" and "Category" to prevent upload errors.</p>
@@ -354,15 +363,15 @@ const LandingPage: React.FC = () => {
 
             {/* Modal Footer / Actions */}
             <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-black/20 flex flex-col sm:flex-row gap-4 justify-end">
-              <button 
+              <button
                 onClick={downloadTemplate}
                 className="px-6 py-3 rounded-xl border border-secondary text-text-main dark:text-gray-300 font-bold hover:bg-secondary/10 transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-icons-outlined">download</span> Download Template
               </button>
-              
-              <button 
-                onClick={proceedToFileSelection} 
+
+              <button
+                onClick={proceedToFileSelection}
                 className="px-8 py-3 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/30 hover:bg-[#777b63] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
                 {pendingFile ? (

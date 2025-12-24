@@ -25,13 +25,12 @@ const Layout: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-body">
       {/* Navbar */}
-      <nav className={`w-full px-6 py-4 flex items-center justify-between z-50 transition-colors duration-300 ${
-        isLanding 
-          ? 'bg-transparent absolute top-0 left-0 right-0 max-w-7xl mx-auto' 
-          : 'bg-white/80 dark:bg-surface-dark/90 backdrop-blur-md border-b border-secondary/30 dark:border-gray-700 sticky top-0'
-      }`}>
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-          <span className="material-icons-round text-primary text-3xl">favorite</span>
+      <nav className={`w-full px-6 py-4 flex items-center justify-between z-50 transition-colors duration-300 ${isLanding
+        ? 'bg-transparent absolute top-0 left-0 right-0 max-w-7xl mx-auto'
+        : 'bg-white/80 dark:bg-surface-dark/90 backdrop-blur-md border-b border-secondary/30 dark:border-gray-700 sticky top-0'
+        }`}>
+        <div className="flex items-center gap-1 cursor-pointer" onClick={() => navigate('/')}>
+          <span className="material-icons-round text-primary text-2xl">favorite</span>
           <span className={`font-display font-bold text-2xl tracking-tight ${isLanding ? 'text-text-main dark:text-text-light' : 'text-text-main dark:text-text-light'}`}>
             Seat<span className="italic text-primary">Harmony</span>
           </span>
@@ -44,11 +43,10 @@ const Layout: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                  location.pathname === link.path
-                    ? 'text-primary font-bold border-b-2 border-primary pb-0.5'
-                    : 'text-gray-500 hover:text-primary dark:text-gray-300 dark:hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${location.pathname === link.path
+                  ? 'text-primary font-bold border-b-2 border-primary pb-0.5'
+                  : 'text-gray-500 hover:text-primary dark:text-gray-300 dark:hover:text-white'
+                  }`}
               >
                 <span className="material-icons-round text-lg">{link.icon}</span>
                 {link.label}
@@ -56,15 +54,6 @@ const Layout: React.FC = () => {
             ))
           ) : (
             <>
-              <a href="#" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
-                <span className="material-icons-round text-lg">lightbulb</span> How it Works
-              </a>
-              <a href="#" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
-                 <span className="material-icons-round text-lg">monetization_on</span> Pricing
-              </a>
-              <a href="#" className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors">
-                 <span className="material-icons-round text-lg">map</span> Sample Plans
-              </a>
             </>
           )}
         </div>
@@ -72,30 +61,30 @@ const Layout: React.FC = () => {
         {/* Right Side Actions */}
         <div className="flex items-center gap-4">
           {!isLanding && (
-            <button 
+            <button
               onClick={() => setShowFeedback(true)}
               className="hidden md:flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary hover:text-accent"
             >
               <span className="material-icons-round text-lg">rate_review</span> Feedback
             </button>
           )}
-          
-          <button 
+
+          <button
             onClick={toggleDarkMode}
-            className="p-2 rounded-full bg-accent-beige/20 dark:bg-surface-dark hover:bg-accent-beige/40 transition-colors"
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <span className="material-icons-round text-sm">light_mode</span>
           </button>
 
           {isLanding ? (
-             <>
-               <Link to="/dashboard" className="hidden sm:flex items-center gap-1 text-sm font-bold text-text-main dark:text-text-light hover:text-primary">
-                 <span className="material-icons-round text-lg">login</span> Log In
-               </Link>
-               <Link to="/dashboard" className="flex items-center gap-2 bg-primary hover:bg-[#777b63] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                  <span className="material-icons-round text-lg">rocket_launch</span> Get Started
-               </Link>
-             </>
+            <>
+              <Link to="/dashboard" className="hidden sm:flex items-center gap-1 text-sm font-bold text-text-main dark:text-text-light hover:text-primary">
+                <span className="material-icons-round text-lg">login</span> Log In
+              </Link>
+              <Link to="/dashboard" className="flex items-center gap-2 bg-primary hover:bg-[#777b63] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <span className="material-icons-round text-lg">rocket_launch</span> Get Started
+              </Link>
+            </>
           ) : (
             <div className="flex items-center gap-3">
               <button className="p-2 rounded-full hover:bg-secondary/20 text-gray-500 dark:text-gray-300 transition-colors">
@@ -116,18 +105,18 @@ const Layout: React.FC = () => {
 
       {/* Footer (Simplified) */}
       {!isLanding && (
-         <footer className="border-t border-secondary/20 dark:border-gray-700 bg-surface-light dark:bg-surface-dark py-8 mt-auto">
-            <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-sm text-gray-400">© 2024 SeatHarmony. All rights reserved.</p>
-              <div className="flex space-x-6">
-                <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Privacy Policy</a>
-                <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Terms of Service</a>
-                <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Help Center</a>
-              </div>
+        <footer className="border-t border-secondary/20 dark:border-gray-700 bg-surface-light dark:bg-surface-dark py-8 mt-auto">
+          <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-gray-400">© 2024 SeatHarmony. All rights reserved.</p>
+            <div className="flex space-x-6">
+              <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Privacy Policy</a>
+              <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Terms of Service</a>
+              <a href="#" className="text-gray-400 hover:text-primary transition text-sm">Help Center</a>
             </div>
+          </div>
         </footer>
       )}
-      
+
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );

@@ -5,11 +5,9 @@ const Recommendations: React.FC = () => {
   return (
     <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
       <div className="text-center mb-16">
-        <span className="inline-flex items-center gap-1 py-1 px-3 rounded-full bg-accent/20 text-primary dark:text-accent text-xs font-bold tracking-wider uppercase mb-4">
-           <span className="material-icons-round text-sm">psychology</span> Tree-of-Thoughts Analysis Complete
-        </span>
+
         <h1 className="flex items-center justify-center gap-2 font-display text-4xl md:text-5xl text-text-main dark:text-secondary mb-4">
-           <span className="material-icons-round text-4xl text-primary">auto_awesome</span> Top 3 Recommendations
+          <span className="material-icons-round text-4xl text-primary">auto_awesome</span> Top 3 Recommendations
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           Our AI has analyzed 15,000+ permutations based on your preferences for family unity and minimizing conflict. Here are the most harmonious arrangements.
@@ -31,7 +29,7 @@ const Recommendations: React.FC = () => {
               </div>
             </div>
             <h2 className="flex items-center gap-2 font-display text-2xl text-text-main dark:text-white mb-2">
-               <span className="material-icons-round">handshake</span> Option A: Maximum Unity
+              <span className="material-icons-round">handshake</span> Option A: Maximum Unity
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 italic">Ideally balances both sides of the family.</p>
             <div className="space-y-4 mb-8">
@@ -76,7 +74,7 @@ const Recommendations: React.FC = () => {
               </div>
             </div>
             <h2 className="flex items-center gap-2 font-display text-2xl text-text-main dark:text-white mb-2">
-               <span className="material-icons-round">celebration</span> Option B: Party Vibes
+              <span className="material-icons-round">celebration</span> Option B: Party Vibes
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 italic">Optimized for dancing and conversation flow.</p>
             <div className="space-y-4 mb-8">
@@ -120,7 +118,7 @@ const Recommendations: React.FC = () => {
               </div>
             </div>
             <h2 className="flex items-center gap-2 font-display text-2xl text-text-main dark:text-white mb-2">
-               <span className="material-icons-round">history_edu</span> Option C: Traditional
+              <span className="material-icons-round">history_edu</span> Option C: Traditional
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 italic">Strict adherence to family lines.</p>
             <div className="space-y-4 mb-8">
@@ -142,7 +140,7 @@ const Recommendations: React.FC = () => {
             </div>
           </div>
           <div className="p-6 pt-0 mt-auto">
-             <button className="w-full py-3 px-4 bg-white dark:bg-surface-light border-2 border-secondary text-text-main dark:text-surface-dark hover:bg-secondary hover:text-white dark:hover:text-white dark:hover:bg-secondary rounded-xl font-medium transition-colors flex justify-center items-center gap-2">
+            <button className="w-full py-3 px-4 bg-white dark:bg-surface-light border-2 border-secondary text-text-main dark:text-surface-dark hover:bg-secondary hover:text-white dark:hover:text-white dark:hover:bg-secondary rounded-xl font-medium transition-colors flex justify-center items-center gap-2">
               <span className="material-icons-round text-sm">auto_awesome</span> Select & Refine
             </button>
             <div className="text-center mt-3">
