@@ -9,16 +9,15 @@ import PlannerAI from './pages/PlannerAI';
 import Confirmation from './pages/Confirmation';
 import ExportDashboard from './pages/ExportDashboard';
 
-// Scroll to top component
-const ScrollToTop = () => {
+const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
-  
+
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
-  
+
   return null;
-}
+};
 
 const App: React.FC = () => {
   return (
@@ -40,3 +39,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+
