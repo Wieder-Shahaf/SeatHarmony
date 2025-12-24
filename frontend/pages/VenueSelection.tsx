@@ -16,7 +16,7 @@ const VenueSelection: React.FC = () => {
   const filteredVenues = useMemo(() => {
     return VENUE_LAYOUTS.filter(venue => {
       const matchesCategory = categoryFilter === 'all' || venue.category === categoryFilter;
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         venue.description.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
@@ -24,7 +24,7 @@ const VenueSelection: React.FC = () => {
   }, [categoryFilter, searchQuery]);
 
   // Get selected venue
-  const selectedVenue = useMemo(() => 
+  const selectedVenue = useMemo(() =>
     VENUE_LAYOUTS.find(v => v.id === selectedVenueId),
     [selectedVenueId]
   );
@@ -45,7 +45,7 @@ const VenueSelection: React.FC = () => {
 
     // Generate tables from the selected venue layout
     const tables = generateTablesFromVenue(selectedVenue);
-    
+
     // Update context with tables and venue config
     setTables(tables);
     setVenueConfig({
@@ -58,12 +58,12 @@ const VenueSelection: React.FC = () => {
         features: selectedVenue.features,
       },
     });
-    
+
     // Save the full venue layout for pipeline use
     setSelectedVenueLayout(selectedVenue);
 
     console.log(`Applied venue "${selectedVenue.name}" with ${tables.length} tables (saved to localStorage)`);
-    
+
     // Navigate to next step
     navigate('/recommendations');
   };
@@ -101,7 +101,7 @@ const VenueSelection: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-3 pl-10 pr-4 rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-primary focus:border-primary shadow-sm transition-shadow dark:text-white dark:placeholder-gray-500"
+            className="w-full py-3 pl-10 pr-4 rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-dark focus:ring-primary focus:border-primary shadow-sm transition-shadow dark:text-white dark:placeholder-gray-300"
             placeholder="Search venues..."
           />
         </div>
@@ -110,11 +110,10 @@ const VenueSelection: React.FC = () => {
             <button
               key={category}
               onClick={() => setCategoryFilter(category)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium shadow-sm transition whitespace-nowrap ${
-                categoryFilter === category
-                  ? 'bg-primary text-white'
-                  : 'bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary dark:hover:text-primary'
-              }`}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium shadow-sm transition whitespace-nowrap ${categoryFilter === category
+                ? 'bg-primary text-white'
+                : 'bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary dark:hover:text-primary'
+                }`}
             >
               <span className="material-icons-round text-sm">{getCategoryIcon(category)}</span>
               {category === 'all' ? 'All Types' : category.charAt(0).toUpperCase() + category.slice(1)}
@@ -128,7 +127,7 @@ const VenueSelection: React.FC = () => {
         {filteredVenues.map((venue) => {
           const isSelected = selectedVenueId === venue.id;
           const capacityOk = hasEnoughCapacity(venue);
-          
+
           return (
             <div
               key={venue.id}
@@ -155,7 +154,7 @@ const VenueSelection: React.FC = () => {
               )}
 
               {/* Image */}
-              <div className="relative h-56 bg-gray-100 overflow-hidden">
+              <div className="relative h-56 bg-gray-100 overflow-hidden rounded-t-2xl">
                 <img
                   src={venue.image}
                   alt={venue.name}
@@ -179,22 +178,21 @@ const VenueSelection: React.FC = () => {
                   <h3 className="flex items-center gap-2 font-display text-2xl font-medium text-gray-900 dark:text-white group-hover:text-primary transition-colors">
                     <span className="material-icons-round text-secondary">{venue.icon}</span> {venue.name}
                   </h3>
-                  <span className={`flex items-center text-sm font-medium px-2 py-1 rounded-md ${
-                    capacityOk 
-                      ? 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800'
-                      : 'text-orange-600 bg-orange-50 dark:bg-orange-900/30'
-                  }`}>
+                  <span className={`flex items-center text-sm font-medium px-2 py-1 rounded-md ${capacityOk
+                    ? 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800'
+                    : 'text-orange-600 bg-orange-50 dark:bg-orange-900/30'
+                    }`}>
                     <span className="material-icons-outlined text-sm mr-1">people</span> {venue.totalCapacity}
                   </span>
                 </div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 line-clamp-2">{venue.description}</p>
-                
+                <p className="text-gray-500 dark:text-gray-300 text-sm mb-4 line-clamp-2">{venue.description}</p>
+
                 {/* Table Info */}
                 <div className="flex flex-wrap gap-2 mb-4">
                   {venue.tableTemplates.map((template, idx) => (
-                    <span 
+                    <span
                       key={idx}
-                      className="text-xs px-2 py-1 bg-secondary/10 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300"
+                      className="text-xs px-2 py-1 bg-secondary/10 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-200"
                       title={`${template.nearDanceFloor} to dance floor, ${template.placement}`}
                     >
                       {template.count}× {template.type} ({template.capacity} seats)
@@ -205,7 +203,7 @@ const VenueSelection: React.FC = () => {
                 {/* Features */}
                 <div className="flex flex-wrap gap-1 mb-4">
                   {venue.features.slice(0, 3).map((feature, idx) => (
-                    <span 
+                    <span
                       key={idx}
                       className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full"
                     >
@@ -221,7 +219,7 @@ const VenueSelection: React.FC = () => {
 
                 {/* Footer */}
                 <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-300">
                     {venue.tableTemplates.reduce((sum, t) => sum + t.count, 0)} tables total
                   </div>
                   {isSelected ? (
@@ -229,7 +227,7 @@ const VenueSelection: React.FC = () => {
                       <span className="material-icons-round text-sm">check_circle</span> Selected
                     </span>
                   ) : (
-                    <span className="text-gray-500 dark:text-gray-400 font-medium text-sm group-hover:text-primary transition-colors flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-gray-300 font-medium text-sm group-hover:text-primary transition-colors flex items-center gap-1">
                       Select <span className="material-icons-outlined text-sm">arrow_forward</span>
                     </span>
                   )}
@@ -245,7 +243,7 @@ const VenueSelection: React.FC = () => {
         <div className="text-center py-12">
           <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600">search_off</span>
           <p className="text-gray-500 dark:text-gray-400 mt-4">No venues match your search criteria.</p>
-          <button 
+          <button
             onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
             className="mt-4 text-primary hover:underline"
           >
@@ -259,15 +257,15 @@ const VenueSelection: React.FC = () => {
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img 
-                src={selectedVenue.image} 
+              <img
+                src={selectedVenue.image}
                 alt={selectedVenue.name}
                 className="w-16 h-16 rounded-lg object-cover"
               />
               <div>
                 <h4 className="font-display text-lg text-text-main dark:text-white">{selectedVenue.name}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedVenue.tableTemplates.reduce((sum, t) => sum + t.count, 0)} tables • 
+                  {selectedVenue.tableTemplates.reduce((sum, t) => sum + t.count, 0)} tables •
                   Capacity: {selectedVenue.totalCapacity} guests
                 </p>
               </div>
@@ -282,11 +280,10 @@ const VenueSelection: React.FC = () => {
               <button
                 onClick={handleConfirmSelection}
                 disabled={!hasEnoughCapacity(selectedVenue)}
-                className={`px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 ${
-                  hasEnoughCapacity(selectedVenue)
-                    ? 'bg-primary text-white hover:bg-[#777b63]'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className={`px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 ${hasEnoughCapacity(selectedVenue)
+                  ? 'bg-primary text-white hover:bg-[#777b63]'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
               >
                 Confirm & Continue
                 <span className="material-icons-round">arrow_forward</span>

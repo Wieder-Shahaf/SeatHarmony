@@ -49,36 +49,36 @@ const LandingPage: React.FC = () => {
   const parseExcelFile = async (file: File): Promise<Guest[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = e.target?.result;
           const workbook = XLSX.read(data, { type: 'binary' });
-          
+
           // Get the first sheet
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          
+
           // Convert to JSON with header row
           const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
-          
+
           if (jsonData.length === 0) {
             reject(new Error('The spreadsheet appears to be empty.'));
             return;
           }
-          
+
           // Check for required columns (case-insensitive)
           const firstRow = jsonData[0];
           const columns = Object.keys(firstRow).map(k => k.toLowerCase());
-          
+
           // Debug: log detected columns
           console.log('Detected columns:', Object.keys(firstRow));
           console.log('First row data:', firstRow);
-          
+
           // Support "Proper Names" column (column W in the Excel)
           const hasName = columns.some(c => c === 'proper names' || c === 'name');
           const hasCategory = columns.some(c => c === 'category');
-          
+
           if (!hasName || !hasCategory) {
             const missing = [];
             if (!hasName) missing.push('"Proper Names"');
@@ -86,13 +86,13 @@ const LandingPage: React.FC = () => {
             reject(new Error(`Missing required column(s): ${missing.join(' and ')}. Please ensure your spreadsheet has the required columns.`));
             return;
           }
-          
+
           // Find the actual column names (preserving original case)
           // Prefer "Proper Names" over "Name" if both exist
-          const nameCol = Object.keys(firstRow).find(k => k.toLowerCase() === 'proper names') 
+          const nameCol = Object.keys(firstRow).find(k => k.toLowerCase() === 'proper names')
             || Object.keys(firstRow).find(k => k.toLowerCase() === 'name')!;
           const categoryCol = Object.keys(firstRow).find(k => k.toLowerCase() === 'category')!;
-          
+
           // Parse guests
           const guests: Guest[] = jsonData
             .filter(row => row[nameCol] && String(row[nameCol]).trim() !== '')
@@ -100,15 +100,15 @@ const LandingPage: React.FC = () => {
               const name = String(row[nameCol]).trim();
               const category = row[categoryCol] ? String(row[categoryCol]).trim() : '';
               const id = `guest-${index + 1}-${name.toLowerCase().replace(/\s+/g, '-')}`;
-              
+
               return createGuestFromExcel(id, name, category);
             });
-          
+
           if (guests.length === 0) {
             reject(new Error('No valid guests found. Please ensure the "Name" column has data.'));
             return;
           }
-          
+
           console.log(`Successfully parsed ${guests.length} guests from ${file.name}`);
           resolve(guests);
         } catch (error) {
@@ -116,11 +116,11 @@ const LandingPage: React.FC = () => {
           reject(new Error('Failed to parse the file. Please ensure it\'s a valid Excel or CSV file.'));
         }
       };
-      
+
       reader.onerror = () => {
         reject(new Error('Failed to read the file. Please try again.'));
       };
-      
+
       reader.readAsBinaryString(file);
     });
   };
@@ -136,15 +136,15 @@ const LandingPage: React.FC = () => {
 
     setParseError(null);
     setIsLoading(true);
-    
+
     try {
       const guests = await parseExcelFile(file);
-      
+
       // Store guests in global context
       initializeFromExcel(guests);
-      
+
       console.log(`Stored ${guests.length} guests in context`);
-      
+
       // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
@@ -210,7 +210,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Hero Content */}
-      <div className="max-w-4xl w-full text-center mt-5 md:mt-5 mb-4 animate-[fadeInUp_1s_ease-out]">
+      <div className="max-w-4xl w-full text-center mt-7 md:mt-7 mb-4 animate-[fadeInUp_1s_ease-out]">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 dark:bg-surface-dark/60 border border-secondary/30 backdrop-blur-sm mb-6">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
           <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary">
@@ -292,7 +292,7 @@ const LandingPage: React.FC = () => {
             <p className="text-xs text-text-main/40 dark:text-text-light/40 mt-4">
               Supports .xlsx, .xls, .csv up to 10MB
             </p>
-            
+
             {/* Error Message */}
             {parseError && (
               <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-lg flex gap-2 items-start text-left">

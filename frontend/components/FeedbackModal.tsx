@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface FeedbackModalProps {
   onClose: () => void;
 }
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ onClose }) => {
+  const [rating, setRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="w-full max-w-4xl bg-white dark:bg-surface-dark rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
@@ -19,7 +22,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onClose }) => {
               <span className="material-icons-round text-white text-4xl opacity-90">favorite</span>
             </div>
             <h2 className="font-display text-4xl text-white italic leading-tight mb-2">SeatHarmony</h2>
-            <p className="text-white/90 text-sm font-light">Crafting perfect moments, one seat at a time.</p>
+            <p className="text-white/90 text-base font-script tracking-wide">Crafting perfect moments, one seat at a time.</p>
           </div>
         </div>
 
@@ -39,9 +42,18 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onClose }) => {
           </div>
 
           <div className="mb-8 flex flex-col items-center md:items-start">
-            <div className="flex flex-row-reverse gap-2 text-3xl text-gray-300 dark:text-gray-600 mb-2 cursor-pointer">
+            <div className="flex flex-row-reverse gap-2 text-3xl mb-2">
               {[5, 4, 3, 2, 1].map((star) => (
-                <span key={star} className="material-icons-round hover:text-secondary transition-colors">
+                <span
+                  key={star}
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className={`material-icons-round cursor-pointer transition-colors ${star <= (hoverRating || rating)
+                    ? 'text-secondary'
+                    : 'text-gray-300 dark:text-gray-600 hover:text-secondary/70'
+                    }`}
+                >
                   star
                 </span>
               ))}
