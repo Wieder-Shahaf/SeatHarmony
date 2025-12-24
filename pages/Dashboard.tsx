@@ -11,12 +11,12 @@ const Dashboard: React.FC = () => {
             <span>Analysis</span>
             <span className="material-icons-round text-xs">chevron_right</span>
             <span className="flex items-center gap-1 text-primary dark:text-accent font-medium">
-               <span className="material-icons-round text-sm">dashboard</span> Cluster View
+              <span className="material-icons-round text-sm">dashboard</span> Cluster View
             </span>
           </div>
           <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Guest Group Orientation</h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-xl">
-            Our AI has detected <span className="font-bold text-primary">6 distinct clusters</span> from your guest list. 
+            Our AI has detected <span className="font-bold text-primary">6 distinct clusters</span> from your guest list.
             Review these groupings to ensure everyone is seated with their tribe.
           </p>
         </div>
@@ -25,10 +25,7 @@ const Dashboard: React.FC = () => {
             <span className="material-icons-round text-sm">filter_list</span>
             Filter
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white shadow-md hover:bg-opacity-90 transition-transform hover:-translate-y-0.5">
-            <span className="material-icons-round text-sm">auto_fix_high</span>
-            Regenerate AI Sort
-          </button>
+
         </div>
       </header>
 
@@ -79,7 +76,7 @@ const Dashboard: React.FC = () => {
 
       {/* Clusters Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
-        
+
         {/* Card 1 */}
         <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-md border-t-4 border-primary hover:shadow-lg transition-shadow">
           <div className="flex justify-between items-start mb-4">
@@ -103,10 +100,10 @@ const Dashboard: React.FC = () => {
               <div className="bg-primary h-2 rounded-full" style={{ width: '100%' }}></div>
             </div>
             <div className="flex -space-x-2 overflow-hidden py-2">
-               {[1,2,3,4].map((i) => (
-                  <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=User+${i}&background=8A8E75&color=fff`} alt="" />
-               ))}
-               <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+8</div>
+              {[1, 2, 3, 4].map((i) => (
+                <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=User+${i}&background=8A8E75&color=fff`} alt="" />
+              ))}
+              <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+8</div>
             </div>
           </div>
           <div className="bg-secondary/10 dark:bg-gray-700/50 rounded-xl p-3">
@@ -139,18 +136,18 @@ const Dashboard: React.FC = () => {
               <div className="bg-slate-400 h-2 rounded-full" style={{ width: '85%' }}></div>
             </div>
             <div className="flex -space-x-2 overflow-hidden py-2">
-               {[1,2,3].map((i) => (
-                  <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=Student+${i}&background=94a3b8&color=fff`} alt="" />
-               ))}
-               <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+21</div>
+              {[1, 2, 3].map((i) => (
+                <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=Student+${i}&background=94a3b8&color=fff`} alt="" />
+              ))}
+              <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+21</div>
             </div>
           </div>
-           <div className="bg-secondary/10 dark:bg-gray-700/50 rounded-xl p-3 flex justify-between items-center">
-             <div className="flex gap-2">
-                <span className="px-2 py-1 bg-white dark:bg-gray-600 rounded text-xs text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-gray-500">Loud</span>
-                <span className="px-2 py-1 bg-white dark:bg-gray-600 rounded text-xs text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-gray-500">Dance Floor</span>
-             </div>
-           </div>
+          <div className="bg-secondary/10 dark:bg-gray-700/50 rounded-xl p-3 flex justify-between items-center">
+            <div className="flex gap-2">
+              <span className="px-2 py-1 bg-white dark:bg-gray-600 rounded text-xs text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-gray-500">Loud</span>
+              <span className="px-2 py-1 bg-white dark:bg-gray-600 rounded text-xs text-gray-600 dark:text-gray-200 border border-gray-200 dark:border-gray-500">Dance Floor</span>
+            </div>
+          </div>
         </div>
 
         {/* Card 3 */}
@@ -176,10 +173,10 @@ const Dashboard: React.FC = () => {
               <div className="bg-secondary h-2 rounded-full" style={{ width: '70%' }}></div>
             </div>
             <div className="flex -space-x-2 overflow-hidden py-2">
-               {[1,2].map((i) => (
-                  <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=Work+${i}&background=D5C7AD&color=fff`} alt="" />
-               ))}
-               <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+16</div>
+              {[1, 2].map((i) => (
+                <img key={i} className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover" src={`https://ui-avatars.com/api/?name=Work+${i}&background=D5C7AD&color=fff`} alt="" />
+              ))}
+              <div className="h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500 dark:text-gray-300 font-medium">+16</div>
             </div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 flex items-start gap-2">
