@@ -156,7 +156,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     name: 'Modern Banquet',
     description: 'Contemporary design with long communal tables. Great for intimate, family-style dining with elegant rectangular seating.',
     icon: 'wine_bar',
-    image: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?q=80&w=1587&auto=format&fit=crop&ixlib=rb-4.1.0',
+    image: 'https://cdn.greenvelope.com/blog/wp-content/uploads/Wedding-reception.jpeg',
     category: 'banquet',
     totalCapacity: 180,
     tableTemplates: [
@@ -173,7 +173,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     name: 'Rooftop Terrace',
     description: 'Stunning city views with a mix of round and cocktail tables. Perfect for sunset ceremonies and evening receptions.',
     icon: 'roofing',
-    image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    image: 'https://www.sofitel-frankfurt.com/wp-content/uploads/sites/92/2022/05/08-26-2020-Sofitel-Glam-Wedding-Frankfurt-Diana-Frohm%C3%BCller-Photography-www.dianafrohmueller.com-300-_-1170x780.jpg',
     category: 'outdoor',
     totalCapacity: 150,
     tableTemplates: [
@@ -189,7 +189,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     name: 'Rustic Barn',
     description: 'Charming countryside venue with exposed beams. Long farmhouse tables create a warm, intimate atmosphere.',
     icon: 'cottage',
-    image: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    image: 'https://cdn0.hitched.co.uk/article/7982/3_2/1280/jpg/152897-preston-court-barn.jpeg',
     category: 'indoor',
     totalCapacity: 160,
     tableTemplates: [
@@ -205,7 +205,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     name: 'Intimate Chapel',
     description: 'A cozy, elegant space for smaller gatherings. Mixed seating with round tables for personal connections.',
     icon: 'church',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    image: 'https://www.elegantweddinginvites.com/wedding-blog/wp-content/uploads/2021/01/romantic-glass-chapel-wedding.jpg',
     category: 'intimate',
     totalCapacity: 80,
     tableTemplates: [
@@ -220,7 +220,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     name: 'Beach Resort',
     description: 'Oceanfront venue with flexible indoor-outdoor flow. Round tables with ocean views for a relaxed celebration.',
     icon: 'beach_access',
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
+    image: 'https://www.bogmallobeachresort.com/wp-content/themes/resort/images/w01.jpg',
     category: 'outdoor',
     totalCapacity: 220,
     tableTemplates: [
@@ -300,7 +300,7 @@ export function createGuestFromExcel(
 // Helper to group guests by category
 export function groupGuestsByCategory(guests: Guest[]): GuestGroup[] {
   const groupMap = new Map<string, Guest[]>();
-  
+
   guests.forEach(guest => {
     const groupId = guest.group_id || 'Uncategorized';
     if (!groupMap.has(groupId)) {

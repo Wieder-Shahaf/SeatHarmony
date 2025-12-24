@@ -21,14 +21,19 @@ const Layout: React.FC = () => {
     { label: 'Export', path: '/export', icon: 'download' },
   ];
 
+  // Ordered list of routes for navigation
+  const routeOrder = ['/', '/dashboard', '/venues', '/recommendations', '/planner', '/confirmation', '/export'];
+  const currentRouteIndex = routeOrder.indexOf(location.pathname);
+  const prevRoute = currentRouteIndex > 0 ? routeOrder[currentRouteIndex - 1] : null;
+  const nextRoute = currentRouteIndex >= 0 && currentRouteIndex < routeOrder.length - 1 ? routeOrder[currentRouteIndex + 1] : null;
+
   return (
     <div className="min-h-screen flex flex-col font-body">
       <nav
-        className={`w-full px-6 py-4 flex items-center justify-between z-50 transition-colors duration-300 ${
-          isLanding
-            ? 'bg-transparent absolute top-0 left-0 right-0 max-w-7xl mx-auto'
-            : 'bg-white/80 dark:bg-surface-dark/90 backdrop-blur-md border-b border-secondary/30 dark:border-gray-700 sticky top-0'
-        }`}
+        className={`w-full px-6 py-4 flex items-center justify-between z-50 transition-colors duration-300 ${isLanding
+          ? 'bg-transparent absolute top-0 left-0 right-0 max-w-7xl mx-auto'
+          : 'bg-white/80 dark:bg-surface-dark/90 backdrop-blur-md border-b border-secondary/30 dark:border-gray-700 sticky top-0'
+          }`}
       >
         <div className="flex items-center gap-1 cursor-pointer" onClick={() => navigate('/')}>
           <span className="material-icons-round text-primary text-2xl">favorite</span>
@@ -37,22 +42,43 @@ const Layout: React.FC = () => {
           </span>
         </div>
 
-        <div className="hidden md:flex items-center gap-6">
-          {!isLanding &&
-            navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-                  location.pathname === link.path
+        <div className="hidden md:flex items-center gap-4">
+          {!isLanding && prevRoute && (
+            <button
+              onClick={() => navigate(prevRoute)}
+              className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
+              aria-label="Previous Page"
+            >
+              <span className="material-icons-round text-xl">chevron_left</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-6">
+            {!isLanding &&
+              navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${location.pathname === link.path
                     ? 'text-primary font-bold border-b-2 border-primary pb-0.5'
                     : 'text-gray-500 hover:text-primary dark:text-gray-300 dark:hover:text-white'
-                }`}
-              >
-                <span className="material-icons-round text-lg">{link.icon}</span>
-                {link.label}
-              </Link>
-            ))}
+                    }`}
+                >
+                  <span className="material-icons-round text-lg">{link.icon}</span>
+                  {link.label}
+                </Link>
+              ))}
+          </div>
+
+          {!isLanding && nextRoute && (
+            <button
+              onClick={() => navigate(nextRoute)}
+              className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
+              aria-label="Next Page"
+            >
+              <span className="material-icons-round text-xl">chevron_right</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -69,37 +95,14 @@ const Layout: React.FC = () => {
             onClick={toggleDarkMode}
             className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
-            <span className="material-icons-round text-sm">light_mode</span>
+            <span className="material-icons-round text-xl">light_mode</span>
           </button>
 
           {isLanding ? (
-            <>
-              <Link
-                to="/dashboard"
-                className="hidden sm:flex items-center gap-1 text-sm font-bold text-text-main dark:text-text-light hover:text-primary"
-              >
-                <span className="material-icons-round text-lg">login</span> Log In
-              </Link>
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 bg-primary hover:bg-[#777b63] text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-              >
-                <span className="material-icons-round text-lg">rocket_launch</span> Get Started
-              </Link>
-            </>
+            null
+
           ) : (
-            <div className="flex items-center gap-3">
-              <button className="p-2 rounded-full hover:bg-secondary/20 text-gray-500 dark:text-gray-300 transition-colors">
-                <span className="material-icons-round">notifications</span>
-              </button>
-              <div className="h-9 w-9 rounded-full bg-secondary overflow-hidden border-2 border-white dark:border-gray-600 shadow-sm">
-                <img
-                  src="https://ui-avatars.com/api/?name=James+Smith&background=D5C7AD&color=fff"
-                  alt="User Avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
+            null
           )}
         </div>
       </nav>
@@ -128,6 +131,8 @@ const Layout: React.FC = () => {
       )}
 
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+
+
     </div>
   );
 };
