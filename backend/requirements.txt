@@ -3,4 +3,9 @@ uvicorn
 streamlit
 pydantic
 gurobipy
+numpy
+pandas
+openpyxl
+google-genai
+python-dotenv
 

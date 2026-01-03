@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { GuestGroup } from '../src/types/models';
 
+// Guest item for drag-and-drop
+interface GuestItem {
+  id: string;
+  name: string;
+}
+
 // Group/Category data structure for display
 interface GroupDisplayData {
   id: string;
@@ -12,11 +18,10 @@ interface GroupDisplayData {
   iconBg: string;
   iconColor: string;
   borderColor: string;
-  priority: string;
   guestCount: number;
   progress: number;
   avatarBg: string;
-  guests: string[]; // Guest names for avatars
+  guestItems: GuestItem[]; // Guest objects with IDs for drag-and-drop
   note?: string;
   noteType?: 'info' | 'warning';
   tags?: string[];
@@ -72,15 +77,6 @@ function convertToDisplayData(groups: GuestGroup[]): GroupDisplayData[] {
     const style = groupStyles[index % groupStyles.length];
     const guestCount = group.guests.length;
 
-    // Determine priority based on keywords in category name
-    let priority = 'Standard';
-    const nameLower = group.name.toLowerCase();
-    if (nameLower.includes('family') || nameLower.includes('parent') || nameLower.includes('sibling')) {
-      priority = 'High Priority';
-    } else if (nameLower.includes('work') || nameLower.includes('colleague')) {
-      priority = 'Mixed Group';
-    }
-
     return {
       id: group.id,
       name: group.name,
@@ -89,11 +85,10 @@ function convertToDisplayData(groups: GuestGroup[]): GroupDisplayData[] {
       iconBg: style.iconBg,
       iconColor: style.iconColor,
       borderColor: style.borderColor,
-      priority,
       guestCount,
       progress: 100, // All guests in this group are assigned
       avatarBg: style.avatarBg,
-      guests: group.guests.slice(0, 5).map(g => g.name), // First 5 for avatars
+      guestItems: group.guests.map(g => ({ id: g.id, name: g.name })), // Guest objects with IDs
     };
   });
 }
@@ -107,6 +102,70 @@ const Dashboard: React.FC = () => {
   const [filterSearch, setFilterSearch] = useState('');
   const [flippedGroupIds, setFlippedGroupIds] = useState<Set<string>>(new Set());
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
+
+  // Drag-and-drop state
+  const [draggedGuest, setDraggedGuest] = useState<GuestItem | null>(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
+  const [dragSourceGroupName, setDragSourceGroupName] = useState<string | null>(null);
+
+  // Drag-and-drop handlers
+  const handleDragStart = (e: React.DragEvent, guest: GuestItem, sourceGroupName: string) => {
+    e.stopPropagation();
+    setDraggedGuest(guest);
+    setDragSourceGroupName(sourceGroupName);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify({ guestId: guest.id, guestName: guest.name }));
+    
+    // Add a slight delay to show drag styling
+    setTimeout(() => {
+      const element = e.target as HTMLElement;
+      element.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation();
+    const element = e.target as HTMLElement;
+    element.style.opacity = '1';
+    setDraggedGuest(null);
+    setDragOverGroupId(null);
+    setDragSourceGroupName(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverGroupId(groupId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverGroupId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetGroupName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedGuest || targetGroupName === dragSourceGroupName) {
+      setDraggedGuest(null);
+      setDragOverGroupId(null);
+      setDragSourceGroupName(null);
+      return;
+    }
+
+    // Update the guest's category
+    updateGuest(draggedGuest.id, { group_id: targetGroupName });
+    
+    console.log(`Moved guest "${draggedGuest.name}" to category "${targetGroupName}"`);
+    
+    // Reset drag state
+    setDraggedGuest(null);
+    setDragOverGroupId(null);
+    setDragSourceGroupName(null);
+  };
 
   const toggleFlip = (id: string) => {
     setFlippedGroupIds(prev => {
@@ -192,16 +251,17 @@ const Dashboard: React.FC = () => {
   };
 
   // Filter groups based on selected categories (show all if none selected)
+  // Use stable sorting by name to keep cards in fixed positions
   const filteredGroups = useMemo(() => {
     const groups = selectedFilters.length === 0
       ? groupsData
       : groupsData.filter(g => selectedFilters.includes(g.category));
 
-    // Always sort "Uncategorized" to the end
+    // Stable sort: alphabetically by name, but "Uncategorized" always at the end
     return [...groups].sort((a, b) => {
       if (a.name === 'Uncategorized') return 1;
       if (b.name === 'Uncategorized') return -1;
-      return 0; // Keep original order for others
+      return a.name.localeCompare(b.name);
     });
   }, [groupsData, selectedFilters]);
 
@@ -393,8 +453,8 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Clusters Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+      {/* Clusters Grid - Fixed layout, no reordering during drag */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr">
         {filteredGroups.map((group) => {
           const isFlipped = flippedGroupIds.has(group.id);
           const searchQuery = searchQueries[group.id] || '';
@@ -410,18 +470,19 @@ const Dashboard: React.FC = () => {
               >
                 {/* Front Face */}
                 <div
-                  onClick={() => !isFlipped && toggleFlip(group.id)}
-                  className={`absolute inset-0 [backface-visibility:hidden] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} cursor-pointer flex flex-col`}
+                  onClick={() => !isFlipped && !draggedGuest && toggleFlip(group.id)}
+                  onDragOver={(e) => handleDragOver(e, group.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, group.name)}
+                  className={`absolute inset-0 [backface-visibility:hidden] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} cursor-pointer flex flex-col transition-all duration-200 ${
+                    dragOverGroupId === group.id && dragSourceGroupName !== group.name
+                      ? 'ring-4 ring-primary ring-opacity-50 scale-[1.02] bg-primary/5'
+                      : ''
+                  } ${draggedGuest && dragSourceGroupName !== group.name ? 'hover:ring-2 hover:ring-primary/30' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                      <div className={`${group.iconBg} ${group.iconColor} p-2 rounded-lg`}>
-                        <span className="material-icons-round">{group.icon}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-display text-xl text-text-main dark:text-white font-semibold">{group.name}</h3>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">{group.priority}</p>
-                      </div>
+                      <h3 className="font-display text-xl text-text-main dark:text-white font-semibold">{group.name}</h3>
                     </div>
                     <div className="relative">
                       <button
@@ -471,13 +532,13 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     <div className="flex -space-x-2 overflow-hidden py-2">
-                      {group.guests.slice(0, 3).map((guestName, i) => (
+                      {group.guestItems.slice(0, 3).map((guest) => (
                         <img
-                          key={i}
+                          key={guest.id}
                           className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover"
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(guestName)}&background=${group.avatarBg}&color=fff`}
-                          alt={guestName}
-                          title={guestName}
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(guest.name)}&background=${group.avatarBg}&color=fff`}
+                          alt={guest.name}
+                          title={guest.name}
                         />
                       ))}
                       {group.guestCount > 3 && (
@@ -524,15 +585,31 @@ const Dashboard: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Tap to flip hint */}
-                  <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="material-icons-round text-lg">touch_app</span>
-                  </div>
+                  {/* Tap to flip hint / Drop zone indicator */}
+                  {draggedGuest && dragSourceGroupName !== group.name ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded-2xl pointer-events-none">
+                      <div className="text-center">
+                        <span className="material-icons-round text-4xl text-primary/50">add_circle</span>
+                        <p className="text-sm text-primary/70 font-medium mt-1">Drop here</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute bottom-4 right-4 text-gray-300 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-icons-round text-lg">touch_app</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Back Face */}
                 <div
-                  className={`absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)_translateZ(1px)] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} flex flex-col ${isFlipped ? 'pointer-events-auto z-10' : 'pointer-events-none z-0'}`}
+                  onDragOver={(e) => handleDragOver(e, group.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, group.name)}
+                  className={`absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)_translateZ(1px)] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} flex flex-col transition-all duration-200 ${isFlipped ? 'pointer-events-auto z-10' : 'pointer-events-none z-0'} ${
+                    dragOverGroupId === group.id && dragSourceGroupName !== group.name
+                      ? 'ring-4 ring-primary ring-opacity-50 bg-primary/5'
+                      : ''
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
                     <h3 className="font-display font-bold text-lg text-text-main dark:text-white truncate pr-2">{group.name}</h3>
@@ -559,19 +636,41 @@ const Dashboard: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2 divide-y divide-gray-50 dark:divide-gray-800 overscroll-contain relative z-20">
-                    {group.guests
-                      .filter(g => g.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map((guestName, idx) => (
-                        <div key={idx} className="py-2 flex items-center gap-2">
+                  <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2 overscroll-contain relative z-20 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                    {group.guestItems
+                      .filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((guest) => (
+                        <div 
+                          key={guest.id} 
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, guest, group.name)}
+                          onDragEnd={handleDragEnd}
+                          className={`py-2 flex items-center gap-2 border-b border-gray-50 dark:border-gray-800 last:border-b-0 cursor-grab active:cursor-grabbing hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-1 -mx-1 transition-colors ${
+                            draggedGuest?.id === guest.id ? 'opacity-50 bg-gray-100 dark:bg-gray-700' : ''
+                          }`}
+                        >
+                          <span className="material-icons-round text-gray-300 dark:text-gray-600 text-sm flex-shrink-0">drag_indicator</span>
                           <img
-                            className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover"
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(guestName)}&background=${group.avatarBg}&color=fff`}
-                            alt={guestName}
+                            className="inline-block h-7 w-7 rounded-full ring-2 ring-white dark:ring-surface-dark object-cover flex-shrink-0"
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(guest.name)}&background=${group.avatarBg}&color=fff`}
+                            alt={guest.name}
                           />
-                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{guestName}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{guest.name}</span>
                         </div>
                       ))}
+                    {group.guestItems.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                      <div className="py-4 text-center text-sm text-gray-400">
+                        No guests match your search
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Guest count footer with drag hint */}
+                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 text-center">
+                    {group.guestItems.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase())).length} of {group.guestCount} guests
+                    <span className="block text-[10px] mt-1 text-gray-300 dark:text-gray-600">
+                      <span className="material-icons-round text-[10px] align-middle">drag_indicator</span> Drag to move
+                    </span>
                   </div>
                 </div>
               </div>
@@ -581,6 +680,34 @@ const Dashboard: React.FC = () => {
 
       </div>
 
+      {/* Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-primary/10 p-3 rounded-xl">
+              <span className="material-icons-round text-primary text-2xl">people</span>
+            </div>
+            <div>
+              <h4 className="font-display text-lg text-text-main dark:text-white">{totalGuests} Guests Ready</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {totalGroups} groups • {unassignedCount > 0 ? `${unassignedCount} uncategorized` : 'All categorized'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/venues')}
+              className="px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 bg-primary text-white hover:bg-[#777b63]"
+            >
+              Continue to Venue
+              <span className="material-icons-round">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Padding for Sticky Bar */}
+      <div className="h-24" />
     </div>
   );
 };

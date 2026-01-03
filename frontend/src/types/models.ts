@@ -10,8 +10,6 @@ export interface Guest {
   group_id: string | null;  // Category from Excel - used for clustering
   importance: number;       // 0 = normal, higher = VIP
   tags: string[];           // Optional tags like "vegetarian", "wheelchair"
-  must_sit_with: string[];  // Guest IDs that must be at same table
-  must_not_sit_with: string[]; // Guest IDs that must NOT be at same table
 }
 
 // Matches backend TableIn Pydantic model
@@ -71,6 +69,20 @@ export interface LayoutResponse {
   layouts: TotLayout[];
 }
 
+// Request for guest explanations
+export interface ExplainGuestsRequest {
+  guests: Guest[];
+  tables: Table[];
+  layout: Layout;
+  weights: Record<string, number>;
+  notes: string;
+}
+
+// Response from /api/layouts/explain-guests
+export interface GuestExplanationsResponse {
+  explanations: Record<string, string>; // guest_id -> explanation text
+}
+
 // Group data for Dashboard display (derived from guests)
 export interface GuestGroup {
   id: string;
@@ -127,7 +139,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'celebration',
     image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
     category: 'indoor',
-    totalCapacity: 350,
+    totalCapacity: 320, // 8×10 + 12×10 + 15×8 = 80 + 120 + 120
     tableTemplates: [
       { type: 'round', capacity: 10, count: 8, zone: 'inner-ring', nearDanceFloor: 'adjacent', placement: 'indoor' },
       { type: 'round', capacity: 10, count: 12, zone: 'main', nearDanceFloor: 'near', placement: 'indoor' },
@@ -143,7 +155,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'local_florist',
     image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
     category: 'outdoor',
-    totalCapacity: 200,
+    totalCapacity: 194, // 7×10 + 6×10 + 8×8 = 70 + 60 + 64
     tableTemplates: [
       { type: 'round', capacity: 10, count: 7, zone: 'pavilion', nearDanceFloor: 'adjacent', placement: 'covered' },
       { type: 'round', capacity: 10, count: 6, zone: 'lawn', nearDanceFloor: 'near', placement: 'outdoor' },
@@ -158,7 +170,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'wine_bar',
     image: 'https://cdn.greenvelope.com/blog/wp-content/uploads/Wedding-reception.jpeg',
     category: 'banquet',
-    totalCapacity: 180,
+    totalCapacity: 174, // 2×14 + 4×12 + 4×12 + 5×10 = 28 + 48 + 48 + 50
     tableTemplates: [
       { type: 'rectangular', capacity: 14, count: 2, zone: 'front', nearDanceFloor: 'adjacent', placement: 'indoor' },
       { type: 'rectangular', capacity: 12, count: 4, zone: 'center', nearDanceFloor: 'near', placement: 'indoor' },
@@ -175,7 +187,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'roofing',
     image: 'https://www.sofitel-frankfurt.com/wp-content/uploads/sites/92/2022/05/08-26-2020-Sofitel-Glam-Wedding-Frankfurt-Diana-Frohm%C3%BCller-Photography-www.dianafrohmueller.com-300-_-1170x780.jpg',
     category: 'outdoor',
-    totalCapacity: 150,
+    totalCapacity: 142, // 4×8 + 6×8 + 4×8 + 5×6 = 32 + 48 + 32 + 30
     tableTemplates: [
       { type: 'round', capacity: 8, count: 4, zone: 'front', nearDanceFloor: 'adjacent', placement: 'covered' },
       { type: 'round', capacity: 8, count: 6, zone: 'main', nearDanceFloor: 'near', placement: 'covered' },
@@ -191,7 +203,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'cottage',
     image: 'https://cdn0.hitched.co.uk/article/7982/3_2/1280/jpg/152897-preston-court-barn.jpeg',
     category: 'indoor',
-    totalCapacity: 160,
+    totalCapacity: 156, // 2×12 + 3×14 + 3×14 + 4×12 = 24 + 42 + 42 + 48
     tableTemplates: [
       { type: 'rectangular', capacity: 12, count: 2, zone: 'front', nearDanceFloor: 'adjacent', placement: 'indoor' },
       { type: 'rectangular', capacity: 14, count: 3, zone: 'main-floor', nearDanceFloor: 'near', placement: 'indoor' },
@@ -207,7 +219,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'church',
     image: 'https://www.elegantweddinginvites.com/wedding-blog/wp-content/uploads/2021/01/romantic-glass-chapel-wedding.jpg',
     category: 'intimate',
-    totalCapacity: 80,
+    totalCapacity: 86, // 3×8 + 4×8 + 5×6 = 24 + 32 + 30
     tableTemplates: [
       { type: 'round', capacity: 8, count: 3, zone: 'altar', nearDanceFloor: 'adjacent', placement: 'indoor' },
       { type: 'round', capacity: 8, count: 4, zone: 'nave', nearDanceFloor: 'near', placement: 'indoor' },
@@ -222,7 +234,7 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'beach_access',
     image: 'https://www.bogmallobeachresort.com/wp-content/themes/resort/images/w01.jpg',
     category: 'outdoor',
-    totalCapacity: 220,
+    totalCapacity: 208, // 4×10 + 6×10 + 6×10 + 6×8 = 40 + 60 + 60 + 48
     tableTemplates: [
       { type: 'round', capacity: 10, count: 4, zone: 'front', nearDanceFloor: 'adjacent', placement: 'covered' },
       { type: 'round', capacity: 10, count: 6, zone: 'pavilion', nearDanceFloor: 'near', placement: 'covered' },
@@ -292,8 +304,6 @@ export function createGuestFromExcel(
     group_id: category || null,
     importance: 0,
     tags: [],
-    must_sit_with: [],
-    must_not_sit_with: [],
   };
 }
 

@@ -72,7 +72,6 @@ def _default_demo_instance() -> Dict[str, Any]:
                 "id": "g3",
                 "name": "Charlie",
                 "group_id": "friends",
-                "must_not_sit_with": ["g4"],
             },
             {"id": "g4", "name": "Dana", "group_id": "friends"},
         ],

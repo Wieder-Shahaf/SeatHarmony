@@ -26,10 +26,10 @@ type TotLayout = {
 
 const demoPayload = {
   guests: [
-    { id: 'g1', name: 'Alice', group_id: 'family_a', importance: 2, tags: [], must_sit_with: [], must_not_sit_with: [] },
-    { id: 'g2', name: 'Bob', group_id: 'family_a', importance: 1, tags: [], must_sit_with: [], must_not_sit_with: [] },
-    { id: 'g3', name: 'Charlie', group_id: 'friends', importance: 0, tags: [], must_sit_with: [], must_not_sit_with: ['g4'] },
-    { id: 'g4', name: 'Dana', group_id: 'friends', importance: 0, tags: [], must_sit_with: [], must_not_sit_with: [] }
+    { id: 'g1', name: 'Alice', group_id: 'family_a', importance: 2, tags: [] },
+    { id: 'g2', name: 'Bob', group_id: 'family_a', importance: 1, tags: [] },
+    { id: 'g3', name: 'Charlie', group_id: 'friends', importance: 0, tags: [] },
+    { id: 'g4', name: 'Dana', group_id: 'friends', importance: 0, tags: [] }
   ],
   tables: [
     { id: 't1', name: 'Table 1', capacity: 4, zone: null, constraints: {} },

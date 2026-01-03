@@ -1,68 +1,83 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-
-type ConstraintSummary = {
-  satisfied_soft: Record<string, number>;
-  violated_soft: Record<string, number>;
-  hard_violations: string[];
-};
-
-type Layout = {
-  id: string;
-  assignments: Record<string, string>;
-  score: number;
-  objective_breakdown: Record<string, number>;
-  variant_label?: string | null;
-  variant_id?: string | null;
-  summary?: ConstraintSummary;
-};
-
-type TotLayout = {
-  value: number;
-  weights: Record<string, number>;
-  notes: string;
-  layout: Layout;
-};
-
-const demoPayload = {
-  guests: [
-    { id: 'g1', name: 'Alice', group_id: 'family_a', importance: 2, tags: [], must_sit_with: [], must_not_sit_with: [] },
-    { id: 'g2', name: 'Bob', group_id: 'family_a', importance: 1, tags: [], must_sit_with: [], must_not_sit_with: [] },
-    { id: 'g3', name: 'Charlie', group_id: 'friends', importance: 0, tags: [], must_sit_with: [], must_not_sit_with: ['g4'] },
-    { id: 'g4', name: 'Dana', group_id: 'friends', importance: 0, tags: [], must_sit_with: [], must_not_sit_with: [] }
-  ],
-  tables: [
-    { id: 't1', name: 'Table 1', capacity: 4, zone: null, constraints: {} },
-    { id: 't2', name: 'Table 2', capacity: 4, zone: null, constraints: {} }
-  ],
-  settings: {},
-  tot: {
-    depth: 2,
-    branching: 4,
-    n_generate: 4,
-    n_evaluate: 4,
-    top_k: 3
-  }
-};
+import React, { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useGuests } from '../src/context/GuestContext';
+import { TotLayout, LayoutRequest } from '../src/types/models';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 const Recommendations: React.FC = () => {
+  const navigate = useNavigate();
+  const { 
+    guests, 
+    tables, 
+    venueConfig,
+    selectedVenueLayout,
+    totParams, 
+    setLayouts: saveLayoutsToContext,
+    setSelectedLayoutIndex,
+    isLoading: contextLoading,
+    setIsLoading,
+    error: contextError,
+    setError: setContextError,
+  } = useGuests();
+  
   const [layouts, setLayouts] = useState<TotLayout[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  // Check if we have the required data
+  const hasRequiredData = guests.length > 0 && tables.length > 0;
+
+  // Build the request payload from context
+  const requestPayload: LayoutRequest | null = useMemo(() => {
+    if (!hasRequiredData) return null;
+    
+    return {
+      guests: guests.map(g => ({
+        id: g.id,
+        name: g.name,
+        group_id: g.group_id,
+        importance: g.importance,
+        tags: g.tags,
+      })),
+      tables: tables.map(t => ({
+        id: t.id,
+        name: t.name,
+        capacity: t.capacity,
+        zone: t.zone,
+        constraints: t.constraints,
+      })),
+      settings: venueConfig.settings,
+      tot: totParams,
+    };
+  }, [guests, tables, venueConfig.settings, totParams, hasRequiredData]);
 
   useEffect(() => {
+    // Don't fetch if we don't have required data or already fetched
+    if (!hasRequiredData || hasFetched || !requestPayload) {
+      return;
+    }
+
     const fetchLayouts = async () => {
       setLoading(true);
+      setIsLoading(true);
       setError(null);
+      
+      console.log('Fetching ToT layouts with:', {
+        guestCount: guests.length,
+        tableCount: tables.length,
+        venue: selectedVenueLayout?.name || 'Custom',
+        totParams,
+      });
+      
       try {
         const response = await fetch(`${API_BASE}/api/layouts/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(demoPayload)
+          body: JSON.stringify(requestPayload)
         });
 
         if (!response.ok) {
@@ -70,16 +85,53 @@ const Recommendations: React.FC = () => {
         }
 
         const data = await response.json();
-        setLayouts(data.layouts ?? []);
+        const fetchedLayouts = data.layouts ?? [];
+        
+        setLayouts(fetchedLayouts);
+        saveLayoutsToContext(fetchedLayouts);
+        setHasFetched(true);
+        
+        console.log(`Received ${fetchedLayouts.length} layout recommendations`);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch layouts');
+        setContextError(err.message || 'Failed to fetch layouts');
       } finally {
         setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchLayouts();
-  }, []);
+  }, [hasRequiredData, hasFetched, requestPayload]);
+
+  // Handle layout selection
+  const handleSelectLayout = (index: number) => {
+    setSelectedLayoutIndex(index);
+    navigate('/planner');
+  };
+
+  // Redirect if no data
+  if (!hasRequiredData && !loading) {
+    return (
+      <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+        <div className="text-center py-16">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">warning</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">No Data Available</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please upload your guest list and select a venue before generating recommendations.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link to="/dashboard" className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors">
+              Upload Guest List
+            </Link>
+            <Link to="/venues" className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+              Select Venue
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
@@ -88,8 +140,26 @@ const Recommendations: React.FC = () => {
           <span className="material-icons-round text-4xl text-primary">auto_awesome</span> Top ToT Recommendations
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          These seating options are generated by SeatHarmony&apos;s Tree-of-Thoughts search over Gurobi-backed layouts.
+          These seating options are generated by SeatHarmony&apos;s Tree-of-Thoughts search.
         </p>
+        
+        {/* Venue & Guest Info */}
+        <div className="mt-6 flex flex-wrap justify-center gap-4">
+          {selectedVenueLayout && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 dark:bg-primary/20 rounded-lg">
+              <span className="material-icons-round text-primary">{selectedVenueLayout.icon || 'location_on'}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>{selectedVenueLayout.name}</strong> • {tables.length} tables
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 px-4 py-2 bg-secondary/10 dark:bg-secondary/20 rounded-lg">
+            <span className="material-icons-round text-secondary">people</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              <strong>{guests.length}</strong> guests
+            </span>
+          </div>
+        </div>
       </div>
 
       {loading && (
@@ -145,8 +215,8 @@ const Recommendations: React.FC = () => {
                   <span className="material-icons-round">handshake</span> {variantLabel}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 italic">
-                  Objective weights: group cohesion {weights.group_cohesion?.toFixed(2) ?? '—'}, conflict avoidance{' '}
-                  {weights.conflict_avoidance?.toFixed(2) ?? '—'}, VIP {weights.vip_preference?.toFixed(2) ?? '—'}.
+                  Weights: Family {weights.family_cohesion?.toFixed(2) ?? '—'}, Social {weights.social_group_cohesion?.toFixed(2) ?? '—'}, 
+                  Mixing {weights.side_mixing?.toFixed(2) ?? '—'}, Relations {weights.relationship_priority?.toFixed(2) ?? '—'}
                 </p>
                 {notes && (
                   <p className="text-xs text-primary dark:text-accent mb-4">
@@ -174,18 +244,41 @@ const Recommendations: React.FC = () => {
                 )}
               </div>
               <div className="p-6 pt-0 mt-auto">
-                <Link
-                  to="/planner"
+                <button
+                  onClick={() => handleSelectLayout(index)}
                   className="w-full py-3 px-4 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-colors shadow-lg shadow-primary/20 flex justify-center items-center gap-2 group-hover:gap-3 transition-all"
                 >
                   <span className="material-icons-round text-sm">auto_awesome</span> Select & Refine
                   <span className="material-icons-round text-sm">arrow_forward</span>
-                </Link>
+                </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Table Preview */}
+      {selectedVenueLayout && (
+        <div className="mt-12">
+          <h3 className="text-center font-display text-xl text-text-main dark:text-secondary mb-6">
+            <span className="material-icons-round text-primary align-middle mr-2">table_restaurant</span>
+            Your Venue: {selectedVenueLayout.name}
+          </h3>
+          <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
+            {selectedVenueLayout.tableTemplates.map((template, i) => (
+              <div key={i} className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <span className="material-icons-round text-gray-400 text-sm">
+                  {template.type === 'round' ? 'circle' : 'crop_square'}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  {template.count}× {template.type} ({template.capacity} seats)
+                </span>
+                <span className="text-xs text-gray-400">{template.zone}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
