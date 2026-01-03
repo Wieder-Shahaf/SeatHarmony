@@ -9,8 +9,6 @@ class Guest:
     group_id: Optional[str] = None
     importance: int = 0
     tags: List[str] = field(default_factory=list)
-    must_sit_with: List[str] = field(default_factory=list)
-    must_not_sit_with: List[str] = field(default_factory=list)
 
 
 @dataclass

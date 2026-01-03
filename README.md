@@ -83,6 +83,19 @@ pip install -r requirements.txt
 pip install -e .    # install the `tot` package into the active venv
 ```
 
+### Configure API Key
+
+Create a `.env` file in the **project root** (not in `backend/`) with your API key:
+
+```bash
+# From project root
+echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+# OR for OpenAI:
+# echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
+```
+
+The backend will automatically load this `.env` file on startup. You can also set the environment variables directly if preferred.
+
 ### Start the FastAPI backend (for the React app)
 
 **Important:** Run this command from the **project root** (not from inside `backend/`):

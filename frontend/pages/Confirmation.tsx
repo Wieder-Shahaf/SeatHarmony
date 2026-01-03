@@ -1,12 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useGuests } from '../src/context/GuestContext';
+import { Guest } from '../src/types/models';
 
 const Confirmation: React.FC = () => {
+  const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
   const [zoom, setZoom] = useState(1);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
   const handleFit = () => setZoom(1);
+
+  // Get selected layout
+  const selectedLayout = layouts[selectedLayoutIndex] || null;
+  const assignments = selectedLayout?.layout?.assignments || {};
+
+  // Group guests by table
+  const guestsByTable = useMemo(() => {
+    const result: Record<string, Guest[]> = {};
+    tables.forEach(t => {
+      result[t.id] = [];
+    });
+    guests.forEach(guest => {
+      const tableId = assignments[guest.id];
+      if (tableId && result[tableId]) {
+        result[tableId].push(guest);
+      }
+    });
+    return result;
+  }, [guests, tables, assignments]);
+
+  // Count tables by category (unique group_ids at each table)
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    tables.forEach(table => {
+      const tableGuests = guestsByTable[table.id] || [];
+      const primaryCategory = tableGuests.length > 0 
+        ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
+        : 'Empty';
+      stats[primaryCategory] = (stats[primaryCategory] || 0) + 1;
+    });
+    return stats;
+  }, [tables, guestsByTable]);
+
+  // Get unseated count
+  const unseatedCount = guests.filter(g => !assignments[g.id]).length;
+
+  // Handle no data
+  if (!selectedLayout || guests.length === 0) {
+    return (
+      <div className="flex-grow flex items-center justify-center">
+        <div className="text-center py-16">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">check_circle</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">No Layout to Confirm</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please generate and select a layout first.
+          </p>
+          <Link to="/recommendations" className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors">
+            Generate Recommendations
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -18,7 +74,7 @@ const Confirmation: React.FC = () => {
             <span className="material-icons-round text-primary text-4xl">check_circle</span> Final Confirmation
           </h1>
           <p className="text-gray-500 dark:text-gray-400 max-w-2xl">
-            Review the bird's eye view of your seating arrangement. Tables are color-coded by group affiliation. Confirm layout to finalize seating charts.
+            Review the bird's eye view of your seating arrangement at {selectedVenueLayout?.name || 'your venue'}. Tables are color-coded by group affiliation. Confirm layout to finalize seating charts.
           </p>
         </div>
         <div className="flex gap-3">
@@ -41,34 +97,18 @@ const Confirmation: React.FC = () => {
               <span className="material-icons-round text-secondary">map</span> Groups Legend
             </h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-4 h-4 rounded-full bg-slate-400 block shadow-sm"></span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Groom's Side</span>
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">4 Tables</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-4 h-4 rounded-full bg-red-300 block shadow-sm"></span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Bride's Side</span>
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">5 Tables</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-4 h-4 rounded-full bg-primary block shadow-sm"></span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Mutual Friends</span>
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">3 Tables</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-4 h-4 rounded-full bg-secondary block shadow-sm"></span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">VIP / Head Table</span>
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">1 Table</span>
-              </div>
+              {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
+                const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
+                return (
+                  <div key={category} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-4 h-4 rounded-full ${colors[i % colors.length]} block shadow-sm`}></span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-[140px]">{category}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{count} Tables</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -78,21 +118,33 @@ const Confirmation: React.FC = () => {
             </h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-background-light dark:bg-gray-800 p-4 rounded-xl text-center border border-secondary/10 dark:border-gray-700">
-                <span className="block text-3xl font-display text-primary font-bold">128</span>
+                <span className="block text-3xl font-display text-primary font-bold">{guests.length}</span>
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Guests</span>
               </div>
               <div className="bg-background-light dark:bg-gray-800 p-4 rounded-xl text-center border border-secondary/10 dark:border-gray-700">
-                <span className="block text-3xl font-display text-primary font-bold">13</span>
+                <span className="block text-3xl font-display text-primary font-bold">{tables.length}</span>
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Tables</span>
               </div>
             </div>
             <div className="mt-auto">
               <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Unseated Guests</h4>
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800/30">
-                <span className="material-icons-round text-red-400 text-xl">warning</span>
-                <span className="text-sm text-red-600 dark:text-red-300">0 guests remaining</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">Great job! Everyone has a seat.</p>
+              {unseatedCount === 0 ? (
+                <>
+                  <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800/30">
+                    <span className="material-icons-round text-green-400 text-xl">check_circle</span>
+                    <span className="text-sm text-green-600 dark:text-green-300">Everyone is seated!</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 text-center">Great job! Everyone has a seat.</p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800/30">
+                    <span className="material-icons-round text-red-400 text-xl">warning</span>
+                    <span className="text-sm text-red-600 dark:text-red-300">{unseatedCount} guests remaining</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2 text-center">Some guests still need seats.</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -111,89 +163,41 @@ const Confirmation: React.FC = () => {
             </button>
           </div>
 
-          <div className="w-full h-full relative pattern-grid transition-transform duration-200" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
-            {/* Head Table */}
-            <div className="absolute top-[10%] left-1/2 transform -translate-x-1/2 flex flex-col items-center group cursor-pointer">
-              <div className="w-64 h-24 bg-secondary/20 dark:bg-secondary/10 border-2 border-secondary rounded-xl flex items-center justify-center relative shadow-lg">
-                <span className="font-display font-medium text-text-main dark:text-secondary">Head Table</span>
-                <div className="absolute -top-3 flex gap-4">
-                  {[1, 2, 3, 4].map(i => <div key={i} className="w-8 h-8 rounded-full bg-white dark:bg-gray-600 border border-secondary shadow-sm"></div>)}
-                </div>
-              </div>
-            </div>
-
+          <div className="w-full h-full relative pattern-grid transition-transform duration-200 p-8 overflow-auto" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
             {/* Dance Floor */}
-            <div className="absolute top-[35%] left-1/2 transform -translate-x-1/2 w-48 h-48 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center opacity-50">
+            <div className="mx-auto w-40 h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center opacity-50 mb-8">
               <span className="text-sm text-gray-400 uppercase tracking-widest font-light">Dance Floor</span>
             </div>
 
-            {/* Tables Groom Side */}
-            <div className="absolute top-[30%] left-[15%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-slate-400/20 dark:bg-slate-400/10 border-2 border-slate-400 flex items-center justify-center shadow-md">
-                <span className="font-bold text-slate-500 dark:text-slate-300 text-lg">1</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Smith Family</div>
-            </div>
+            {/* Dynamic Tables Grid */}
+            <div className="flex flex-wrap justify-center gap-6">
+              {tables.map((table, i) => {
+                const tableGuests = guestsByTable[table.id] || [];
+                const primaryCategory = tableGuests.length > 0 
+                  ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
+                  : 'Empty';
+                const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
+                const borderColors = ['border-slate-400', 'border-red-300', 'border-primary', 'border-secondary', 'border-amber-400', 'border-emerald-400'];
+                const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % colors.length;
+                const isRound = table.constraints?.tableType !== 'rectangular';
 
-            <div className="absolute top-[55%] left-[12%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-slate-400/20 dark:bg-slate-400/10 border-2 border-slate-400 flex items-center justify-center shadow-md">
-                <span className="font-bold text-slate-500 dark:text-slate-300 text-lg">2</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">College Friends</div>
+                return (
+                  <div key={table.id} className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
+                    <div className={`w-20 h-20 ${isRound ? 'rounded-full' : 'rounded-xl'} ${colors[colorIndex]}/20 dark:${colors[colorIndex]}/10 border-2 ${borderColors[colorIndex]} flex items-center justify-center shadow-md relative`}>
+                      <span className={`font-bold text-lg ${colors[colorIndex].replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
+                        {table.name.replace('Table ', '')}
+                      </span>
+                      <span className="absolute -bottom-1 -right-1 text-[10px] bg-white dark:bg-gray-700 px-1.5 rounded-full shadow text-gray-500">
+                        {tableGuests.length}/{table.capacity}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 max-w-[80px] truncate">
+                      {primaryCategory}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="absolute top-[75%] left-[20%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-slate-400/20 dark:bg-slate-400/10 border-2 border-slate-400 flex items-center justify-center shadow-md">
-                <span className="font-bold text-slate-500 dark:text-slate-300 text-lg">3</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Work Colleagues</div>
-            </div>
-
-            {/* Tables Bride Side */}
-            <div className="absolute top-[30%] right-[15%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-red-300/30 dark:bg-red-300/10 border-2 border-red-300 flex items-center justify-center shadow-md">
-                <span className="font-bold text-red-400 dark:text-red-300 text-lg">4</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Jones Family</div>
-            </div>
-
-            <div className="absolute top-[55%] right-[12%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-red-300/30 dark:bg-red-300/10 border-2 border-red-300 flex items-center justify-center shadow-md">
-                <span className="font-bold text-red-400 dark:text-red-300 text-lg">5</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Cousins</div>
-            </div>
-
-            <div className="absolute top-[75%] right-[20%] flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-red-300/30 dark:bg-red-300/10 border-2 border-red-300 flex items-center justify-center shadow-md">
-                <span className="font-bold text-red-400 dark:text-red-300 text-lg">6</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Childhood Friends</div>
-            </div>
-
-            {/* Mutuals */}
-            <div className="absolute bottom-[10%] left-[40%] transform -translate-x-1/2 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-primary/20 dark:bg-primary/10 border-2 border-primary flex items-center justify-center shadow-md">
-                <span className="font-bold text-primary text-lg">7</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Mutuals</div>
-            </div>
-
-            <div className="absolute bottom-[10%] right-[40%] transform translate-x-1/2 flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-              <div className="w-24 h-24 rounded-full bg-primary/20 dark:bg-primary/10 border-2 border-primary flex items-center justify-center shadow-md">
-                <span className="font-bold text-primary text-lg">8</span>
-              </div>
-              <div className="absolute inset-0 -m-3 border-[6px] border-dotted border-gray-200 dark:border-gray-600 rounded-full opacity-40"></div>
-              <div className="mt-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Kids Table</div>
-            </div>
-
           </div>
         </div>
       </div>
@@ -202,71 +206,54 @@ const Confirmation: React.FC = () => {
       <div className="mt-8">
         <h2 className="font-display text-2xl text-text-main dark:text-secondary mb-4">Table Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
-            <div className="h-2 bg-slate-400 w-full"></div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-gray-800 dark:text-gray-200">Table 1</h4>
-                <span className="text-xs font-medium bg-slate-400/10 text-slate-500 px-2 py-1 rounded">Groom</span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">8 Seats • Round Table</p>
-              <ul className="space-y-1">
-                {['John Smith (Father)', 'Mary Smith (Mother)', 'Uncle Bob', 'Aunt Sarah', 'Cousin Mike'].map((n, i) => (
-                  <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> {n}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          {tables.slice(0, 8).map((table, i) => {
+            const tableGuests = guestsByTable[table.id] || [];
+            const primaryCategory = tableGuests.length > 0 
+              ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
+              : 'Empty';
+            const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
+            const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % colors.length;
+            const isRound = table.constraints?.tableType !== 'rectangular';
 
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
-            <div className="h-2 bg-red-300 w-full"></div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-gray-800 dark:text-gray-200">Table 4</h4>
-                <span className="text-xs font-medium bg-red-300/20 text-red-400 dark:text-red-300 px-2 py-1 rounded">Bride</span>
+            return (
+              <div key={table.id} className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
+                <div className={`h-2 ${colors[colorIndex]} w-full`}></div>
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="font-bold text-gray-800 dark:text-gray-200">{table.name}</h4>
+                    <span className={`text-xs font-medium ${colors[colorIndex]}/20 px-2 py-1 rounded truncate max-w-[80px]`}>
+                      {primaryCategory}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    {table.capacity} Seats • {isRound ? 'Round' : 'Rectangular'} Table
+                    {table.zone && ` • ${table.zone}`}
+                  </p>
+                  <ul className="space-y-1 max-h-32 overflow-y-auto">
+                    {tableGuests.slice(0, 6).map((guest) => (
+                      <li key={guest.id} className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${guest.importance > 0 ? 'font-bold' : ''}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${guest.importance > 0 ? 'bg-secondary' : 'bg-gray-300'}`}></div>
+                        <span className="truncate">{guest.name}</span>
+                      </li>
+                    ))}
+                    {tableGuests.length > 6 && (
+                      <li className="text-xs text-gray-400 italic">+{tableGuests.length - 6} more...</li>
+                    )}
+                    {tableGuests.length === 0 && (
+                      <li className="text-xs text-gray-400 italic">No guests assigned</li>
+                    )}
+                  </ul>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">8 Seats • Round Table</p>
-              <ul className="space-y-1">
-                {['Robert Jones (Father)', 'Linda Jones (Mother)', 'Grandma Betty', 'Grandpa Joe'].map((n, i) => (
-                  <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> {n}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
-            <div className="h-2 bg-primary w-full"></div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-gray-800 dark:text-gray-200">Table 7</h4>
-                <span className="text-xs font-medium bg-primary/20 text-primary px-2 py-1 rounded">Mutual</span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">10 Seats • Round Table</p>
-              <ul className="space-y-1">
-                {['Sarah Connor', 'Kyle Reese', 'Peter Parker', 'Mary Jane'].map((n, i) => (
-                  <li key={i} className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div> {n}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
-            <div className="h-2 bg-secondary w-full"></div>
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <h4 className="font-bold text-gray-800 dark:text-gray-200">Head Table</h4>
-                <span className="text-xs font-medium bg-secondary/20 text-text-main dark:text-secondary px-2 py-1 rounded">VIP</span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">12 Seats • Rectangular</p>
-              <ul className="space-y-1">
-                {['Groom', 'Bride', 'Best Man', 'Maid of Honor'].map((n, i) => (
-                  <li key={i} className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${i < 2 ? 'font-bold' : ''}`}><div className={`w-1.5 h-1.5 rounded-full ${i < 2 ? 'bg-secondary' : 'bg-gray-300'}`}></div> {n}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
+            );
+          })}
         </div>
+        
+        {tables.length > 8 && (
+          <p className="text-center text-sm text-gray-400 mt-4">
+            Showing first 8 tables. {tables.length - 8} more tables available.
+          </p>
+        )}
       </div>
     </div>
   );

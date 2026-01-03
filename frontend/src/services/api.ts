@@ -10,6 +10,8 @@ import {
   LayoutResponse,
   TotParams,
   DEFAULT_TOT_PARAMS,
+  ExplainGuestsRequest,
+  GuestExplanationsResponse,
 } from '../types/models';
 
 // Base URL from environment or default to localhost
@@ -70,6 +72,28 @@ export async function explainLayout(
 }
 
 /**
+ * Get explanations for all guests in a layout (batched by table)
+ */
+export async function explainGuestsSeating(
+  request: ExplainGuestsRequest
+): Promise<GuestExplanationsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/layouts/explain-guests`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to explain guests: ${response.status} - ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Health check - verify backend is running
  */
 export async function healthCheck(): Promise<boolean> {
@@ -94,8 +118,6 @@ export function prepareGuestsForApi(guests: Guest[]): Guest[] {
     group_id: guest.group_id,
     importance: guest.importance || 0,
     tags: guest.tags || [],
-    must_sit_with: guest.must_sit_with || [],
-    must_not_sit_with: guest.must_not_sit_with || [],
   }));
 }
 
