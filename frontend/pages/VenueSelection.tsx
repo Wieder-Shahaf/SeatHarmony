@@ -83,7 +83,7 @@ const VenueSelection: React.FC = () => {
       {/* Header */}
       <div className="mb-12 text-center max-w-2xl mx-auto">
         <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">
-          <span className="material-icons-round text-4xl text-primary">domain</span> Select Your Venue Layout
+          Select Your Venue Layout
         </h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
           Choose a floor plan that matches your event space. SeatHarmony will optimize seating for your{' '}
@@ -254,7 +254,7 @@ const VenueSelection: React.FC = () => {
 
       {/* Sticky Bottom Bar */}
       {selectedVenue && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img

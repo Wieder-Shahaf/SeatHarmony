@@ -59,53 +59,57 @@ const LandingPage: React.FC = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
 
-          // Convert to JSON with header row
-          const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet);
+          // Convert to 2D array to handle headers manually and robustly
+          const rows = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
 
-          if (jsonData.length === 0) {
+          if (!rows || rows.length === 0) {
             reject(new Error('The spreadsheet appears to be empty.'));
             return;
           }
 
-          // Check for required columns (case-insensitive)
-          const firstRow = jsonData[0];
-          const columns = Object.keys(firstRow).map(k => k.toLowerCase());
+          // Row 0 is the header row
+          const headerRow = rows[0] as string[];
+          const columns = headerRow.map(c => String(c).trim().toLowerCase());
 
           // Debug: log detected columns
-          console.log('Detected columns:', Object.keys(firstRow));
-          console.log('First row data:', firstRow);
+          console.log('Detected columns:', columns);
 
-          // Support "Proper Names" column (column W in the Excel)
-          const hasName = columns.some(c => c === 'proper names' || c === 'name');
-          const hasCategory = columns.some(c => c === 'category');
+          // Find column indices
+          const nameIndex = columns.findIndex(c => c === 'proper names' || c === 'name' || c === 'full guest name');
+          const categoryIndex = columns.findIndex(c => c === 'category');
 
-          if (!hasName || !hasCategory) {
+          if (nameIndex === -1 || categoryIndex === -1) {
             const missing = [];
-            if (!hasName) missing.push('"Proper Names"');
-            if (!hasCategory) missing.push('"Category"');
+            if (nameIndex === -1) missing.push('"Full Guest Name", "Proper Names", or "Name"');
+            if (categoryIndex === -1) missing.push('"Category"');
+
             reject(new Error(`Missing required column(s): ${missing.join(' and ')}. Please ensure your spreadsheet has the required columns.`));
             return;
           }
 
-          // Find the actual column names (preserving original case)
-          // Prefer "Proper Names" over "Name" if both exist
-          const nameCol = Object.keys(firstRow).find(k => k.toLowerCase() === 'proper names')
-            || Object.keys(firstRow).find(k => k.toLowerCase() === 'name')!;
-          const categoryCol = Object.keys(firstRow).find(k => k.toLowerCase() === 'category')!;
+          // Check if there are any data rows
+          if (rows.length < 2) {
+            reject(new Error('The spreadsheet appears to be empty (only headers found).'));
+            return;
+          }
 
-          // Parse guests
-          const guests: Guest[] = jsonData
-            .filter(row => row[nameCol] && String(row[nameCol]).trim() !== '')
+          // Parse guests from data rows
+          const guests: Guest[] = rows.slice(1)
+            .filter(row => {
+              // Ensure row has data in the name column
+              const val = row[nameIndex];
+              return val && String(val).trim() !== '';
+            })
             .map((row, index) => {
-              const name = String(row[nameCol]).trim();
-              const category = row[categoryCol] ? String(row[categoryCol]).trim() : '';
+              const name = String(row[nameIndex]).trim();
+              const category = row[categoryIndex] ? String(row[categoryIndex]).trim() : '';
               const id = `guest-${index + 1}-${name.toLowerCase().replace(/\s+/g, '-')}`;
 
               return createGuestFromExcel(id, name, category);
             });
 
           if (guests.length === 0) {
-            reject(new Error('No valid guests found. Please ensure the "Name" column has data.'));
+            reject(new Error('The spreadsheet appears to be empty (no valid guests found).'));
             return;
           }
 

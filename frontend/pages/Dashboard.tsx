@@ -71,10 +71,21 @@ const groupStyles = [
   { icon: 'spa', iconBg: 'bg-[#6B8E23]/20', iconColor: 'text-[#6B8E23]', borderColor: 'border-[#6B8E23]', avatarBg: '6B8E23' },
 ];
 
+// Deterministic hash to pick a stable color index based on group name
+function getStableGroupStyleIndex(name: string, max: number): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % max;
+}
+
 // Convert GuestGroup from context to display format
 function convertToDisplayData(groups: GuestGroup[]): GroupDisplayData[] {
-  return groups.map((group, index) => {
-    const style = groupStyles[index % groupStyles.length];
+  return groups.map((group) => {
+    // Use stable hash instead of array index so color persists across reorders/filters
+    const styleIndex = getStableGroupStyleIndex(group.name, groupStyles.length);
+    const style = groupStyles[styleIndex];
     const guestCount = group.guests.length;
 
     return {
@@ -115,7 +126,7 @@ const Dashboard: React.FC = () => {
     setDragSourceGroupName(sourceGroupName);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', JSON.stringify({ guestId: guest.id, guestName: guest.name }));
-    
+
     // Add a slight delay to show drag styling
     setTimeout(() => {
       const element = e.target as HTMLElement;
@@ -148,7 +159,7 @@ const Dashboard: React.FC = () => {
   const handleDrop = (e: React.DragEvent, targetGroupName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!draggedGuest || targetGroupName === dragSourceGroupName) {
       setDraggedGuest(null);
       setDragOverGroupId(null);
@@ -158,9 +169,9 @@ const Dashboard: React.FC = () => {
 
     // Update the guest's category
     updateGuest(draggedGuest.id, { group_id: targetGroupName });
-    
+
     console.log(`Moved guest "${draggedGuest.name}" to category "${targetGroupName}"`);
-    
+
     // Reset drag state
     setDraggedGuest(null);
     setDragOverGroupId(null);
@@ -302,7 +313,7 @@ const Dashboard: React.FC = () => {
         <div>
           <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Guest Group Overview</h2>
           <p className="text-gray-600 dark:text-gray-300 max-w-xl">
-            Review and organize your guests into logical groups beneath. This helps the AI understand relationships and ensure everyone is seated with their tribe. Scroll
+            Review and organize your guests into logical groups beneath. This helps the AI understand relationships and ensure everyone is seated with their group.
           </p>
         </div>
         <div className="flex items-center gap-3 relative" ref={filterRef}>
@@ -474,48 +485,49 @@ const Dashboard: React.FC = () => {
                   onDragOver={(e) => handleDragOver(e, group.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, group.name)}
-                  className={`absolute inset-0 [backface-visibility:hidden] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} cursor-pointer flex flex-col transition-all duration-200 ${
-                    dragOverGroupId === group.id && dragSourceGroupName !== group.name
-                      ? 'ring-4 ring-primary ring-opacity-50 scale-[1.02] bg-primary/5'
-                      : ''
-                  } ${draggedGuest && dragSourceGroupName !== group.name ? 'hover:ring-2 hover:ring-primary/30' : ''}`}
+                  className={`absolute inset-0 [backface-visibility:hidden] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} cursor-pointer flex flex-col transition-all duration-200 ${dragOverGroupId === group.id && dragSourceGroupName !== group.name
+                    ? 'ring-4 ring-primary ring-opacity-50 scale-[1.02] bg-primary/5'
+                    : ''
+                    } ${draggedGuest && dragSourceGroupName !== group.name ? 'hover:ring-2 hover:ring-primary/30' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <h3 className="font-display text-xl text-text-main dark:text-white font-semibold">{group.name}</h3>
                     </div>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMenuOpenGroupId(menuOpenGroupId === group.id ? null : group.id);
-                        }}
-                        className="text-gray-400 hover:text-primary p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <span className="material-icons-round">more_vert</span>
-                      </button>
+                    {group.name !== 'Uncategorized' && (
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuOpenGroupId(menuOpenGroupId === group.id ? null : group.id);
+                          }}
+                          className="text-gray-400 hover:text-primary p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <span className="material-icons-round">more_vert</span>
+                        </button>
 
-                      {/* Dropdown Menu */}
-                      {menuOpenGroupId === group.id && (
-                        <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 z-50 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteGroup(group.id);
-                            }}
-                            className="w-full px-3 py-2.5 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100/50 dark:hover:from-red-900/30 dark:hover:to-red-800/20 rounded-lg flex items-center gap-3 transition-all group/delete"
-                          >
-                            <span className="w-8 h-8 bg-red-100 dark:bg-red-900/40 rounded-lg flex items-center justify-center group-hover/delete:scale-110 transition-transform">
-                              <span className="material-icons-round text-lg text-red-500">delete_outline</span>
-                            </span>
-                            <div>
-                              <span className="block">Delete Group</span>
-                              <span className="text-xs text-gray-400 font-normal"></span>
-                            </div>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                        {/* Dropdown Menu */}
+                        {menuOpenGroupId === group.id && (
+                          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 z-50 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteGroup(group.id);
+                              }}
+                              className="w-full px-3 py-2.5 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100/50 dark:hover:from-red-900/30 dark:hover:to-red-800/20 rounded-lg flex items-center gap-3 transition-all group/delete"
+                            >
+                              <span className="w-8 h-8 bg-red-100 dark:bg-red-900/40 rounded-lg flex items-center justify-center group-hover/delete:scale-110 transition-transform">
+                                <span className="material-icons-round text-lg text-red-500">delete_outline</span>
+                              </span>
+                              <div>
+                                <span className="block">Delete Group</span>
+                                <span className="text-xs text-gray-400 font-normal"></span>
+                              </div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3 mb-6">
@@ -605,11 +617,10 @@ const Dashboard: React.FC = () => {
                   onDragOver={(e) => handleDragOver(e, group.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, group.name)}
-                  className={`absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)_translateZ(1px)] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} flex flex-col transition-all duration-200 ${isFlipped ? 'pointer-events-auto z-10' : 'pointer-events-none z-0'} ${
-                    dragOverGroupId === group.id && dragSourceGroupName !== group.name
-                      ? 'ring-4 ring-primary ring-opacity-50 bg-primary/5'
-                      : ''
-                  }`}
+                  className={`absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)_translateZ(1px)] bg-white dark:bg-surface-dark rounded-2xl p-6 border-t-4 ${group.borderColor} flex flex-col transition-all duration-200 ${isFlipped ? 'pointer-events-auto z-10' : 'pointer-events-none z-0'} ${dragOverGroupId === group.id && dragSourceGroupName !== group.name
+                    ? 'ring-4 ring-primary ring-opacity-50 bg-primary/5'
+                    : ''
+                    }`}
                 >
                   <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
                     <h3 className="font-display font-bold text-lg text-text-main dark:text-white truncate pr-2">{group.name}</h3>
@@ -640,14 +651,13 @@ const Dashboard: React.FC = () => {
                     {group.guestItems
                       .filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
                       .map((guest) => (
-                        <div 
-                          key={guest.id} 
+                        <div
+                          key={guest.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, guest, group.name)}
                           onDragEnd={handleDragEnd}
-                          className={`py-2 flex items-center gap-2 border-b border-gray-50 dark:border-gray-800 last:border-b-0 cursor-grab active:cursor-grabbing hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-1 -mx-1 transition-colors ${
-                            draggedGuest?.id === guest.id ? 'opacity-50 bg-gray-100 dark:bg-gray-700' : ''
-                          }`}
+                          className={`py-2 flex items-center gap-2 border-b border-gray-50 dark:border-gray-800 last:border-b-0 cursor-grab active:cursor-grabbing hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-1 -mx-1 transition-colors ${draggedGuest?.id === guest.id ? 'opacity-50 bg-gray-100 dark:bg-gray-700' : ''
+                            }`}
                         >
                           <span className="material-icons-round text-gray-300 dark:text-gray-600 text-sm flex-shrink-0">drag_indicator</span>
                           <img
@@ -664,7 +674,7 @@ const Dashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Guest count footer with drag hint */}
                   <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400 text-center">
                     {group.guestItems.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase())).length} of {group.guestCount} guests
@@ -681,11 +691,11 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <span className="material-icons-round text-primary text-2xl">people</span>
+            <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="material-icons-round text-primary text-3xl">people</span>
             </div>
             <div>
               <h4 className="font-display text-lg text-text-main dark:text-white">{totalGuests} Guests Ready</h4>
