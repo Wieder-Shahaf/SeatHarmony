@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 import os
+import time
 
 # Load .env file early (before any other imports that might use env vars)
 from dotenv import load_dotenv
@@ -14,12 +17,16 @@ elif (Path(__file__).parent / ".env").exists():
     # Fallback to backend/.env
     load_dotenv(Path(__file__).parent / ".env")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, RootModel
 
 from .seat_harmony_task import SeatHarmonyTask, SeatHarmonyState
 from .models import layout_to_dict
+from .logger import get_logger, set_request_id, get_request_id
+
+# Initialize logger for this module
+logger = get_logger("api")
 
 
 class GuestIn(BaseModel):
@@ -44,9 +51,9 @@ class SettingsIn(RootModel[Dict[str, Any]]):
 
 class TotParams(BaseModel):
     depth: int = 2
-    branching: int = 4
-    n_generate: int = 4
-    n_evaluate: int = 4
+    branching: int = 3    # 3 children per node (parallel threads)
+    n_generate: int = 3   # Generate 3 thought variants
+    n_evaluate: int = 3   # Evaluate top 3
     top_k: int = 3
 
 
@@ -83,18 +90,146 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Verify API key is available on startup."""
+    logger.info("=" * 60)
+    logger.info("SeatHarmony API starting up...")
+    logger.info("=" * 60)
+
     # .env is already loaded at module import time (above)
     # Just verify the key is available
     gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
-    
+
     if gemini_key:
-        print(f"✓ GEMINI_API_KEY found in environment")
+        logger.info("GEMINI_API_KEY found in environment")
     elif openai_key:
-        print(f"✓ OPENAI_API_KEY found in environment")
+        logger.info("OPENAI_API_KEY found in environment")
     else:
-        print("⚠ Warning: No API key found. Set GEMINI_API_KEY or OPENAI_API_KEY in .env file")
-        print(f"  (Looked for .env at: {env_file} or {Path(__file__).parent / '.env'})")
+        logger.warning("No API key found. Set GEMINI_API_KEY or OPENAI_API_KEY in .env file")
+        logger.warning(f"Looked for .env at: {env_file} or {Path(__file__).parent / '.env'}")
+
+    logger.info("API startup complete - ready to receive requests")
+
+
+def _apply_thought_worker(
+    task: SeatHarmonyTask,
+    state: SeatHarmonyState,
+    thought: str,
+    worker_id: int = 0,
+) -> Tuple[SeatHarmonyState, str]:
+    """Worker function to apply a single thought - runs in a thread."""
+    thread_name = threading.current_thread().name
+    start_time = time.time()
+    logger.debug(f"Thread [{thread_name}] worker={worker_id} | Applying thought: {thought}")
+
+    new_state = task.apply_thought(state, thought)
+
+    duration_ms = (time.time() - start_time) * 1000
+    score = new_state.layout.score if new_state.layout else 0.0
+    logger.debug(f"Thread [{thread_name}] worker={worker_id} | Completed thought: {thought} | score={score:.2f} | {duration_ms:.0f}ms")
+
+    return new_state, thought
+
+
+def _parallel_tot_bfs(
+    instance: Dict[str, Any],
+    depth: int,
+    branching: int = 3,  # Default branching factor of 3
+    n_generate: int = 3,
+    n_evaluate: int = 3,
+) -> List[Tuple[SeatHarmonyState, float]]:
+    """
+    Parallel Tree-of-Thoughts BFS with concurrent node expansion.
+
+    - Branching factor of 3: each node has up to 3 children
+    - One thread per node at the same level
+    - Nodes at the same depth are computed concurrently
+    - Uses ThreadPoolExecutor for parallel execution
+
+    Returns a list of (state, value) pairs.
+    """
+    tot_start_time = time.time()
+    logger.info(f"ToT BFS starting | depth={depth} branching={branching} n_generate={n_generate} n_evaluate={n_evaluate}")
+
+    task = SeatHarmonyTask()
+    root = task.get_initial_state(instance)
+    logger.debug(f"Initial state created | guests={len(root.guests)} tables={len(root.venue.tables)}")
+
+    frontier: List[SeatHarmonyState] = [root]
+    scored_states: List[Tuple[SeatHarmonyState, float]] = []
+
+    # Thread-safe list for collecting results
+    results_lock = threading.Lock()
+
+    for level in range(depth):
+        level_start_time = time.time()
+        logger.info(f"ToT Level {level + 1}/{depth} starting | frontier_size={len(frontier)}")
+
+        new_frontier: List[SeatHarmonyState] = []
+        level_scored: List[Tuple[SeatHarmonyState, float]] = []
+
+        # Collect all (state, thought) pairs to process at this level
+        work_items: List[Tuple[SeatHarmonyState, str]] = []
+        for state in frontier:
+            thoughts = task.generate_thoughts(state, n_generate)[:branching]
+            for thought in thoughts:
+                work_items.append((state, thought))
+
+        logger.info(f"ToT Level {level + 1}/{depth} | Generated {len(work_items)} work items (thoughts)")
+
+        # Process all work items concurrently
+        # Each node gets its own thread, nodes at same level run in parallel
+        max_workers = min(len(work_items), branching * len(frontier))
+        logger.debug(f"Spawning ThreadPoolExecutor | max_workers={max_workers}")
+
+        completed_count = 0
+        failed_count = 0
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(_apply_thought_worker, task, state, thought, idx): (state, thought)
+                for idx, (state, thought) in enumerate(work_items)
+            }
+
+            for future in as_completed(futures):
+                try:
+                    child_state, thought = future.result()
+                    if child_state.layout is not None:
+                        # Evaluate this child
+                        evaluated = task.evaluate_states([child_state], n_evaluate)
+                        with results_lock:
+                            level_scored.extend(evaluated)
+                        completed_count += 1
+                except Exception as e:
+                    failed_count += 1
+                    logger.warning(f"Thread failed for thought | error={type(e).__name__}: {e}")
+                    continue
+
+        level_duration_ms = (time.time() - level_start_time) * 1000
+        logger.info(f"ToT Level {level + 1}/{depth} completed | success={completed_count} failed={failed_count} | {level_duration_ms:.0f}ms")
+
+        # Add this level's results to overall scored states
+        scored_states.extend(level_scored)
+
+        # Select top states for next level's frontier
+        # Group by parent state and take best from each, then overall best
+        level_sorted = sorted(level_scored, key=lambda x: x[1], reverse=True)
+        new_frontier = [s for s, _ in level_sorted[:branching]]
+
+        if level_sorted:
+            top_scores = [f"{s[1]:.2f}" for s in level_sorted[:3]]
+            logger.debug(f"ToT Level {level + 1}/{depth} | Top scores: {', '.join(top_scores)}")
+
+        frontier = new_frontier
+
+        # Early termination if no valid states
+        if not frontier:
+            logger.warning(f"ToT early termination at level {level + 1} - no valid states in frontier")
+            break
+
+    tot_duration_ms = (time.time() - tot_start_time) * 1000
+    logger.info(f"ToT BFS completed | total_states={len(scored_states)} | {tot_duration_ms:.0f}ms")
+
+    return scored_states
 
 
 def _simple_tot_bfs(
@@ -105,37 +240,28 @@ def _simple_tot_bfs(
     n_evaluate: int,
 ) -> List[Tuple[SeatHarmonyState, float]]:
     """
-    Server-side version of the lightweight Tree-of-Thoughts-style BFS.
-    Returns a list of (state, value) pairs.
+    Wrapper that calls the parallel ToT implementation.
+    Kept for backward compatibility.
     """
-    task = SeatHarmonyTask()
-    root = task.get_initial_state(instance)
-
-    frontier: List[SeatHarmonyState] = [root]
-    scored_states: List[Tuple[SeatHarmonyState, float]] = []
-
-    for _ in range(depth):
-        new_frontier: List[SeatHarmonyState] = []
-
-        for state in frontier:
-            thoughts = task.generate_thoughts(state, n_generate)[:branching]
-            children: List[SeatHarmonyState] = [
-                task.apply_thought(state, t) for t in thoughts
-            ]
-
-            evaluated = task.evaluate_states(children, n_evaluate)
-            scored_states.extend(evaluated)
-
-            evaluated_sorted = sorted(evaluated, key=lambda x: x[1], reverse=True)
-            new_frontier.extend([s for s, _ in evaluated_sorted[:branching]])
-
-        frontier = new_frontier
-
-    return scored_states
+    return _parallel_tot_bfs(
+        instance=instance,
+        depth=depth,
+        branching=branching,
+        n_generate=n_generate,
+        n_evaluate=n_evaluate,
+    )
 
 
 @app.post("/api/layouts/generate")
 def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
+    # Set unique request ID for this request
+    req_id = set_request_id()
+    request_start_time = time.time()
+
+    logger.info("=" * 50)
+    logger.info(f"POST /api/layouts/generate | guests={len(req.guests)} tables={len(req.tables)}")
+    logger.info(f"ToT params: depth={req.tot.depth} branching={req.tot.branching} n_generate={req.tot.n_generate} top_k={req.tot.top_k}")
+
     instance: Dict[str, Any] = {
         "guests": [g.dict() for g in req.guests],
         "tables": [t.dict() for t in req.tables],
@@ -153,6 +279,7 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
     # Sort by value and take top_k distinct layouts
     unique_layouts: List[Dict[str, Any]] = []
     seen_ids = set()
+    duplicates_skipped = 0
 
     for state, value in sorted(scored_states, key=lambda x: x[1], reverse=True):
         if state.layout is None:
@@ -160,6 +287,7 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
         layout_dict = layout_to_dict(state.layout)
         layout_id = (layout_dict["id"], tuple(sorted(layout_dict["assignments"].items())))
         if layout_id in seen_ids:
+            duplicates_skipped += 1
             continue
         seen_ids.add(layout_id)
         unique_layouts.append(
@@ -172,6 +300,17 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
         )
         if len(unique_layouts) >= req.tot.top_k:
             break
+
+    request_duration_ms = (time.time() - request_start_time) * 1000
+    logger.info(f"Response: {len(unique_layouts)} unique layouts (skipped {duplicates_skipped} duplicates)")
+
+    if unique_layouts:
+        scores = [f"{l['value']:.2f}" for l in unique_layouts[:3]]
+        notes = [l['notes'] for l in unique_layouts[:3]]
+        logger.info(f"Top layouts: scores={scores} strategies={notes}")
+
+    logger.info(f"POST /api/layouts/generate completed | {request_duration_ms:.0f}ms")
+    logger.info("=" * 50)
 
     return {"layouts": unique_layouts}
 
@@ -235,6 +374,10 @@ def _explain_guests_batch(
     Generate explanations for all guests at a table in a single LLM call.
     Returns a dict mapping guest_id -> explanation.
     """
+    table_name = table.get("name", f"Table {table_index + 1}")
+    logger.debug(f"Generating explanations for {table_name} | guests={len(table_guests)}")
+    batch_start_time = time.time()
+
     from tot.models import gpt
     
     # Build table context
@@ -315,7 +458,11 @@ Now generate ONE natural, concise sentence for each of the {len(table_guests)} g
 
     try:
         # Reduced max_tokens since we're generating one sentence per guest
+        logger.debug(f"Calling LLM for {table_name} explanations | model=gpt-4")
+        llm_start_time = time.time()
         response = gpt(prompt, model="gpt-4", temperature=0.7, max_tokens=400, n=1)[0]
+        llm_duration_ms = (time.time() - llm_start_time) * 1000
+        logger.debug(f"LLM response received | {llm_duration_ms:.0f}ms | response_len={len(response)}")
         
         # Parse the response to extract individual explanations
         explanations = {}
@@ -380,30 +527,38 @@ Now generate ONE natural, concise sentence for each of the {len(table_guests)} g
                 result[guest_id] = explanation
         
         # If parsing failed or incomplete, provide fallback explanations for missing guests
+        fallback_count = 0
         for g in table_guests:
             if g["id"] not in result:
                 # Create natural fallback explanation in third person
                 guest_name = g["name"]
                 category = g.get("group_id") or "Uncategorized"
-                
+
                 # Build natural explanation
                 if "Family" in category:
                     explanation = f"{guest_name} sits with family members as part of the seating arrangement."
                 else:
                     explanation = f"{guest_name} is seated here as part of the optimized arrangement."
-                
+
                 result[g["id"]] = explanation
-        
+                fallback_count += 1
+
+        batch_duration_ms = (time.time() - batch_start_time) * 1000
+        logger.debug(f"{table_name} explanations complete | parsed={len(result) - fallback_count} fallback={fallback_count} | {batch_duration_ms:.0f}ms")
+
         return result
         
     except Exception as e:
         # Fallback if LLM call fails
-        print(f"Error generating explanations: {e}")
+        batch_duration_ms = (time.time() - batch_start_time) * 1000
+        logger.error(f"LLM explanation failed for {table_name} | error={type(e).__name__}: {e} | {batch_duration_ms:.0f}ms")
+        logger.info(f"Using fallback explanations for {table_name}")
+
         fallback_explanations = {}
         for g in table_guests:
             guest_name = g["name"]
             category = g.get("group_id") or "Uncategorized"
-            
+
             if "Family" in category:
                 fallback_explanations[g["id"]] = f"{guest_name} sits with family members as part of the seating arrangement."
             else:
@@ -417,10 +572,17 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
     Generate explanations for all guests, batched by table.
     Returns a dict mapping guest_id -> explanation.
     """
+    req_id = set_request_id()
+    request_start_time = time.time()
+
+    logger.info("=" * 50)
+    logger.info(f"POST /api/layouts/explain-guests | guests={len(req.guests)} tables={len(req.tables)}")
+    logger.info(f"Strategy: {req.notes}")
+
     assignments = req.layout.get("assignments", {})
     all_guests_dict = {g.id: g.dict() for g in req.guests}
     all_tables_dict = {t.id: t.dict() for t in req.tables}
-    
+
     # Group guests by table
     table_to_guests: Dict[str, List[Dict[str, Any]]] = {}
     for guest_id, table_id in assignments.items():
@@ -428,18 +590,22 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
             table_to_guests[table_id] = []
         if guest_id in all_guests_dict:
             table_to_guests[table_id].append(all_guests_dict[guest_id])
-    
+
+    logger.debug(f"Guests grouped into {len(table_to_guests)} tables")
+
     # Generate explanations for each table (batched)
     all_explanations: Dict[str, str] = {}
     tables_list = list(req.tables)
-    
-    for table_id, table_guests in table_to_guests.items():
+
+    for table_idx, (table_id, table_guests) in enumerate(table_to_guests.items()):
         if not table_guests or table_id not in all_tables_dict:
             continue
-        
+
         table = all_tables_dict[table_id]
         table_index = next((i for i, t in enumerate(tables_list) if t.id == table_id), 0)
-        
+
+        logger.debug(f"Processing table {table_idx + 1}/{len(table_to_guests)} | {table.get('name', table_id)} | {len(table_guests)} guests")
+
         # Generate batch explanation for this table
         table_explanations = _explain_guests_batch(
             table_guests=table_guests,
@@ -451,9 +617,13 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
             weights=req.weights,
             notes=req.notes,
         )
-        
+
         all_explanations.update(table_explanations)
-    
+
+    request_duration_ms = (time.time() - request_start_time) * 1000
+    logger.info(f"Generated {len(all_explanations)} guest explanations | {request_duration_ms:.0f}ms")
+    logger.info("=" * 50)
+
     return {"explanations": all_explanations}
 
 
