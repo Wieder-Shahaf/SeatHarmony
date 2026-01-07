@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { TotLayout, LayoutRequest } from '../src/types/models';
@@ -25,6 +25,9 @@ const Recommendations: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
+
+  // Use ref to prevent double-fetch in StrictMode (ref persists across re-renders)
+  const fetchStartedRef = useRef(false);
 
   // Check if we have the required data
   const hasRequiredData = guests.length > 0 && tables.length > 0;
@@ -54,10 +57,14 @@ const Recommendations: React.FC = () => {
   }, [guests, tables, venueConfig.settings, totParams, hasRequiredData]);
 
   useEffect(() => {
-    // Don't fetch if we don't have required data or already fetched
-    if (!hasRequiredData || hasFetched || !requestPayload) {
+    // Don't fetch if we don't have required data, already fetched, or fetch already started
+    // fetchStartedRef prevents double-fetch in React StrictMode
+    if (!hasRequiredData || hasFetched || !requestPayload || fetchStartedRef.current) {
       return;
     }
+
+    // Mark fetch as started immediately (before async call)
+    fetchStartedRef.current = true;
 
     const fetchLayouts = async () => {
       setLoading(true);
@@ -95,6 +102,8 @@ const Recommendations: React.FC = () => {
       } catch (err: any) {
         setError(err.message || 'Failed to fetch layouts');
         setContextError(err.message || 'Failed to fetch layouts');
+        // Reset ref on error so user can retry
+        fetchStartedRef.current = false;
       } finally {
         setLoading(false);
         setIsLoading(false);

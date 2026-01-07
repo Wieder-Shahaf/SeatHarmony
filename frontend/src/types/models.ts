@@ -283,13 +283,13 @@ export function getVenueById(id: string): VenueLayout | undefined {
   return VENUE_LAYOUTS.find(v => v.id === id);
 }
 
-// Default ToT parameters
+// Default ToT parameters - optimized for parallel execution
 export const DEFAULT_TOT_PARAMS: TotParams = {
-  depth: 2,
-  branching: 4,
-  n_generate: 4,
-  n_evaluate: 4,
-  top_k: 3,
+  depth: 2,       // 2 levels of exploration
+  branching: 3,   // 3 children per node (parallel threads)
+  n_generate: 3,  // Generate 3 thought variants
+  n_evaluate: 3,  // Evaluate top 3
+  top_k: 3,       // Return top 3 layouts
 };
 
 // Helper to create a guest from Excel row
