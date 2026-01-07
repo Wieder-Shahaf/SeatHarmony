@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+import time
 
 from tot.tasks.base import Task  # type: ignore
 
 from .models import Guest, Table, VenueConfig, Layout, ConstraintSummary
+from .logger import get_logger
+
+# Initialize logger for this module
+logger = get_logger("task")
 
 
 @dataclass
@@ -30,7 +35,6 @@ class SeatHarmonyTask(Task):
             "family_cohesion": 0.5,
             "social_group_cohesion": 0.5,
             "side_mixing": 0.5,
-            "relationship_priority": 0.5,
         }
         self.value_cache = {}
         self.steps = 2  # Depth of ToT search
@@ -42,6 +46,7 @@ class SeatHarmonyTask(Task):
         guests = [Guest(**g) for g in instance.get("guests", [])]
         tables = [Table(**t) for t in instance.get("tables", [])]
         venue = VenueConfig(tables=tables, settings=instance.get("settings", {}))
+        logger.debug(f"Initial state created | guests={len(guests)} tables={len(tables)} base_weights={self.base_weights}")
         return SeatHarmonyState(guests=guests, venue=venue, weights=self.base_weights.copy())
 
     def generate_thoughts(self, state: SeatHarmonyState, n_generate: int) -> List[str]:
@@ -55,7 +60,6 @@ class SeatHarmonyTask(Task):
             "emphasize_family_cohesion",
             "emphasize_social_group_cohesion",
             "emphasize_side_mixing",
-            "emphasize_relationship_priority",
             "balance_all",
             "traditional_seating",  # High family, low mixing
             "modern_seating",  # More mixing, balanced priorities
@@ -64,6 +68,7 @@ class SeatHarmonyTask(Task):
             if len(thoughts) >= n_generate:
                 break
             thoughts.append(p)
+        logger.debug(f"Generated {len(thoughts)} thoughts: {thoughts}")
         return thoughts
 
     def apply_thought(self, state: SeatHarmonyState, thought: str) -> SeatHarmonyState:
@@ -71,22 +76,23 @@ class SeatHarmonyTask(Task):
         Apply a weight modification pattern and recompute a layout.
         The actual optimization is delegated to a separate optimizer module.
         """
+        apply_start_time = time.time()
+        logger.debug(f"Applying thought: {thought}")
+
         new_weights = state.weights.copy()
-        
+
         # Ensure all required hyperparameters exist
-        required_keys = ["family_cohesion", "social_group_cohesion", "side_mixing", "relationship_priority"]
+        required_keys = ["family_cohesion", "social_group_cohesion", "side_mixing"]
         for key in required_keys:
             if key not in new_weights:
                 new_weights[key] = 0.5  # Default value
-        
+
         if thought == "emphasize_family_cohesion":
             new_weights["family_cohesion"] = min(1.0, new_weights["family_cohesion"] * 1.5)
         elif thought == "emphasize_social_group_cohesion":
             new_weights["social_group_cohesion"] = min(1.0, new_weights["social_group_cohesion"] * 1.5)
         elif thought == "emphasize_side_mixing":
             new_weights["side_mixing"] = min(1.0, new_weights["side_mixing"] * 1.5)
-        elif thought == "emphasize_relationship_priority":
-            new_weights["relationship_priority"] = min(1.0, new_weights["relationship_priority"] * 1.5)
         elif thought == "balance_all":
             avg = sum(new_weights.values()) / len(new_weights)
             for k in new_weights:
@@ -96,13 +102,13 @@ class SeatHarmonyTask(Task):
             new_weights["family_cohesion"] = 0.9
             new_weights["social_group_cohesion"] = 0.7
             new_weights["side_mixing"] = 0.1
-            new_weights["relationship_priority"] = 0.8
         elif thought == "modern_seating":
             # More mixing, balanced priorities
             new_weights["family_cohesion"] = 0.6
             new_weights["social_group_cohesion"] = 0.5
             new_weights["side_mixing"] = 0.7
-            new_weights["relationship_priority"] = 0.6
+
+        logger.debug(f"Adjusted weights: family={new_weights['family_cohesion']:.2f} social={new_weights['social_group_cohesion']:.2f} mixing={new_weights['side_mixing']:.2f}")
 
         # Lazy import to avoid circular deps
         from .optimizer import generate_layout_for_weights
@@ -112,6 +118,10 @@ class SeatHarmonyTask(Task):
         )
         updated_layout = layout
         updated_layout.summary = summary
+
+        apply_duration_ms = (time.time() - apply_start_time) * 1000
+        score = updated_layout.score if updated_layout else 0.0
+        logger.debug(f"Thought '{thought}' applied | score={score:.2f} | {apply_duration_ms:.0f}ms")
 
         return SeatHarmonyState(
             guests=state.guests,
@@ -135,6 +145,11 @@ class SeatHarmonyTask(Task):
             else:
                 value = s.layout.score
             evaluated.append((s, value))
+
+        if evaluated:
+            scores = [f"{v:.2f}" for _, v in evaluated]
+            logger.debug(f"Evaluated {len(evaluated)} states | scores={scores}")
+
         return evaluated
 
     def is_terminal(self, state: SeatHarmonyState) -> bool:

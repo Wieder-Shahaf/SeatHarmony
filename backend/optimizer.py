@@ -1,10 +1,15 @@
 from typing import Dict, List, Tuple, Optional
+import time
 
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 
 from .models import Guest, Table, VenueConfig, Layout, ConstraintSummary
+from .logger import get_logger
+
+# Initialize logger for this module
+logger = get_logger("optimizer")
 
 # Category definitions for wedding seating optimization
 IMMEDIATE_FAMILY_CATEGORIES = {"Groom's Family", "Bride's Family"}
@@ -27,24 +32,6 @@ BRIDE_SIDE_CATEGORIES = {
 }
 
 NEUTRAL_CATEGORIES = {"Mutual Friends", "Family Friends"}
-
-# Relationship closeness hierarchy (higher = closer to couple, better seating priority)
-CLOSENESS_RANK: Dict[str, int] = {
-    "Groom's Family": 5,
-    "Bride's Family": 5,
-    "Groom's Extended Family": 4,
-    "Bride's Extended Family": 4,
-    "Family Friends": 4,
-    "Groom's Friends": 3,
-    "Bride's Friends": 3,
-    "Mutual Friends": 3,
-    "Groom's Uni Friends": 2,
-    "Bride's Uni Friends": 2,
-    "Groom's Work Colleagues": 2,
-    "Bride's Work Colleagues": 2,
-    "Groom's Side": 1,
-    "Bride's Side": 1,
-}
 
 
 def _get_category(guest: Guest) -> Optional[str]:
@@ -72,16 +59,13 @@ def _is_bride_side(category: Optional[str]) -> bool:
     return category in BRIDE_SIDE_CATEGORIES if category else False
 
 
-def _get_closeness_rank(category: Optional[str]) -> int:
-    """Get the closeness rank for a category (higher = closer to couple)."""
-    return CLOSENESS_RANK.get(category, 0) if category else 0
-
-
 def _dummy_layout(guests: List[Guest], venue: VenueConfig) -> Tuple[Layout, ConstraintSummary]:
     """
     Fallback layout generator when optimization fails.
     Seats guests round-robin across tables without considering constraints.
     """
+    logger.warning(f"Using dummy layout fallback | guests={len(guests)} tables={len(venue.tables)}")
+
     assignments: Dict[str, str] = {}
     table_ids = [t.id for t in venue.tables] or ["default"]
     for i, g in enumerate(guests):
@@ -101,6 +85,8 @@ def _dummy_layout(guests: List[Guest], venue: VenueConfig) -> Tuple[Layout, Cons
         variant_id=None,
         summary=summary,
     )
+
+    logger.debug(f"Dummy layout created | score=0.0")
     return layout, summary
 
 
@@ -111,7 +97,12 @@ def generate_layout_for_weights(
     Generate a single layout for a given set of objective weights.
     Uses Gurobi MILP solver for optimization.
     """
+    opt_start_time = time.time()
+    logger.debug(f"Optimizer starting | guests={len(guests)} tables={len(venue.tables)}")
+    logger.debug(f"Weights: family={weights.get('family_cohesion', 0):.2f} social={weights.get('social_group_cohesion', 0):.2f} mixing={weights.get('side_mixing', 0):.2f}")
+
     if not guests or not venue.tables:
+        logger.warning("Empty guests or tables - returning dummy layout")
         return _dummy_layout(guests, venue)
 
     tables: List[Table] = venue.tables
@@ -130,7 +121,6 @@ def generate_layout_for_weights(
     family_cohesion_weight = weights.get("family_cohesion", 0.0)
     social_group_cohesion_weight = weights.get("social_group_cohesion", 0.0)
     side_mixing_weight = weights.get("side_mixing", 0.0)
-    relationship_priority_weight = weights.get("relationship_priority", 0.0)
 
     # Identify pairs for linearization based on categories
     # Family cohesion pairs: guests from family categories at same table
@@ -176,10 +166,17 @@ def generate_layout_for_weights(
     # Conflict pairs: removed - not used in current implementation
     conflict_pairs = []
 
+    logger.debug(f"Pair identification complete | family={len(family_pairs)} social={len(social_group_pairs)} cross_side={len(cross_side_pairs)}")
+
     # Create Gurobi model
     try:
+        model_start_time = time.time()
+        logger.debug("Creating Gurobi model...")
+
         model = gp.Model("SeatHarmony")
         model.setParam('OutputFlag', 0)  # Suppress Gurobi output
+        model.setParam('MIPGap', 0.02)   # Accept solutions within 2% of optimal
+        model.setParam('MIPFocus', 1)    # Focus on finding good feasible solutions quickly
         
         # Create binary variables
         # x[g, t]: guest g at table t
@@ -229,22 +226,12 @@ def generate_layout_for_weights(
         for p_idx in range(len(cross_side_pairs)):
             for t_id in table_ids:
                 obj += side_mixing_weight * c[p_idx, t_id]
-        
-        # Relationship priority: prefer guests with higher closeness rank at better tables
-        if table_ids and relationship_priority_weight > 0:
-            for t_idx, t_id in enumerate(table_ids):
-                table_quality = 1.0 / (1.0 + t_idx)  # Higher quality for lower index
-                for g in guests:
-                    category = _get_category(g)
-                    closeness = _get_closeness_rank(category)
-                    if closeness > 0:
-                        # Reward placing high-closeness guests at high-quality tables
-                        obj += relationship_priority_weight * closeness * table_quality * x[g.id, t_id]
-        
-        # Conflict penalty removed - not used in current implementation
-        
+
         model.setObjective(obj, GRB.MAXIMIZE)
-        
+
+        model_setup_ms = (time.time() - model_start_time) * 1000
+        logger.debug(f"Model setup complete | variables={len(x) + len(f) + len(s) + len(c)} | {model_setup_ms:.0f}ms")
+
         # Constraint 1: Each guest sits at exactly one table
         # sum_t x[g, t] = 1 for each guest g
         for g_id in guest_ids:
@@ -281,10 +268,32 @@ def generate_layout_for_weights(
                 model.addConstr(c[p_idx, t_id] >= x[g1_id, t_id] + x[g2_id, t_id] - 1, name=f"c_{p_idx}_{t_id}_geq_x1_x2")
         
         # Optimize
+        logger.debug("Starting Gurobi optimization...")
+        solve_start_time = time.time()
         model.optimize()
-        
-        # Check if solution is optimal or feasible
-        if model.status not in [GRB.OPTIMAL, GRB.SUBOPTIMAL]:
+        solve_duration_ms = (time.time() - solve_start_time) * 1000
+
+        # Map Gurobi status codes to human-readable strings
+        status_map = {
+            GRB.OPTIMAL: "OPTIMAL",
+            GRB.INFEASIBLE: "INFEASIBLE",
+            GRB.INF_OR_UNBD: "INF_OR_UNBD",
+            GRB.UNBOUNDED: "UNBOUNDED",
+            GRB.CUTOFF: "CUTOFF",
+            GRB.ITERATION_LIMIT: "ITERATION_LIMIT",
+            GRB.NODE_LIMIT: "NODE_LIMIT",
+            GRB.TIME_LIMIT: "TIME_LIMIT",
+            GRB.SOLUTION_LIMIT: "SOLUTION_LIMIT",
+            GRB.INTERRUPTED: "INTERRUPTED",
+            GRB.SUBOPTIMAL: "SUBOPTIMAL",
+        }
+        status_str = status_map.get(model.Status, f"STATUS_{model.Status}")
+        logger.debug(f"Gurobi finished | status={status_str} solutions={model.SolCount} | {solve_duration_ms:.0f}ms")
+
+        # Check if solution is optimal, suboptimal, or found before time limit
+        # TIME_LIMIT status can still have a good feasible solution
+        if model.SolCount == 0:
+            logger.warning(f"No solution found | status={status_str}")
             return _dummy_layout(guests, venue)
         
         # Extract assignments from solution
@@ -297,8 +306,38 @@ def generate_layout_for_weights(
         
         # Get objective value
         obj_value = model.ObjVal
-        
+
+        # Calculate maximum possible score for normalization
+        # Each pair can be satisfied at most once (at one table)
+        max_family = len(family_pairs) * family_cohesion_weight
+        max_social = len(social_group_pairs) * social_group_cohesion_weight
+        max_cross = len(cross_side_pairs) * side_mixing_weight
+        max_score = max_family + max_social + max_cross
+
+        # Normalize score to 0-100 range
+        if max_score > 0:
+            normalized_score = (obj_value / max_score) * 100.0
+        else:
+            normalized_score = 100.0  # No pairs to optimize = perfect score
+
+        # Also calculate per-objective satisfaction percentages
+        family_satisfied = sum(1 for p_idx in range(len(family_pairs))
+                               for t_id in table_ids if f[p_idx, t_id].x > 0.5)
+        social_satisfied = sum(1 for p_idx in range(len(social_group_pairs))
+                               for t_id in table_ids if s[p_idx, t_id].x > 0.5)
+        cross_satisfied = sum(1 for p_idx in range(len(cross_side_pairs))
+                              for t_id in table_ids if c[p_idx, t_id].x > 0.5)
+
+        family_pct = (family_satisfied / len(family_pairs) * 100) if family_pairs else 100.0
+        social_pct = (social_satisfied / len(social_group_pairs) * 100) if social_group_pairs else 100.0
+        cross_pct = (cross_satisfied / len(cross_side_pairs) * 100) if cross_side_pairs else 100.0
+
+        opt_duration_ms = (time.time() - opt_start_time) * 1000
+        logger.info(f"Optimization complete | score={normalized_score:.2f} | family={family_pct:.0f}% social={social_pct:.0f}% mixing={cross_pct:.0f}% | {opt_duration_ms:.0f}ms")
+
     except Exception as e:
+        opt_duration_ms = (time.time() - opt_start_time) * 1000
+        logger.error(f"Optimization failed | error={type(e).__name__}: {e} | {opt_duration_ms:.0f}ms")
         return _dummy_layout(guests, venue)
 
     summary = ConstraintSummary(
@@ -310,12 +349,11 @@ def generate_layout_for_weights(
     layout = Layout(
         id="opt",
         assignments=assignments,
-        score=obj_value,
+        score=normalized_score,
         objective_breakdown={
-            "family_cohesion": float(family_cohesion_weight) if family_cohesion_weight else 0.0,
-            "social_group_cohesion": float(social_group_cohesion_weight) if social_group_cohesion_weight else 0.0,
-            "side_mixing": float(side_mixing_weight) if side_mixing_weight else 0.0,
-            "relationship_priority": float(relationship_priority_weight) if relationship_priority_weight else 0.0,
+            "family_cohesion": family_pct,
+            "social_group_cohesion": social_pct,
+            "side_mixing": cross_pct,
         },
         variant_label=None,
         variant_id=None,
