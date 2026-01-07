@@ -139,7 +139,7 @@ def test_explanation_system():
     try:
         layout, summary = generate_layout_for_weights(guests, venue, weights)
         print(f"\n✓ Layout generated successfully")
-        print(f"  Score: {layout.score:.4f}")
+        print(f"  Score: {layout.score:.1f}/100")
         print(f"  Assignments: {len(layout.assignments)} guests")
     except Exception as e:
         print(f"\n✗ Error generating layout: {e}")
