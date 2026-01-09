@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { Guest, Table } from '../src/types/models';
@@ -16,16 +16,14 @@ const PlannerAI: React.FC = () => {
     selectedVenueLayout,
     layouts,
     selectedLayoutIndex,
+    updateGuestAssignment,
   } = useGuests();
 
   const [zoom, setZoom] = useState(1);
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
   const [explanations, setExplanations] = useState<ExplanationCache>({});
   const [loadingExplanation, setLoadingExplanation] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
+
 
   // Get the selected layout
   const selectedLayout = layouts[selectedLayoutIndex] || null;
@@ -35,12 +33,12 @@ const PlannerAI: React.FC = () => {
   // Group guests by table based on assignments
   const guestsByTable = useMemo(() => {
     const result: Record<string, Guest[]> = {};
-    
+
     // Initialize all tables with empty arrays
     tables.forEach(t => {
       result[t.id] = [];
     });
-    
+
     // Assign guests to their tables
     guests.forEach(guest => {
       const tableId = assignments[guest.id];
@@ -48,7 +46,7 @@ const PlannerAI: React.FC = () => {
         result[tableId].push(guest);
       }
     });
-    
+
     return result;
   }, [guests, tables, assignments]);
 
@@ -60,7 +58,7 @@ const PlannerAI: React.FC = () => {
   // Fetch explanation for a guest
   const fetchExplanation = async (guestId: string) => {
     if (explanations[guestId] || !selectedLayout) return;
-    
+
     setLoadingExplanation(true);
     try {
       const response = await fetch(`${API_BASE}/api/layouts/explain-guests`, {
@@ -86,7 +84,7 @@ const PlannerAI: React.FC = () => {
           notes: selectedLayout.notes,
         }),
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setExplanations(prev => ({ ...prev, ...data.explanations }));
@@ -108,25 +106,7 @@ const PlannerAI: React.FC = () => {
     }
   }, [selectedGuestId]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setIsDragging(true);
-      dragStartRef.current = { x: e.clientX - panPosition.x, y: e.clientY - panPosition.y };
-    }
-  };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPanPosition({
-        x: e.clientX - dragStartRef.current.x,
-        y: e.clientY - dragStartRef.current.y
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
 
   // Get unique categories for filter buttons
   const categories = useMemo(() => {
@@ -175,27 +155,26 @@ const PlannerAI: React.FC = () => {
   return (
     <div className="flex-grow flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-80 bg-white dark:bg-surface-dark border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft">
+      <aside className="w-80 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft">
         <div className="p-5 border-b border-gray-100 dark:border-gray-700">
           <h2 className="flex items-center gap-2 font-display text-lg text-text-main dark:text-secondary mb-4">
             <span className="material-icons-round text-primary">list_alt</span> Guest List ({guests.length})
           </h2>
           <div className="relative">
             <span className="material-icons-round absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 text-gray-700 dark:text-gray-200 placeholder-gray-400" 
-              placeholder="Find a guest..." 
+              className="w-full pl-9 pr-4 py-2 bg-background-light dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 text-gray-700 dark:text-gray-200 placeholder-gray-400"
+              placeholder="Find a guest..."
             />
           </div>
           <div className="flex gap-2 mt-4 overflow-x-auto pb-1 no-scrollbar">
-            <button 
+            <button
               onClick={() => setFilterCategory(null)}
-              className={`flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap ${
-                !filterCategory ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
+              className={`flex items-center gap-1 px-3 py-1 text-xs rounded-full whitespace-nowrap ${!filterCategory ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
             >
               All ({guests.length})
             </button>
@@ -205,12 +184,11 @@ const PlannerAI: React.FC = () => {
               </button>
             )}
             {categories.slice(0, 3).map(cat => (
-              <button 
+              <button
                 key={cat}
                 onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
-                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap ${
-                  filterCategory === cat ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap ${filterCategory === cat ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
               >
                 {cat}
               </button>
@@ -222,21 +200,19 @@ const PlannerAI: React.FC = () => {
             const tableId = assignments[guest.id];
             const table = tables.find(t => t.id === tableId);
             const isSelected = selectedGuestId === guest.id;
-            
+
             return (
-              <div 
+              <div
                 key={guest.id}
                 onClick={() => setSelectedGuestId(isSelected ? null : guest.id)}
-                className={`group bg-background-light dark:bg-gray-800 p-3 rounded-lg border shadow-sm cursor-pointer transition-all ${
-                  isSelected 
-                    ? 'border-primary ring-2 ring-primary/20' 
-                    : 'border-gray-100 dark:border-gray-700 hover:border-primary/50'
-                }`}
+                className={`group bg-background-light dark:bg-gray-800 p-3 rounded-lg border shadow-sm cursor-pointer transition-all ${isSelected
+                  ? 'border-primary ring-2 ring-primary/20'
+                  : 'border-gray-100 dark:border-gray-700 hover:border-primary/50'
+                  }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                    tableId ? 'bg-primary/20 text-primary' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                  }`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${tableId ? 'bg-primary/20 text-primary' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                    }`}>
                     {getInitials(guest.name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -253,7 +229,7 @@ const PlannerAI: React.FC = () => {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Explanation tooltip */}
                 {isSelected && (
                   <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -283,14 +259,11 @@ const PlannerAI: React.FC = () => {
 
       {/* Main Canvas */}
       <main
-        className={`flex-1 bg-background-lighter dark:bg-background-dark pattern-grid relative overflow-hidden ${isPanning ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        className="flex-1 bg-background-lighter dark:bg-background-dark pattern-grid relative overflow-auto cursor-default"
+        onClick={() => setSelectedGuestId(null)}
       >
         {/* Floating Toolbar */}
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white dark:bg-surface-dark px-2 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-secondary/20 dark:border-gray-700 z-30">
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-secondary/20 dark:border-gray-700 z-30">
           <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-colors" title="Zoom Out">
             <span className="material-icons-round text-xl">remove</span>
           </button>
@@ -298,22 +271,8 @@ const PlannerAI: React.FC = () => {
           <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-colors" title="Zoom In">
             <span className="material-icons-round text-xl">add</span>
           </button>
-          <div className="w-px h-6 bg-gray-200 dark:bg-gray-600 mx-1"></div>
-          <button
-            className={`p-2 rounded-lg transition-colors ${!isPanning ? 'text-primary bg-primary/10' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-            onClick={() => setIsPanning(false)}
-            title="Select Tool"
-          >
-            <span className="material-icons-round text-xl">near_me</span>
-          </button>
-          <button
-            className={`p-2 rounded-lg transition-colors ${isPanning ? 'text-primary bg-primary/10' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-            onClick={() => setIsPanning(true)}
-            title="Pan Tool"
-          >
-            <span className="material-icons-round text-xl">hand_gesture</span>
-          </button>
-          
+
+
           {/* Venue info */}
           {selectedVenueLayout && (
             <>
@@ -328,8 +287,8 @@ const PlannerAI: React.FC = () => {
 
         {/* Canvas Area - Dynamic Tables */}
         <div
-          className="absolute top-0 left-0 w-full h-full flex items-start justify-center p-20 pt-24 origin-center transition-transform duration-75 ease-linear overflow-auto"
-          style={{ transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})` }}
+          className="w-full min-h-full flex items-start justify-center p-20 pt-32 origin-top transition-transform duration-200 ease-out"
+          style={{ transform: `scale(${zoom})` }}
         >
           <div className="flex flex-wrap justify-center gap-8 max-w-6xl">
             {tables.map((table, tableIndex) => {
@@ -337,19 +296,33 @@ const PlannerAI: React.FC = () => {
               const isRound = table.constraints?.tableType !== 'rectangular';
               const capacity = table.capacity;
               const tableSize = Math.max(120, 80 + capacity * 8);
-              
+
               return (
-                <div 
+                <div
                   key={table.id}
                   className="relative flex flex-col items-center"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.transform = 'scale(1)';
+                    const guestId = e.dataTransfer.getData('guestId');
+                    if (guestId) {
+                      updateGuestAssignment(guestId, table.id);
+                    }
+                  }}
                 >
                   {/* Table */}
-                  <div 
-                    className={`bg-white dark:bg-gray-800 border-4 shadow-lg flex flex-col items-center justify-center relative group ${
-                      isRound ? 'rounded-full' : 'rounded-xl'
-                    } ${tableIndex === 0 ? 'border-primary/40 dark:border-primary/20' : 'border-secondary/50 dark:border-gray-600'}`}
-                    style={{ 
-                      width: tableSize, 
+                  <div
+                    className={`bg-white dark:bg-gray-800 border-4 shadow-lg flex flex-col items-center justify-center relative group ${isRound ? 'rounded-full' : 'rounded-xl'
+                      } ${tableIndex === 0 ? 'border-primary/40 dark:border-primary/20' : 'border-secondary/50 dark:border-gray-600'}`}
+                    style={{
+                      width: tableSize,
                       height: isRound ? tableSize : tableSize * 0.6,
                     }}
                   >
@@ -374,40 +347,62 @@ const PlannerAI: React.FC = () => {
                       return (
                         <div
                           key={guest.id}
-                          onClick={() => setSelectedGuestId(isSelectedGuest ? null : guest.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedGuestId(isSelectedGuest ? null : guest.id);
+                          }}
                           className={`relative cursor-pointer transition-all ${isSelectedGuest ? 'scale-110 z-10' : 'hover:scale-105'}`}
                           title={`${guest.name} (${guest.group_id || 'No category'})`}
                         >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 ${
-                            isSelectedGuest 
-                              ? 'bg-primary text-white border-white ring-4 ring-primary/20' 
-                              : guest.importance > 0
-                                ? 'bg-accent text-white border-white'
-                                : 'bg-primary/80 text-white border-white/50'
-                          }`}>
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 transition-transform duration-200 ${isSelectedGuest
+                            ? 'bg-primary text-white border-white ring-4 ring-primary/20'
+                            : guest.importance > 0
+                              ? 'bg-accent text-white border-white'
+                              : 'bg-primary/80 text-white border-white/50'
+                            }`}
+                            draggable
+                            onDragStart={(e) => {
+                              if (isSelectedGuest) setSelectedGuestId(null);
+                              e.dataTransfer.setData('guestId', guest.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                            }}
+                          >
                             {getInitials(guest.name)}
                           </div>
-                          
+
                           {/* Popup explanation */}
-                          {isSelectedGuest && explanations[guest.id] && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 z-50">
-                              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-primary/20 dark:border-gray-600 p-3">
+                          {isSelectedGuest && (
+                            <div
+                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 z-50 cursor-default"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-primary/20 dark:border-gray-600 p-4">
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-800 border-b border-r border-primary/20 dark:border-gray-600 rotate-45"></div>
-                                <div className="flex items-center gap-2 mb-2">
+                                <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2">
                                   <span className="material-icons-round text-primary text-sm">auto_awesome</span>
                                   <span className="text-xs font-bold text-primary">AI Insight</span>
                                 </div>
-                                <p className="text-xs font-semibold text-gray-800 dark:text-white mb-1">{guest.name}</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                                  {explanations[guest.id]}
-                                </p>
+                                <p className="text-sm font-semibold text-gray-800 dark:text-white mb-1">{guest.name}</p>
+
+                                {loadingExplanation ? (
+                                  <div className="flex items-center gap-2 py-2 text-primary">
+                                    <span className="material-icons-round animate-spin text-sm">progress_activity</span>
+                                    <span className="text-xs">Generating insight...</span>
+                                  </div>
+                                ) : explanations[guest.id] ? (
+                                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                                    {explanations[guest.id]}
+                                  </p>
+                                ) : (
+                                  <p className="text-xs text-gray-400 italic">No specific insight available for this assignment.</p>
+                                )}
                               </div>
                             </div>
                           )}
                         </div>
                       );
                     })}
-                    
+
                     {/* Empty seats */}
                     {Array.from({ length: Math.max(0, capacity - tableGuests.length) }).map((_, i) => (
                       <div key={`empty-${i}`} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600"></div>

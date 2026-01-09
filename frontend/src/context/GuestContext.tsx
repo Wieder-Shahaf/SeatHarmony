@@ -61,11 +61,11 @@ interface GuestContextType {
   addGuest: (guest: Guest) => void;
   updateGuest: (id: string, updates: Partial<Guest>) => void;
   removeGuest: (id: string) => void;
-  
+
   // Derived data
   guestGroups: GuestGroup[];
   totalGuestCount: number;
-  
+
   // Table/Venue data
   tables: Table[];
   setTables: (tables: Table[]) => void;
@@ -73,29 +73,33 @@ interface GuestContextType {
   setVenueConfig: (config: VenueConfig) => void;
   selectedVenueLayout: VenueLayout | null;
   setSelectedVenueLayout: (layout: VenueLayout | null) => void;
-  
+
   // ToT parameters
   totParams: TotParams;
   setTotParams: (params: TotParams) => void;
-  
+
   // Optimization results
   layouts: TotLayout[];
   setLayouts: (layouts: TotLayout[]) => void;
   selectedLayoutIndex: number;
   setSelectedLayoutIndex: (index: number) => void;
-  
+
   // Loading/error state
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   error: string | null;
   setError: (error: string | null) => void;
-  
+
   // Actions
   clearAll: () => void;
   initializeFromExcel: (guests: Guest[]) => void;
-  
+
+  // Storage info
   // Storage info
   hasStoredData: boolean;
+
+  // Manual assignment
+  updateGuestAssignment: (guestId: string, tableId: string | null) => void;
 }
 
 const GuestContext = createContext<GuestContextType | undefined>(undefined);
@@ -106,28 +110,28 @@ interface GuestProviderProps {
 
 export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   // Load initial state from localStorage
-  const [guests, setGuestsState] = useState<Guest[]>(() => 
+  const [guests, setGuestsState] = useState<Guest[]>(() =>
     loadFromStorage(STORAGE_KEYS.GUESTS, [])
   );
-  const [tables, setTablesState] = useState<Table[]>(() => 
+  const [tables, setTablesState] = useState<Table[]>(() =>
     loadFromStorage(STORAGE_KEYS.TABLES, [])
   );
-  const [venueConfig, setVenueConfigState] = useState<VenueConfig>(() => 
+  const [venueConfig, setVenueConfigState] = useState<VenueConfig>(() =>
     loadFromStorage(STORAGE_KEYS.VENUE_CONFIG, { tables: [], settings: {} })
   );
-  const [selectedVenueLayout, setSelectedVenueLayoutState] = useState<VenueLayout | null>(() => 
+  const [selectedVenueLayout, setSelectedVenueLayoutState] = useState<VenueLayout | null>(() =>
     loadFromStorage(STORAGE_KEYS.VENUE_LAYOUT, null)
   );
-  const [totParams, setTotParamsState] = useState<TotParams>(() => 
+  const [totParams, setTotParamsState] = useState<TotParams>(() =>
     loadFromStorage(STORAGE_KEYS.TOT_PARAMS, DEFAULT_TOT_PARAMS)
   );
-  const [layouts, setLayoutsState] = useState<TotLayout[]>(() => 
+  const [layouts, setLayoutsState] = useState<TotLayout[]>(() =>
     loadFromStorage(STORAGE_KEYS.LAYOUTS, [])
   );
-  const [selectedLayoutIndex, setSelectedLayoutIndexState] = useState<number>(() => 
+  const [selectedLayoutIndex, setSelectedLayoutIndexState] = useState<number>(() =>
     loadFromStorage(STORAGE_KEYS.SELECTED_LAYOUT, 0)
   );
-  
+
   // UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -227,22 +231,49 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     setError(null);
     clearStorage();
     console.log('All data cleared from memory and localStorage');
+    console.log('All data cleared from memory and localStorage');
   }, []);
+
+  // Manual assignment update
+  const updateGuestAssignment = useCallback((guestId: string, tableId: string | null) => {
+    // Only update if we have a selected layout
+    if (!layouts[selectedLayoutIndex]) return;
+
+    setLayoutsState(prev => {
+      const newLayouts = [...prev];
+      const currentLayout = { ...newLayouts[selectedLayoutIndex] };
+      const currentAssignments = { ...currentLayout.layout.assignments };
+
+      if (tableId) {
+        currentAssignments[guestId] = tableId;
+      } else {
+        delete currentAssignments[guestId];
+      }
+
+      currentLayout.layout = {
+        ...currentLayout.layout,
+        assignments: currentAssignments
+      };
+
+      newLayouts[selectedLayoutIndex] = currentLayout;
+      return newLayouts;
+    });
+  }, [layouts, selectedLayoutIndex]);
 
   // Initialize from Excel upload
   const initializeFromExcel = useCallback((newGuests: Guest[]) => {
     setGuestsState(newGuests);
-    
+
     // Create default tables based on guest count (10 seats per table)
     const defaultTables = createDefaultTables(newGuests.length, 10);
     setTablesState(defaultTables);
     setVenueConfigState({ tables: defaultTables, settings: {} });
-    
+
     // Clear previous results
     setLayoutsState([]);
     setSelectedLayoutIndexState(0);
     setError(null);
-    
+
     console.log(`Initialized ${newGuests.length} guests and ${defaultTables.length} tables (auto-saved to localStorage)`);
   }, []);
 
@@ -273,6 +304,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     clearAll,
     initializeFromExcel,
     hasStoredData,
+    updateGuestAssignment,
   };
 
   return (
