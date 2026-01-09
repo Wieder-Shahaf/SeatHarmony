@@ -1,149 +1,137 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SeatHarmony
 
-## SeatHarmony
-
-AI-powered wedding seating planner that creates harmonious seating arrangements
-based on guest relationships and preferences.
-
-This repository contains:
-
-- **React/Vite frontend** – interactive UI for loading guests, exploring layouts, and refining plans.
-- **Python backend** – Gurobi-backed optimizer, Tree-of-Thoughts-style search, FastAPI API, and Streamlit debug UI.
-
-Original AI Studio app link (for reference):  
-`https://ai.studio/apps/drive/1HhtrnqNNoj_hZa70rEwKA3lzFUNzSulW`
+AI-powered wedding seating planner that creates harmonious seating arrangements based on guest relationships, preferences, and venue constraints.
 
 ---
 
-## Project structure
+## Project Overview
 
-- `frontend/` – Vite/React frontend (app entry, components, pages, configs).
-- `backend/` – Python backend (optimizer, ToT task, FastAPI API, Streamlit debug UI).
+SeatHarmony helps plan optimal table assignments for weddings and events. Users upload their guest list, define tables and venue layout, and the system generates seating arrangements that respect relationships (who should sit together or apart), guest importance, and other preferences.
 
-See `backend/README.md` for backend-specific details.
+The system combines **constraint optimization** (Gurobi-based) with **Tree-of-Thoughts search** — an AI technique that explores different objective weightings to find well-balanced, socially harmonious layouts. An LLM (Gemini or OpenAI) powers the ToT search and generates human-readable explanations for the seating decisions.
 
 ---
 
-## Frontend (React/Vite)
+## Components
 
-**Prerequisites:** Node.js (LTS recommended).
+### Frontend (`frontend/`)
 
-From the project root, install dependencies once:
+React/Vite application with a multi-step workflow:
+
+- **Landing** — Introduction and entry point
+- **Dashboard** — Guest management and overview
+- **Venue Selection** — Configure tables, capacity, and zones
+- **Recommendations** — View AI-generated seating suggestions
+- **Planner AI** — Interactive layout generation and refinement
+- **Confirmation & Export** — Finalize and export the seating plan
+
+### Backend (`backend/`)
+
+Python service providing:
+
+- **FastAPI API** — Endpoints for layout generation (`/api/layouts/generate`) and explanations (`/api/layouts/explain`)
+- **Optimizer** — Gurobi-backed constraint solver with heuristic fallback (if Gurobi is unavailable)
+- **SeatHarmonyTask** — Tree-of-Thoughts-compatible task that explores objective variants
+- **Streamlit Debug UI** — Interactive tool for testing and inspecting ToT search
+
+### Tree-of-Thought-LLM (`tree-of-thought-llm/`)
+
+The [Tree-of-Thought-LLM](https://github.com/princeton-nlp/tree-of-thought-llm) library (included as a subfolder) provides the ToT search framework. It is installed from source into the backend environment.
+
+---
+
+## Prerequisites
+
+- **Node.js** (LTS) — for the frontend
+- **Python 3.10+** — for the backend
+- **LLM API key** — Gemini (`GEMINI_API_KEY`) or OpenAI (`OPENAI_API_KEY`) for AI-powered search and explanations
+
+> **Note:** Gurobi is optional. The optimizer falls back to a heuristic if Gurobi is not installed or licensed. See `backend/setup_gurobi_license.sh` if you have Gurobi.
+
+---
+
+## How to Run
+
+### 1. Backend Setup (first time)
+
+```bash
+# From project root
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# Install Tree-of-Thought-LLM (from the bundled tree-of-thought-llm/ folder)
+cd ../tree-of-thought-llm
+pip install -r requirements.txt
+pip install -e .
+cd ..
+```
+
+### 2. Configure API Key
+
+Create a `.env` file in the **project root**:
+
+```bash
+# Project root
+echo "GEMINI_API_KEY=your_key_here" > .env
+# OR: echo "OPENAI_API_KEY=your_key_here" > .env
+```
+
+### 3. Frontend Setup (first time)
 
 ```bash
 cd frontend
 npm install
+
+# Optional: create .env.local to override API URL (default: http://127.0.0.1:8000)
+echo "VITE_API_BASE=http://127.0.0.1:8000" > .env.local
 ```
 
-Then create a `frontend/.env.local` file and set your Gemini key (and optional backend base URL) if needed:
+### 4. Start the Application
+
+**Terminal 1 — Backend:**
 
 ```bash
-echo "GEMINI_API_KEY=your_key_here" > frontend/.env.local
-echo "VITE_API_BASE=http://127.0.0.1:8000" >> frontend/.env.local   # FastAPI default
+# From project root
+source backend/.venv/bin/activate
+uvicorn backend.api:app --reload
 ```
 
-### Start the frontend dev server
+API runs at `http://127.0.0.1:8000`
+
+**Terminal 2 — Frontend:**
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-By default Vite serves the app at `http://localhost:5173`.
+App runs at `http://localhost:5173`
 
 ---
 
-## Backend (Python)
+## Optional: Streamlit ToT Debugger
 
-The backend lives in the `backend/` folder and provides:
-
-- A Gurobi-backed optimizer with heuristic fallback.
-- A Tree-of-Thoughts-style `SeatHarmonyTask`.
-- A FastAPI API for the frontend (`/api/layouts/generate`, `/api/layouts/explain`).
-- A Streamlit UI for debugging ToT search.
-
-From the project root:
+For debugging and inspecting the Tree-of-Thoughts search:
 
 ```bash
-cd backend
-python3 -m venv .venv                       # create venv (first time only)
-source .venv/bin/activate                  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt            # install backend deps (excluding Tree-of-Thought-LLM)
-```
-
-Then, in the **same** virtual environment, install the Tree-of-Thought-LLM package from source:
-
-```bash
-cd ..
-git clone https://github.com/princeton-nlp/tree-of-thought-llm
-cd tree-of-thought-llm
-pip install -r requirements.txt
-pip install -e .    # install the `tot` package into the active venv
-```
-
-### Configure API Key
-
-Create a `.env` file in the **project root** (not in `backend/`) with your API key:
-
-```bash
-# From project root
-echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
-# OR for OpenAI:
-# echo "OPENAI_API_KEY=your_openai_api_key_here" > .env
-```
-
-The backend will automatically load this `.env` file on startup. You can also set the environment variables directly if preferred.
-
-### Start the FastAPI backend (for the React app)
-
-**Important:** Run this command from the **project root** (not from inside `backend/`):
-
-```bash
-cd /Users/shahafwieder/SeatHarmony  # or just 'cd ..' if you're in backend/
-source backend/.venv/bin/activate    # activate venv
-uvicorn backend.api:app --reload
-```
-
-This serves the API (by default) at `http://127.0.0.1:8000`.
-
-### Start the optional Streamlit ToT debug UI
-
-```bash
+source backend/.venv/bin/activate
 streamlit run backend/streamlit_tot_debug.py
 ```
 
-This opens an interactive debugger for running Tree-of-Thoughts search over SeatHarmony instances.
+Opens at `http://localhost:8501`
 
 ---
 
-## Running the full app end-to-end
+## Project Structure
 
-1. **Start the backend** (API):
-   - In one terminal (from project root):
-     ```bash
-     cd /Users/shahafwieder/SeatHarmony  # project root
-     source backend/.venv/bin/activate
-     uvicorn backend.api:app --reload
-     ```
+```
+SeatHarmony/
+├── frontend/          # React/Vite UI
+├── backend/           # Python API, optimizer, ToT task
+├── tree-of-thought-llm/   # ToT library (install from source)
+└── .env               # API keys (create this)
+```
 
-2. **Start the frontend**:
-   - In another terminal:
-     ```bash
-     cd frontend
-     npm run dev
-     ```
-
-3. **Open the app in your browser**:
-   - Navigate to `http://localhost:5173`.
-   - The frontend will call the backend at `VITE_API_BASE` (e.g. `http://127.0.0.1:8000`) for ToT-powered layouts and explanations.
-
-4. *(Optional)* **Run the Streamlit debugger** in a third terminal:
-   ```bash
-   cd backend
-   source .venv/bin/activate
-   streamlit run streamlit_tot_debug.py
-   ```
-
-
+See `backend/README.md` for detailed backend documentation.
