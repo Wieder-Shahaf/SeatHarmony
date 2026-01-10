@@ -188,9 +188,9 @@ def main():
     print("="*80)
     
     weights = {
-        "family_cohesion": 0.8,      # Keep families together
-        "social_group_cohesion": 0.3, # Keep friend groups together
-        "side_mixing": 0.1,           # Some mixing between sides
+        "family_cohesion": 0.5,      # Keep families together
+        "social_group_cohesion": 0.5, # Keep friend groups together
+        "side_mixing": 0.5,           # Some mixing between sides
     }
     
     print(f"\nHyperparameters:")

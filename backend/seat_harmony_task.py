@@ -37,6 +37,7 @@ class SeatHarmonyTask(Task):
             "side_mixing": 0.5,
         }
         self.value_cache = {}
+        self.layout_cache: Dict[str, Tuple[Layout, ConstraintSummary]] = {}  # Cache for optimization results
         self.steps = 2  # Depth of ToT search
         self.stops = ['\n'] * 2
 
@@ -51,18 +52,17 @@ class SeatHarmonyTask(Task):
 
     def generate_thoughts(self, state: SeatHarmonyState, n_generate: int) -> List[str]:
         """
-        Generate thoughts (weight modifications) for the current state.
-        Can use LLM-based proposals or fixed patterns.
+        Generate weight modification thoughts for single-level ToT.
+        6 distinct strategies covering different wedding styles.
         """
-        # For now, use fixed patterns. Can be enhanced with LLM proposals.
         thoughts: List[str] = []
         patterns = [
-            "emphasize_family_cohesion",
-            "emphasize_social_group_cohesion",
-            "emphasize_side_mixing",
-            "balance_all",
-            "traditional_seating",  # High family, low mixing
-            "modern_seating",  # More mixing, balanced priorities
+            "baseline",          # (0.5, 0.5, 0.5) - Balanced starting point
+            "boost_family",      # (0.8, 0.5, 0.5) - Family priority
+            "boost_social",      # (0.5, 0.8, 0.5) - Social groups priority
+            "max_cohesion",      # (0.7, 0.7, 0.3) - Keep groups together
+            "max_mingling",      # (0.3, 0.3, 0.9) - Encourage mixing
+            "reduce_social",     # (0.5, 0.2, 0.5) - Deprioritize social groups
         ]
         for p in patterns:
             if len(thoughts) >= n_generate:
@@ -73,49 +73,54 @@ class SeatHarmonyTask(Task):
 
     def apply_thought(self, state: SeatHarmonyState, thought: str) -> SeatHarmonyState:
         """
-        Apply a weight modification pattern and recompute a layout.
-        The actual optimization is delegated to a separate optimizer module.
+        Apply an INCREMENTAL weight modification and recompute layout.
+        Weights are clamped to [0.0, 1.0] range.
         """
         apply_start_time = time.time()
-        logger.debug(f"Applying thought: {thought}")
+        logger.debug(f"Applying thought: {thought} to weights: {state.weights}")
 
         new_weights = state.weights.copy()
 
-        # Ensure all required hyperparameters exist
-        required_keys = ["family_cohesion", "social_group_cohesion", "side_mixing"]
-        for key in required_keys:
+        # Ensure all required keys exist
+        for key in ["family_cohesion", "social_group_cohesion", "side_mixing"]:
             if key not in new_weights:
-                new_weights[key] = 0.5  # Default value
+                new_weights[key] = 0.5
 
-        if thought == "emphasize_family_cohesion":
-            new_weights["family_cohesion"] = min(1.0, new_weights["family_cohesion"] * 1.5)
-        elif thought == "emphasize_social_group_cohesion":
-            new_weights["social_group_cohesion"] = min(1.0, new_weights["social_group_cohesion"] * 1.5)
-        elif thought == "emphasize_side_mixing":
-            new_weights["side_mixing"] = min(1.0, new_weights["side_mixing"] * 1.5)
-        elif thought == "balance_all":
-            avg = sum(new_weights.values()) / len(new_weights)
-            for k in new_weights:
-                new_weights[k] = avg
-        elif thought == "traditional_seating":
-            # High family cohesion, low side mixing
-            new_weights["family_cohesion"] = 0.9
-            new_weights["social_group_cohesion"] = 0.7
-            new_weights["side_mixing"] = 0.1
-        elif thought == "modern_seating":
-            # More mixing, balanced priorities
-            new_weights["family_cohesion"] = 0.6
-            new_weights["social_group_cohesion"] = 0.5
-            new_weights["side_mixing"] = 0.7
+        # Incremental modifications (deltas from base 0.5, 0.5, 0.5)
+        deltas = {
+            "baseline":        {},  # No change - use base weights
+            "boost_family":    {"family_cohesion": +0.3},
+            "boost_social":    {"social_group_cohesion": +0.3},
+            "reduce_social":   {"social_group_cohesion": -0.3},
+            "max_cohesion":    {"family_cohesion": +0.2, "social_group_cohesion": +0.2, "side_mixing": -0.2},
+            "max_mingling":    {"family_cohesion": -0.2, "social_group_cohesion": -0.2, "side_mixing": +0.4},
+        }
+
+        if thought in deltas:
+            for key, delta in deltas[thought].items():
+                new_weights[key] = max(0.0, min(1.0, new_weights[key] + delta))
+        else:
+            logger.warning(f"Unknown thought pattern: {thought}")
 
         logger.debug(f"Adjusted weights: family={new_weights['family_cohesion']:.2f} social={new_weights['social_group_cohesion']:.2f} mixing={new_weights['side_mixing']:.2f}")
 
-        # Lazy import to avoid circular deps
-        from .optimizer import generate_layout_for_weights
-
-        layout, summary = generate_layout_for_weights(
-            guests=state.guests, venue=state.venue, weights=new_weights
-        )
+        # Create cache key from guest IDs and weights
+        guest_ids_key = tuple(sorted(g.id for g in state.guests))
+        weights_key = tuple(sorted((k, round(v, 2)) for k, v in new_weights.items()))
+        cache_key = (guest_ids_key, weights_key)
+        
+        # Check cache first
+        if cache_key in self.layout_cache:
+            layout, summary = self.layout_cache[cache_key]
+            logger.debug(f"Cache HIT for weights | score={layout.score:.2f}")
+        else:
+            from .optimizer import generate_layout_for_weights
+            layout, summary = generate_layout_for_weights(
+                guests=state.guests, venue=state.venue, weights=new_weights
+            )
+            self.layout_cache[cache_key] = (layout, summary)
+            logger.debug(f"Cache MISS - computed | score={layout.score:.2f}")
+        
         updated_layout = layout
         updated_layout.summary = summary
 
