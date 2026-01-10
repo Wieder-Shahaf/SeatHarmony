@@ -1,7 +1,5 @@
 from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 import os
 import time
 
@@ -50,11 +48,11 @@ class SettingsIn(RootModel[Dict[str, Any]]):
 
 
 class TotParams(BaseModel):
-    depth: int = 2
-    branching: int = 3    # 3 children per node (parallel threads)
+    depth: int = 2        # 2 levels of exploration
+    branching: int = 3    # 3 children per node
     n_generate: int = 3   # Generate 3 thought variants
     n_evaluate: int = 3   # Evaluate top 3
-    top_k: int = 3
+    top_k: int = 3        # Return top 3 layouts
 
 
 class LayoutRequest(BaseModel):
@@ -110,40 +108,19 @@ async def startup_event():
     logger.info("API startup complete - ready to receive requests")
 
 
-def _apply_thought_worker(
-    task: SeatHarmonyTask,
-    state: SeatHarmonyState,
-    thought: str,
-    worker_id: int = 0,
-) -> Tuple[SeatHarmonyState, str]:
-    """Worker function to apply a single thought - runs in a thread."""
-    thread_name = threading.current_thread().name
-    start_time = time.time()
-    logger.debug(f"Thread [{thread_name}] worker={worker_id} | Applying thought: {thought}")
-
-    new_state = task.apply_thought(state, thought)
-
-    duration_ms = (time.time() - start_time) * 1000
-    score = new_state.layout.score if new_state.layout else 0.0
-    logger.debug(f"Thread [{thread_name}] worker={worker_id} | Completed thought: {thought} | score={score:.2f} | {duration_ms:.0f}ms")
-
-    return new_state, thought
-
-
-def _parallel_tot_bfs(
+def _sequential_tot_bfs(
     instance: Dict[str, Any],
     depth: int,
-    branching: int = 3,  # Default branching factor of 3
+    branching: int = 3,
     n_generate: int = 3,
     n_evaluate: int = 3,
 ) -> List[Tuple[SeatHarmonyState, float]]:
     """
-    Parallel Tree-of-Thoughts BFS with concurrent node expansion.
+    Sequential Tree-of-Thoughts BFS.
 
-    - Branching factor of 3: each node has up to 3 children
-    - One thread per node at the same level
-    - Nodes at the same depth are computed concurrently
-    - Uses ThreadPoolExecutor for parallel execution
+    - Branching factor controls how many children per node
+    - Processes thoughts one at a time (no threading overhead)
+    - Gurobi can use all CPU cores for each optimization
 
     Returns a list of (state, value) pairs.
     """
@@ -157,14 +134,10 @@ def _parallel_tot_bfs(
     frontier: List[SeatHarmonyState] = [root]
     scored_states: List[Tuple[SeatHarmonyState, float]] = []
 
-    # Thread-safe list for collecting results
-    results_lock = threading.Lock()
-
     for level in range(depth):
         level_start_time = time.time()
         logger.info(f"ToT Level {level + 1}/{depth} starting | frontier_size={len(frontier)}")
 
-        new_frontier: List[SeatHarmonyState] = []
         level_scored: List[Tuple[SeatHarmonyState, float]] = []
 
         # Collect all (state, thought) pairs to process at this level
@@ -176,33 +149,34 @@ def _parallel_tot_bfs(
 
         logger.info(f"ToT Level {level + 1}/{depth} | Generated {len(work_items)} work items (thoughts)")
 
-        # Process all work items concurrently
-        # Each node gets its own thread, nodes at same level run in parallel
-        max_workers = min(len(work_items), branching * len(frontier))
-        logger.debug(f"Spawning ThreadPoolExecutor | max_workers={max_workers}")
-
         completed_count = 0
         failed_count = 0
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(_apply_thought_worker, task, state, thought, idx): (state, thought)
-                for idx, (state, thought) in enumerate(work_items)
-            }
+        # Process work items sequentially
+        for idx, (state, thought) in enumerate(work_items):
+            thought_start_time = time.time()
+            logger.debug(f"Processing thought {idx + 1}/{len(work_items)}: {thought}")
 
-            for future in as_completed(futures):
-                try:
-                    child_state, thought = future.result()
-                    if child_state.layout is not None:
-                        # Evaluate this child
-                        evaluated = task.evaluate_states([child_state], n_evaluate)
-                        with results_lock:
-                            level_scored.extend(evaluated)
-                        completed_count += 1
-                except Exception as e:
+            try:
+                child_state = task.apply_thought(state, thought)
+
+                if child_state.layout is not None:
+                    # Evaluate this child
+                    evaluated = task.evaluate_states([child_state], n_evaluate)
+                    level_scored.extend(evaluated)
+                    completed_count += 1
+
+                    thought_duration_ms = (time.time() - thought_start_time) * 1000
+                    score = child_state.layout.score if child_state.layout else 0.0
+                    logger.debug(f"Completed thought {idx + 1}/{len(work_items)}: {thought} | score={score:.2f} | {thought_duration_ms:.0f}ms")
+                else:
                     failed_count += 1
-                    logger.warning(f"Thread failed for thought | error={type(e).__name__}: {e}")
-                    continue
+                    logger.warning(f"Thought produced no layout: {thought}")
+
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"Failed to apply thought: {thought} | error={type(e).__name__}: {e}")
+                continue
 
         level_duration_ms = (time.time() - level_start_time) * 1000
         logger.info(f"ToT Level {level + 1}/{depth} completed | success={completed_count} failed={failed_count} | {level_duration_ms:.0f}ms")
@@ -211,15 +185,12 @@ def _parallel_tot_bfs(
         scored_states.extend(level_scored)
 
         # Select top states for next level's frontier
-        # Group by parent state and take best from each, then overall best
         level_sorted = sorted(level_scored, key=lambda x: x[1], reverse=True)
-        new_frontier = [s for s, _ in level_sorted[:branching]]
+        frontier = [s for s, _ in level_sorted[:branching]]
 
         if level_sorted:
             top_scores = [f"{s[1]:.2f}" for s in level_sorted[:3]]
             logger.debug(f"ToT Level {level + 1}/{depth} | Top scores: {', '.join(top_scores)}")
-
-        frontier = new_frontier
 
         # Early termination if no valid states
         if not frontier:
@@ -240,10 +211,9 @@ def _simple_tot_bfs(
     n_evaluate: int,
 ) -> List[Tuple[SeatHarmonyState, float]]:
     """
-    Wrapper that calls the parallel ToT implementation.
-    Kept for backward compatibility.
+    Wrapper that calls the sequential ToT implementation.
     """
-    return _parallel_tot_bfs(
+    return _sequential_tot_bfs(
         instance=instance,
         depth=depth,
         branching=branching,

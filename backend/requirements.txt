@@ -8,4 +8,5 @@ pandas
 openpyxl
 google-genai
 python-dotenv
+jspdf
 
