@@ -23,6 +23,7 @@ const PlannerAI: React.FC = () => {
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [explanations, setExplanations] = useState<ExplanationCache>({});
   const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const guestRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
 
 
   // Get the selected layout
@@ -106,6 +107,16 @@ const PlannerAI: React.FC = () => {
     }
   }, [selectedGuestId]);
 
+  // Scroll to guest in sidebar when selected
+  useEffect(() => {
+    if (selectedGuestId && guestRefs.current[selectedGuestId]) {
+      guestRefs.current[selectedGuestId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [selectedGuestId]);
+
 
 
   // Get unique categories for filter buttons
@@ -157,8 +168,8 @@ const PlannerAI: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-80 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft">
         <div className="p-5 border-b border-gray-100 dark:border-gray-700">
-          <h2 className="flex items-center gap-2 font-display text-lg text-text-main dark:text-secondary mb-4">
-            <span className="material-icons-round text-primary">list_alt</span> Guest List ({guests.length})
+          <h2 className="flex items-center gap-2 font-display text-2xl font-light tracking-wide text-text-main dark:text-secondary mb-6">
+            <span className="material-icons-round text-primary/80">list_alt</span> Guest List
           </h2>
           <div className="relative">
             <span className="material-icons-round absolute left-3 top-2.5 text-gray-400 text-sm">search</span>
@@ -204,6 +215,7 @@ const PlannerAI: React.FC = () => {
             return (
               <div
                 key={guest.id}
+                ref={el => guestRefs.current[guest.id] = el}
                 onClick={() => setSelectedGuestId(isSelected ? null : guest.id)}
                 className={`group bg-background-light dark:bg-gray-800 p-3 rounded-lg border shadow-sm cursor-pointer transition-all ${isSelected
                   ? 'border-primary ring-2 ring-primary/20'
@@ -271,6 +283,20 @@ const PlannerAI: React.FC = () => {
           <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-colors" title="Zoom In">
             <span className="material-icons-round text-xl">add</span>
           </button>
+
+          <div className="w-px h-6 bg-gray-200 dark:bg-gray-600 mx-1"></div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 px-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+              <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Seated</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-dashed border-gray-400"></div>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Empty</span>
+            </div>
+          </div>
 
 
           {/* Venue info */}
@@ -414,42 +440,31 @@ const PlannerAI: React.FC = () => {
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="absolute bottom-6 right-6 bg-white dark:bg-surface-dark p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 z-20 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Seated</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-dashed border-gray-400"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Empty</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-accent"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">VIP</span>
-          </div>
-        </div>
 
-        {/* Layout info */}
-        <div className="absolute bottom-6 left-6 bg-white dark:bg-surface-dark p-3 rounded-lg shadow-lg border border-gray-100 dark:border-gray-700 z-20">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Layout Score</div>
-          <div className="text-lg font-bold text-primary">{Math.round(selectedLayout.layout.score || selectedLayout.value)}/100</div>
-          {selectedLayout.notes && (
-            <div className="text-[10px] text-gray-400 mt-1 max-w-[150px] truncate" title={selectedLayout.notes}>
-              {selectedLayout.notes}
+
+        {/* Sticky Bottom Bar */}
+        <div className="fixed bottom-0 left-80 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Left side content (optional) */}
+              <div className="hidden md:flex items-center gap-2">
+                <span className="material-icons-round text-primary text-xl">event_seat</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Arranging <strong>{guests.length} guests</strong> across <strong>{tables.length} tables</strong>
+                </span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Continue button */}
-        <div className="absolute top-6 right-6 z-30">
-          <Link
-            to="/confirmation"
-            className="px-4 py-2 bg-primary hover:bg-[#777b63] text-white rounded-lg font-medium transition-colors shadow-lg flex items-center gap-2"
-          >
-            Continue to Export
-            <span className="material-icons-round text-sm">arrow_forward</span>
-          </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/confirmation"
+                className="px-8 py-3 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+              >
+                <span>Continue to Export</span>
+                <span className="material-icons-round text-sm">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     </div>

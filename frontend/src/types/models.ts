@@ -139,11 +139,11 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'celebration',
     image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
     category: 'indoor',
-    totalCapacity: 320, // 8×10 + 12×10 + 15×8 = 80 + 120 + 120
+    totalCapacity: 360, // 36 tables x 10 seats
     tableTemplates: [
-      { type: 'round', capacity: 10, count: 8, zone: 'inner-ring', nearDanceFloor: 'adjacent', placement: 'indoor' },
-      { type: 'round', capacity: 10, count: 12, zone: 'main', nearDanceFloor: 'near', placement: 'indoor' },
-      { type: 'round', capacity: 8, count: 15, zone: 'sides', nearDanceFloor: 'far', placement: 'indoor' },
+      { type: 'round', capacity: 10, count: 12, zone: 'front', nearDanceFloor: 'adjacent', placement: 'indoor' },
+      { type: 'round', capacity: 10, count: 12, zone: 'middle', nearDanceFloor: 'near', placement: 'indoor' },
+      { type: 'round', capacity: 10, count: 12, zone: 'back', nearDanceFloor: 'far', placement: 'indoor' },
     ],
     features: ['Dance Floor', 'Stage', 'High Ceilings', 'Central Location'],
     popular: true,
@@ -242,6 +242,21 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
       { type: 'round', capacity: 8, count: 6, zone: 'beachfront', nearDanceFloor: 'far', placement: 'outdoor' },
     ],
     features: ['Ocean Views', 'Beach Access', 'Indoor-Outdoor', 'Sunset Backdrop'],
+    popular: true,
+  },
+  {
+    id: 'luxury-garden-estate',
+    name: 'Luxury Garden Estate',
+    description: 'A magnificent estate combining an elegant indoor hall with a sprawling garden. Features long banquet tables indoors and round tables outdoors.',
+    icon: 'castle',
+    image: '/luxury-garden-estate.jpg',
+    category: 'outdoor',
+    totalCapacity: 500,
+    tableTemplates: [
+      { type: 'rectangular', capacity: 14, count: 16, zone: 'indoor-hall', nearDanceFloor: 'near', placement: 'indoor' },
+      { type: 'round', capacity: 10, count: 28, zone: 'garden', nearDanceFloor: 'far', placement: 'outdoor' },
+    ],
+    features: ['Indoor Hall', 'Large Garden', 'Bars', 'Restrooms', 'Luxury Vibe'],
     popular: true,
   },
 ];
