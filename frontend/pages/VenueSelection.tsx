@@ -132,7 +132,7 @@ const VenueSelection: React.FC = () => {
             <div
               key={venue.id}
               onClick={() => handleSelectVenue(venue)}
-              className={`group bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border cursor-pointer transform hover:-translate-y-1 relative 
+              className={`group flex flex-col bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border cursor-pointer transform hover:-translate-y-1 relative 
                 ${isSelected
                   ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark'
                   : 'border-gray-100 dark:border-gray-700'}
@@ -173,7 +173,7 @@ const VenueSelection: React.FC = () => {
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 flex-grow flex flex-col">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="flex items-center gap-2 font-display text-2xl font-medium text-gray-900 dark:text-white group-hover:text-primary transition-colors">
                     <span className="material-icons-round text-secondary">{venue.icon}</span> {venue.name}
@@ -218,7 +218,7 @@ const VenueSelection: React.FC = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div className="mt-auto flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
                   <div className="text-xs text-gray-500 dark:text-gray-300">
                     {venue.tableTemplates.reduce((sum, t) => sum + t.count, 0)} tables total
                   </div>

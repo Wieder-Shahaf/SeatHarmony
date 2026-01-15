@@ -18,7 +18,7 @@ export interface VisualLayoutDef {
     venueId: string;
     width: number;
     height: number;
-    danceFloor: DanceFloorConfig;
+    danceFloor?: DanceFloorConfig;
     tables: TablePosition[];
 }
 
@@ -73,29 +73,34 @@ const createGrid = (
 
 // --- VENUE DEFINITIONS ---
 
-// 1. Grand Ballroom (35 tables)
-// Concentric circles around dance floor
+// 1. Grand Ballroom (36 tables)
+// Grid layout on the right side
 const grandBallroom: VisualLayoutDef = {
     venueId: 'grand-ballroom',
-    width: 1000,
-    height: 800,
-    danceFloor: { x: 50, y: 50, width: 20, height: 20, shape: 'circle' },
+    width: 1200,
+    height: 1000,
+    danceFloor: { x: 25, y: 50, width: 30, height: 70, shape: 'rect' },
     tables: [
-        // Inner ring (8 tables)
-        ...createCircle(50, 50, 20, 25, 8, 0, 1),
-        // Middle ring (12 tables)
-        ...createCircle(50, 50, 32, 38, 12, 0.2, 9),
-        // Outer ring / corners (15 tables)
-        ...createCircle(50, 50, 42, 45, 15, 0, 21),
+        // Grid of 36 tables (3 columns x 12 rows) on the right side
+        ...createGrid(52, 12, 4, 9, 12, 9, 1),
+        //createGrid(width, height, start_x, start_y, cell_size, padding, seed)
     ],
+    features: [
+        { x: 25, y: 4, width: 8, height: 40, type: 'bar', label: 'Main Bar', shape: 'rect', rotation: 90, labelRotation: -90 },
+        { x: 100, y: 92, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 100, y: 4, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 0, y: 92, width: 16, height: 8, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 0, y: 50, width: 25, height: 16, type: 'canopy', label: 'Wedding Canopy', shape: 'circle', rotation: -90 },
+        { x: 100, y: 50, width: 40, height: 10, type: 'buffet', label: 'Buffet', shape: 'rect', rotation: 90, labelRotation: -90 },
+    ]
 };
 
 // 2. Garden Pavilion (21 tables)
 // Pavilion area (top) + Lawn (bottom)
 const gardenPavilion: VisualLayoutDef = {
     venueId: 'garden-pavilion',
-    width: 1000,
-    height: 900,
+    width: 1200,
+    height: 1000,
     danceFloor: { x: 50, y: 30, width: 25, height: 15, shape: 'rect' },
     tables: [
         // Pavilion (7 tables) - around dance floor
@@ -111,8 +116,8 @@ const gardenPavilion: VisualLayoutDef = {
 // Long rows
 const modernBanquet: VisualLayoutDef = {
     venueId: 'modern-banquet',
-    width: 1000,
-    height: 800,
+    width: 1200,
+    height: 1000,
     danceFloor: { x: 50, y: 85, width: 40, height: 15, shape: 'rect' },
     tables: [
         // Row 1 (2 large head tables)
@@ -130,8 +135,8 @@ const modernBanquet: VisualLayoutDef = {
 // 4. Rooftop Terrace (19 tables)
 const rooftopTerrace: VisualLayoutDef = {
     venueId: 'rooftop-terrace',
-    width: 1000,
-    height: 800,
+    width: 1200,
+    height: 1000,
     danceFloor: { x: 80, y: 50, width: 15, height: 25, shape: 'rect' },
     tables: [
         // Main area (4 tables)
@@ -148,7 +153,7 @@ const rooftopTerrace: VisualLayoutDef = {
 // 5. Rustic Barn (12 tables)
 const rusticBarn: VisualLayoutDef = {
     venueId: 'rustic-barn',
-    width: 800,
+    width: 1200,
     height: 1000,
     danceFloor: { x: 50, y: 50, width: 30, height: 20, shape: 'rect' },
     tables: [
@@ -165,8 +170,8 @@ const rusticBarn: VisualLayoutDef = {
 // 6. Intimate Chapel (12 tables)
 const intimateChapel: VisualLayoutDef = {
     venueId: 'intimate-chapel',
-    width: 800,
-    height: 800,
+    width: 1200,
+    height: 1000,
     danceFloor: { x: 50, y: 20, width: 20, height: 10, shape: 'rect' }, // Altar area as dance floor for visualization
     tables: [
         // Left aisle (6 tables)
@@ -180,17 +185,30 @@ const intimateChapel: VisualLayoutDef = {
 // Organic flow
 const beachResort: VisualLayoutDef = {
     venueId: 'beach-resort',
-    width: 1000,
-    height: 800,
-    danceFloor: { x: 50, y: 50, width: 30, height: 30, shape: 'circle' },
+    width: 1200,
+    height: 1000,
+    //danceFloor: { x: 0, y: 90, width: 10, height: 10, shape: 'circle' },
     tables: [
-        // Inner circle (6 tables)
-        ...createCircle(50, 50, 25, 25, 6, 0, 1),
-        // Middle wave
-        ...createCircle(50, 50, 40, 40, 10, 0.5, 7),
-        // Outer scatter
-        ...createCircle(50, 50, 48, 45, 6, 0, 17),
+        // Left Side (2 columns x 6 rows)
+        ...createGrid(22, 34, 2, 6, 12, 11, 10),
+        // Right Side (2 columns x 6 rows)
+        ...createGrid(67, 34, 2, 6, 12, 11, 10),
+
     ],
+    features: [
+        // Zones
+        { x: 52, y: -4, width: 120, height: 20, type: 'zone', label: 'Beach', shape: 'rect' },
+
+        { x: 0, y: 60, width: 40, height: 10, type: 'bar', label: 'Main Bar', shape: 'rect', rotation: 90, labelRotation: -90 },
+        { x: 100, y: 60, width: 40, height: 10, type: 'buffet', label: 'Buffet', shape: 'rect', rotation: 90, labelRotation: -90 },
+        { x: 39, y: 106, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 65, y: 106, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 52, y: 106, width: 16, height: 8, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 52, y: 16, width: 25, height: 16, type: 'canopy', label: 'Wedding Canopy', shape: 'circle' },
+        { x: 98, y: 104, width: 12, height: 12, type: 'lifeguard', label: 'Lifeguard', shape: 'rect' },
+
+    ]
+
 };
 
 const LAYOUTS: Record<string, VisualLayoutDef> = {
@@ -210,19 +228,75 @@ const getDefaultLayout = (count: number): VisualLayoutDef => {
 
     return {
         venueId: 'default',
-        width: 1000,
-        height: 800,
+        width: 1200,
+        height: 1000,
         danceFloor: { x: 50, y: 15, width: 30, height: 10, shape: 'rect' },
         tables: createGrid(15, 30, cols, rows, 80 / cols, 60 / rows, 1)
     };
 };
 
+// --- FEATURES SUPPORT ---
+export interface VenueFeature {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard';
+    label: string;
+    rotation?: number;
+    labelRotation?: number;
+    shape?: 'rect' | 'circle';
+}
+
+// Extend definition to include features
+export interface VisualLayoutDef {
+    venueId: string;
+    width: number;
+    height: number;
+    danceFloor?: DanceFloorConfig;
+    tables: TablePosition[];
+    features?: VenueFeature[];
+}
+
+// 8. Luxury Garden Estate (45 tables - 500 capacity approx logic)
+// Indoor Hall (Rectangular) + Outdoor Garden (Round)
+const luxuryGardenEstate: VisualLayoutDef = {
+    venueId: 'luxury-garden-estate',
+    width: 1200,
+    height: 1000,
+
+    tables: [
+        // --- INDOOR (Left Side) ---
+        // Grid x=10, 28
+        ...createGrid(10, 8, 2, 8, 10, 8, 1),
+        ...createGrid(55, 10, 4, 8, 8, 8, 17),
+
+    ],
+    features: [
+        // ZONES
+        { x: 23, y: 50, width: 40, height: 100, type: 'zone', label: 'Indoor Hall', shape: 'rect' },
+        { x: 75, y: 50, width: 50, height: 100, type: 'zone', label: 'Garden', shape: 'rect' },
+
+        { x: 38, y: 35, width: 8, height: 65, type: 'bar', label: 'Main Bar', shape: 'rect' },
+        { x: 92, y: 30, width: 10, height: 35, type: 'bar', label: 'Garden Bar', shape: 'circle' },
+        { x: -1, y: 4, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: -1, y: 96, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 105, y: 96, width: 10, height: 8, type: 'restroom', label: 'Garden WC', shape: 'rect' },
+        { x: 90, y: -3, width: 14, height: 6, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 65, y: 88, width: 25, height: 14, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+    ]
+};
+
+// Re-map with update
+const UPDATED_LAYOUTS: Record<string, VisualLayoutDef> = {
+    ...LAYOUTS,
+    'luxury-garden-estate': luxuryGardenEstate,
+};
+
 export const getVisualLayout = (venueId: string | undefined, tableCount: number): VisualLayoutDef => {
-    if (venueId && LAYOUTS[venueId]) {
-        // If we have fewer tables than the template defines, the extra positions will just be unused, which is fine.
-        // However, if we have MORE tables (custom added), we need to ensure they have positions.
-        // For now, we assume the venue visual matches the venue config table count closely.
-        return LAYOUTS[venueId];
+    if (venueId && UPDATED_LAYOUTS[venueId]) {
+        return UPDATED_LAYOUTS[venueId];
     }
     return getDefaultLayout(tableCount);
 };
+

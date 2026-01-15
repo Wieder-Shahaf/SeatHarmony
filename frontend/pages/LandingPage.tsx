@@ -405,7 +405,7 @@ const LandingPage: React.FC = () => {
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">1</div>
                       <div>
                         <h4 className="font-bold text-text-main dark:text-white mb-1">Create Columns</h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Create two columns in your spreadsheet: <span className="font-mono text-primary bg-primary/5 px-1 rounded">Proper Names</span> and <span className="font-mono text-primary bg-primary/5 px-1 rounded">Category</span>.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Create two columns in your spreadsheet: <span className="font-mono text-primary bg-primary/5 px-1 rounded"> Full Guest Names</span> and <span className="font-mono text-primary bg-primary/5 px-1 rounded">Category</span>.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
@@ -457,7 +457,7 @@ const LandingPage: React.FC = () => {
 
                   <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-lg flex gap-3 items-start">
                     <span className="material-icons-round text-amber-500 text-lg mt-0.5">lightbulb</span>
-                    <p className="text-xs text-amber-800 dark:text-amber-200"><strong>Tip:</strong> Ensure your column headers are exactly "Proper Names" and "Category" to prevent upload errors.</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-200"><strong>Tip:</strong> Ensure your column headers are exactly "Full Guest Name" and "Category" to prevent upload errors.</p>
                   </div>
                 </div>
 

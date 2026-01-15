@@ -220,7 +220,7 @@ def generate_layout_for_weights(
         model.setParam('MIPGap', 0.4)   # Accept solutions within 5% of optimal
         model.setParam('MIPFocus', 1)    # Focus on finding good feasible solutions quickly
         model.setParam('NonConvex', 2)   # Allow non-convex quadratic (needed for x*x products)
-        model.setParam('TimeLimit', 5)  # 60 seconds timeout
+        model.setParam('TimeLimit', 60)  # 60 seconds timeout
         
         # ===========================================
         # DECISION VARIABLES

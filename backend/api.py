@@ -16,8 +16,10 @@ elif (Path(__file__).parent / ".env").exists():
     load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, RootModel
+import json
 
 from .seat_harmony_task import SeatHarmonyTask, SeatHarmonyState
 from .models import layout_to_dict
@@ -219,6 +221,147 @@ def _simple_tot_bfs(
         branching=branching,
         n_generate=n_generate,
         n_evaluate=n_evaluate,
+    )
+
+
+
+def _sequential_tot_bfs_generator(
+    instance: Dict[str, Any],
+    depth: int,
+    branching: int = 3,
+    n_generate: int = 3,
+    n_evaluate: int = 3,
+):
+    """
+    Generator version of Sequential Tree-of-Thoughts BFS.
+    Yields JSON strings with progress updates.
+    Finally yields the result as a JSON string.
+    """
+    tot_start_time = time.time()
+    logger.info(f"ToT BFS Generator starting | depth={depth} branching={branching}")
+
+    task = SeatHarmonyTask()
+    root = task.get_initial_state(instance)
+    
+    frontier: List[SeatHarmonyState] = [root]
+    scored_states: List[Tuple[SeatHarmonyState, float]] = []
+
+    # Initial progress
+    yield json.dumps({
+        "type": "progress",
+        "percent": 0,
+        "message": "Initializing optimization..."
+    }) + "\n"
+
+    for level in range(depth):
+        level_start_time = time.time()
+        yield json.dumps({
+            "type": "progress",
+            "percent": int((level / depth) * 100),
+            "message": f"Starting Level {level + 1} of {depth}..."
+        }) + "\n"
+
+        level_scored: List[Tuple[SeatHarmonyState, float]] = []
+
+        # Collect work items
+        work_items: List[Tuple[SeatHarmonyState, str]] = []
+        for state in frontier:
+            thoughts = task.generate_thoughts(state, n_generate)[:branching]
+            for thought in thoughts:
+                work_items.append((state, thought))
+
+        total_work = len(work_items)
+        if total_work == 0:
+            break
+
+        completed_count = 0
+        
+        # Process work items
+        for idx, (state, thought) in enumerate(work_items):
+            # Calculate granular progress
+            # Base progress for level + fraction of current level
+            level_base = (level / depth) * 100
+            step_progress = ((idx + 1) / total_work) * (100 / depth)
+            current_percent = min(99, int(level_base + step_progress))
+            
+            yield json.dumps({
+                "type": "progress",
+                "percent": current_percent,
+                "message": f"Level {level + 1}: Analyzing strategy {idx + 1}/{total_work} ({thought})..."
+            }) + "\n"
+
+            try:
+                child_state = task.apply_thought(state, thought)
+
+                if child_state.layout is not None:
+                    # Evaluate
+                    evaluated = task.evaluate_states([child_state], n_evaluate)
+                    level_scored.extend(evaluated)
+                    completed_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to apply thought: {thought} | {e}")
+                continue
+
+        # Add this level's results
+        scored_states.extend(level_scored)
+
+        # Select top states for next level
+        level_sorted = sorted(level_scored, key=lambda x: x[1], reverse=True)
+        frontier = [s for s, _ in level_sorted[:branching]]
+
+        if not frontier:
+            break
+
+    # Final processing
+    unique_layouts = []
+    seen_ids = set()
+    
+    for state, value in sorted(scored_states, key=lambda x: x[1], reverse=True):
+        if state.layout is None:
+            continue
+        layout_dict = layout_to_dict(state.layout)
+        # Use simple ID + assignments hash to dedup
+        layout_id = (layout_dict["id"], tuple(sorted(layout_dict["assignments"].items())))
+        
+        if layout_id in seen_ids:
+            continue
+        seen_ids.add(layout_id)
+        
+        unique_layouts.append({
+            "value": value,
+            "weights": state.weights,
+            "notes": state.notes,
+            "layout": layout_dict,
+        })
+        # Note: top_k filtering should happen here or be passed in, 
+        # but for now we return all useful ones and let client filter or filter locally if needed.
+        # Let's limit to reasonable amount to avoid huge payloads
+        if len(unique_layouts) >= 6:
+            break
+
+    yield json.dumps({
+        "type": "result",
+        "layouts": unique_layouts
+    }) + "\n"
+
+
+@app.post("/api/layouts/stream-generate")
+def stream_generate_layouts(req: LayoutRequest) -> StreamingResponse:
+    instance: Dict[str, Any] = {
+        "guests": [g.dict() for g in req.guests],
+        "tables": [t.dict() for t in req.tables],
+        "settings": req.settings,
+    }
+    
+    return StreamingResponse(
+        _sequential_tot_bfs_generator(
+            instance=instance,
+            depth=req.tot.depth,
+            branching=req.tot.branching,
+            n_generate=req.tot.n_generate,
+            n_evaluate=req.tot.n_evaluate,
+        ),
+        media_type="application/x-ndjson"
     )
 
 

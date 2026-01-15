@@ -309,97 +309,98 @@ const Dashboard: React.FC = () => {
   return (
     <div className="flex-grow p-6 md:p-10 max-w-7xl mx-auto w-full">
       {/* Header */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Guest Group Overview</h2>
-          <p className="text-gray-600 dark:text-gray-300 max-w-xl">
-            Review and organize your guests into logical groups beneath. This helps the AI understand relationships and ensure everyone is seated with their group.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 relative" ref={filterRef}>
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border transition-colors bg-white dark:bg-transparent ${selectedFilters.length > 0
-              ? 'border-primary text-primary'
-              : 'border-secondary text-text-main dark:text-accent hover:bg-secondary/10'
-              }`}
-          >
-            <span className="material-icons-round text-sm">filter_list</span>
-            {selectedFilters.length === 0
-              ? 'Filter'
-              : selectedFilters.length === 1
-                ? selectedFilters[0]
-                : `${selectedFilters.length} selected`}
-            <span className="material-icons-round text-sm">{isFilterOpen ? 'expand_less' : 'expand_more'}</span>
-          </button>
+      {/* Header */}
+      <div className="mb-12 text-center max-w-2xl mx-auto">
+        <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Guest Group Overview</h2>
+        <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
+          Review and organize your guests into logical groups beneath. This helps the AI understand relationships and ensure everyone is seated with their group.
+        </p>
+      </div>
 
-          {/* Dropdown Menu */}
-          {isFilterOpen && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-secondary/20 dark:border-gray-700 z-50 overflow-hidden">
-              <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-                <div className="relative">
-                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
-                  <input
-                    type="text"
-                    placeholder="Find category..."
-                    value={filterSearch}
-                    onChange={(e) => setFilterSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-text-main dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary"
-                    autoFocus
-                  />
-                </div>
+      {/* Filter Bar */}
+      <div className="flex justify-end mb-8 relative" ref={filterRef}>
+        <button
+          onClick={() => setIsFilterOpen(!isFilterOpen)}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border transition-colors bg-white dark:bg-transparent ${selectedFilters.length > 0
+            ? 'border-primary text-primary'
+            : 'border-secondary text-text-main dark:text-accent hover:bg-secondary/10'
+            }`}
+        >
+          <span className="material-icons-round text-sm">filter_list</span>
+          {selectedFilters.length === 0
+            ? 'Filter'
+            : selectedFilters.length === 1
+              ? selectedFilters[0]
+              : `${selectedFilters.length} selected`}
+          <span className="material-icons-round text-sm">{isFilterOpen ? 'expand_less' : 'expand_more'}</span>
+        </button>
+
+        {/* Dropdown Menu */}
+        {isFilterOpen && (
+          <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-secondary/20 dark:border-gray-700 z-50 overflow-hidden">
+            <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+              <div className="relative">
+                <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                <input
+                  type="text"
+                  placeholder="Find category..."
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-text-main dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary"
+                  autoFocus
+                />
               </div>
-              <div className="p-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <p className="text-xs text-gray-500 dark:text-gray-300 uppercase tracking-wider font-medium px-2">Filter by Category</p>
-                {selectedFilters.length > 0 && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{selectedFilters.length}</span>
-                )}
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {filteredCategories.map((category) => {
-                  const isSelected = category === 'All Groups'
-                    ? selectedFilters.length === 0
-                    : selectedFilters.includes(category);
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => toggleFilter(category)}
-                      className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${isSelected
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        {category === 'All Groups' && <span className="material-icons-round text-sm">apps</span>}
-                        {category}
-                      </span>
-                      <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-                        ? 'bg-primary border-primary'
-                        : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                        {isSelected && <span className="material-icons-round text-xs text-white">check</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            </div>
+            <div className="p-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-300 uppercase tracking-wider font-medium px-2">Filter by Category</p>
               {selectedFilters.length > 0 && (
-                <div className="p-2 border-t border-gray-100 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      setSelectedFilters([]);
-                      setFilterSearch('');
-                    }}
-                    className="w-full text-center text-sm text-gray-500 hover:text-primary py-2"
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{selectedFilters.length}</span>
               )}
             </div>
-          )}
-        </div>
-      </header>
+            <div className="max-h-64 overflow-y-auto">
+              {filteredCategories.map((category) => {
+                const isSelected = category === 'All Groups'
+                  ? selectedFilters.length === 0
+                  : selectedFilters.includes(category);
+                return (
+                  <button
+                    key={category}
+                    onClick={() => toggleFilter(category)}
+                    className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${isSelected
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {category === 'All Groups' && <span className="material-icons-round text-sm">apps</span>}
+                      {category}
+                    </span>
+                    <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
+                      ? 'bg-primary border-primary'
+                      : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                      {isSelected && <span className="material-icons-round text-xs text-white">check</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedFilters.length > 0 && (
+              <div className="p-2 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    setSelectedFilters([]);
+                    setFilterSearch('');
+                  }}
+                  className="w-full text-center text-sm text-gray-500 hover:text-primary py-2"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -408,7 +409,7 @@ const Dashboard: React.FC = () => {
             <span className="material-icons-round text-sm">people</span> Total Guests
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="font-display text-3xl font-bold text-text-main dark:text-white">{totalGuests}</span>
+            <span className="font-display text-3xl font-bold text-text-main dark:text-white lining-nums">{totalGuests}</span>
             <span className="text-green-800 dark:text-green-300 text-sm flex items-center bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
               <span className="material-icons-round text-xs mr-1">check_circle</span> Confirmed
             </span>
@@ -418,8 +419,8 @@ const Dashboard: React.FC = () => {
           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
             <span className="material-icons-round text-sm">workspaces</span> Groups
           </span>
-          <div className="flex items-center gap-2">
-            <span className="font-display text-3xl font-bold text-primary">{totalGroups}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-3xl font-bold text-primary lining-nums">{totalGroups}</span>
             <span className="text-gray-400 text-sm mt-1">Groups Detected</span>
           </div>
         </div>
@@ -427,8 +428,8 @@ const Dashboard: React.FC = () => {
           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
             <span className="material-icons-round text-md">person_search</span> Uncategorized
           </span>
-          <div className="flex items-center gap-2">
-            <span className="font-display text-3xl font-bold text-orange-400">{unassignedCount}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-3xl font-bold text-orange-400 lining-nums">{unassignedCount}</span>
             <span className="text-gray-400 text-sm mt-1">Guests Pending</span>
           </div>
         </div>
