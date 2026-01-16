@@ -348,7 +348,7 @@ const Recommendations: React.FC = () => {
                         weights.side_mixing && weights.side_mixing > 0.6 ? 'mixing guests' : 'a balanced arrangement'}.
                   </p>
 
-                  {/* Harmony Profile - Visual Summary */}
+                  {/* Harmony Profile - Visual Summary (showing actual results) */}
                   <div className="space-y-4 mb-6">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Harmony Profile</h3>
 
@@ -357,12 +357,12 @@ const Recommendations: React.FC = () => {
                       <div>
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-gray-600 dark:text-gray-300">Family Cohesion</span>
-                          <span className="font-semibold text-primary">{Math.round((weights.family_cohesion || 0) * 100)}%</span>
+                          <span className="font-semibold text-primary">{Math.round(layout.objective_breakdown?.family_cohesion || 0)}%</span>
                         </div>
                         <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary rounded-full"
-                            style={{ width: `${(weights.family_cohesion || 0) * 100}%` }}
+                            style={{ width: `${layout.objective_breakdown?.family_cohesion || 0}%` }}
                           ></div>
                         </div>
                       </div>
@@ -371,12 +371,12 @@ const Recommendations: React.FC = () => {
                       <div>
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-gray-600 dark:text-gray-300">Social Groups</span>
-                          <span className="font-semibold text-secondary">{Math.round((weights.social_group_cohesion || 0) * 100)}%</span>
+                          <span className="font-semibold text-secondary">{Math.round(layout.objective_breakdown?.social_group_cohesion || 0)}%</span>
                         </div>
                         <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-secondary rounded-full"
-                            style={{ width: `${(weights.social_group_cohesion || 0) * 100}%` }}
+                            style={{ width: `${layout.objective_breakdown?.social_group_cohesion || 0}%` }}
                           ></div>
                         </div>
                       </div>
@@ -385,12 +385,12 @@ const Recommendations: React.FC = () => {
                       <div>
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-gray-600 dark:text-gray-300">Mixing</span>
-                          <span className="font-semibold text-accent">{Math.round((weights.side_mixing || 0) * 100)}%</span>
+                          <span className="font-semibold text-accent">{Math.round(layout.objective_breakdown?.side_mixing || 0)}%</span>
                         </div>
                         <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-accent rounded-full"
-                            style={{ width: `${(weights.side_mixing || 0) * 100}%` }}
+                            style={{ width: `${layout.objective_breakdown?.side_mixing || 0}%` }}
                           ></div>
                         </div>
                       </div>
