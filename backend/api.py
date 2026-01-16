@@ -336,7 +336,7 @@ def _sequential_tot_bfs_generator(
         # Note: top_k filtering should happen here or be passed in, 
         # but for now we return all useful ones and let client filter or filter locally if needed.
         # Let's limit to reasonable amount to avoid huge payloads
-        if len(unique_layouts) >= 6:
+        if len(unique_layouts) >= 3:
             break
 
     yield json.dumps({
