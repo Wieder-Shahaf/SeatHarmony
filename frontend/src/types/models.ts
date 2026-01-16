@@ -298,10 +298,10 @@ export function getVenueById(id: string): VenueLayout | undefined {
   return VENUE_LAYOUTS.find(v => v.id === id);
 }
 
-// Default ToT parameters - optimized for parallel execution
+// Default ToT parameters - 12 optimizations for diverse results
 export const DEFAULT_TOT_PARAMS: TotParams = {
-  depth: 2,       // 2 levels of exploration
-  branching: 3,   // 3 children per node (parallel threads)
+  depth: 2,       // 2 levels = 3 + 9 = 12 optimizations
+  branching: 3,   // 3 children per node
   n_generate: 3,  // Generate 3 thought variants
   n_evaluate: 3,  // Evaluate top 3
   top_k: 3,       // Return top 3 layouts

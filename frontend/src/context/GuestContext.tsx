@@ -21,7 +21,13 @@ const STORAGE_KEYS = {
   TOT_PARAMS: 'seatharmony_tot_params',
   LAYOUTS: 'seatharmony_layouts',
   SELECTED_LAYOUT: 'seatharmony_selected_layout',
+  EXPLANATIONS: 'seatharmony_explanations',
 } as const;
+
+// Type for guest explanations cache
+export type ExplanationCache = Record<string, string>;
+
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 // Helper functions for localStorage
 function saveToStorage<T>(key: string, data: T): void {
@@ -100,6 +106,13 @@ interface GuestContextType {
 
   // Manual assignment
   updateGuestAssignment: (guestId: string, tableId: string | null) => void;
+
+  // Explanations
+  explanations: ExplanationCache;
+  setExplanations: (explanations: ExplanationCache) => void;
+  fetchAllExplanations: () => Promise<void>;
+  fetchExplanationsForTables: (tableIds: string[]) => Promise<void>;
+  isLoadingExplanations: boolean;
 }
 
 const GuestContext = createContext<GuestContextType | undefined>(undefined);
@@ -131,9 +144,13 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   const [selectedLayoutIndex, setSelectedLayoutIndexState] = useState<number>(() =>
     loadFromStorage(STORAGE_KEYS.SELECTED_LAYOUT, 0)
   );
+  const [explanations, setExplanationsState] = useState<ExplanationCache>(() =>
+    loadFromStorage(STORAGE_KEYS.EXPLANATIONS, {})
+  );
 
   // UI state (not persisted)
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingExplanations, setIsLoadingExplanations] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Derived data
@@ -169,6 +186,10 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.SELECTED_LAYOUT, selectedLayoutIndex);
   }, [selectedLayoutIndex]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.EXPLANATIONS, explanations);
+  }, [explanations]);
 
   // Guest management
   const setGuests = useCallback((newGuests: Guest[]) => {
@@ -228,16 +249,137 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     setSelectedVenueLayoutState(null);
     setLayoutsState([]);
     setSelectedLayoutIndexState(0);
+    setExplanationsState({});
     setError(null);
     clearStorage();
     console.log('All data cleared from memory and localStorage');
-    console.log('All data cleared from memory and localStorage');
   }, []);
+
+  // Explanations management
+  const setExplanations = useCallback((newExplanations: ExplanationCache) => {
+    setExplanationsState(newExplanations);
+  }, []);
+
+  // Fetch explanations for all guests in the selected layout
+  const fetchAllExplanations = useCallback(async () => {
+    const selectedLayout = layouts[selectedLayoutIndex];
+    if (!selectedLayout || guests.length === 0 || tables.length === 0) return;
+
+    setIsLoadingExplanations(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/layouts/explain-guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guests: guests.map(g => ({
+            id: g.id,
+            name: g.name,
+            group_id: g.group_id,
+            importance: g.importance,
+            tags: g.tags,
+          })),
+          tables: tables.map(t => ({
+            id: t.id,
+            name: t.name,
+            capacity: t.capacity,
+            zone: t.zone,
+            constraints: t.constraints,
+          })),
+          layout: selectedLayout.layout,
+          weights: selectedLayout.weights,
+          notes: selectedLayout.notes,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setExplanationsState(data.explanations || {});
+        console.log(`Fetched explanations for ${Object.keys(data.explanations || {}).length} guests`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch explanations:', err);
+    } finally {
+      setIsLoadingExplanations(false);
+    }
+  }, [guests, tables, layouts, selectedLayoutIndex]);
+
+  // Fetch explanations for specific tables only (for when guests are moved)
+  const fetchExplanationsForTables = useCallback(async (tableIds: string[]) => {
+    const selectedLayout = layouts[selectedLayoutIndex];
+    if (!selectedLayout || tableIds.length === 0) return;
+
+    const assignments = selectedLayout.layout.assignments as Record<string, string>;
+
+    // Get guests at the specified tables
+    const affectedGuestIds = new Set<string>();
+    for (const [guestId, tableId] of Object.entries(assignments)) {
+      if (tableIds.includes(tableId)) {
+        affectedGuestIds.add(guestId);
+      }
+    }
+
+    if (affectedGuestIds.size === 0) return;
+
+    // Get the affected guests and tables
+    const affectedGuests = guests.filter(g => affectedGuestIds.has(g.id));
+    const affectedTables = tables.filter(t => tableIds.includes(t.id));
+
+    setIsLoadingExplanations(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/layouts/explain-guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guests: affectedGuests.map(g => ({
+            id: g.id,
+            name: g.name,
+            group_id: g.group_id,
+            importance: g.importance,
+            tags: g.tags,
+          })),
+          tables: affectedTables.map(t => ({
+            id: t.id,
+            name: t.name,
+            capacity: t.capacity,
+            zone: t.zone,
+            constraints: t.constraints,
+          })),
+          layout: {
+            ...selectedLayout.layout,
+            // Only include assignments for affected guests
+            assignments: Object.fromEntries(
+              Object.entries(assignments).filter(([gId]) => affectedGuestIds.has(gId))
+            ),
+          },
+          weights: selectedLayout.weights,
+          notes: selectedLayout.notes,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Merge new explanations with existing ones
+        setExplanationsState(prev => ({
+          ...prev,
+          ...data.explanations,
+        }));
+        console.log(`Updated explanations for ${Object.keys(data.explanations || {}).length} guests at tables: ${tableIds.join(', ')}`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch explanations for tables:', err);
+    } finally {
+      setIsLoadingExplanations(false);
+    }
+  }, [guests, tables, layouts, selectedLayoutIndex]);
 
   // Manual assignment update
   const updateGuestAssignment = useCallback((guestId: string, tableId: string | null) => {
     // Only update if we have a selected layout
     if (!layouts[selectedLayoutIndex]) return;
+
+    // Get the current table for the guest (before move)
+    const currentLayout = layouts[selectedLayoutIndex];
+    const oldTableId = currentLayout.layout.assignments[guestId];
 
     setLayoutsState(prev => {
       const newLayouts = [...prev];
@@ -258,6 +400,22 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
       newLayouts[selectedLayoutIndex] = currentLayout;
       return newLayouts;
     });
+
+    // After updating, refresh explanations for affected tables
+    // Use setTimeout to ensure state update completes first
+    setTimeout(() => {
+      const tablesToRefresh: string[] = [];
+      if (oldTableId) tablesToRefresh.push(oldTableId);
+      if (tableId) tablesToRefresh.push(tableId);
+
+      if (tablesToRefresh.length > 0) {
+        // We need to call this after the state update, so we use a workaround
+        // The fetchExplanationsForTables will be called from the component
+      }
+    }, 100);
+
+    // Return the affected table IDs so the component can refresh explanations
+    return { oldTableId, newTableId: tableId };
   }, [layouts, selectedLayoutIndex]);
 
   // Initialize from Excel upload
@@ -305,6 +463,11 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     initializeFromExcel,
     hasStoredData,
     updateGuestAssignment,
+    explanations,
+    setExplanations,
+    fetchAllExplanations,
+    fetchExplanationsForTables,
+    isLoadingExplanations,
   };
 
   return (

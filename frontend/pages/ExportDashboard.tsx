@@ -4,10 +4,24 @@ import { useGuests } from '../src/context/GuestContext';
 import { getVisualLayout } from '../src/utils/visualLayouts';
 import confetti from 'canvas-confetti';
 
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
 const ExportDashboard: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
   const [showPreview, setShowPreview] = useState(false);
   const iconRef = useRef<HTMLDivElement>(null);
+
+  // Export states
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Export options state (connected to checkboxes)
+  const [exportOptions, setExportOptions] = useState({
+    includeDietary: true,
+    vendorMealCount: false,
+    highResForPrinting: true,
+  });
 
   // Trigger confetti on mount
   useEffect(() => {
@@ -25,6 +39,113 @@ const ExportDashboard: React.FC = () => {
       });
     }
   }, []);
+
+  // Format date for filename
+  const formatDate = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
+  // Handle Excel export
+  const handleExcelExport = async () => {
+    const selectedLayout = layouts[selectedLayoutIndex];
+    if (!selectedLayout) return;
+
+    setIsExportingExcel(true);
+    setExportError(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/export/excel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guests: guests.map(g => ({
+            id: g.id,
+            name: g.name,
+            group_id: g.group_id,
+            importance: g.importance,
+            tags: g.tags,
+          })),
+          tables: tables.map(t => ({
+            id: t.id,
+            name: t.name,
+            capacity: t.capacity,
+            zone: t.zone,
+            constraints: t.constraints,
+          })),
+          layout: selectedLayout.layout,
+          options: {
+            include_dietary: exportOptions.includeDietary,
+            include_vendor_summary: exportOptions.vendorMealCount,
+            include_table_details: true,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Excel file');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const venueName = selectedVenueLayout?.name?.replace(/\s+/g, '_') || 'Venue';
+      a.download = `SeatHarmony_SeatingPlan_${venueName}_${formatDate()}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      setExportError('Failed to export Excel file. Please try again.');
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
+  // Handle PDF export (client-side using html2canvas + jsPDF)
+  const handlePdfExport = async () => {
+    setIsExportingPdf(true);
+    setExportError(null);
+
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const { default: jsPDF } = await import('jspdf');
+
+      // Find the preview element
+      const previewElement = document.querySelector('.floor-plan-preview');
+      if (!previewElement) {
+        throw new Error('Preview element not found');
+      }
+
+      const scale = exportOptions.highResForPrinting ? 2 : 1;
+      const canvas = await html2canvas(previewElement as HTMLElement, {
+        scale,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgWidth = 297; // A4 landscape width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF({
+        orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight);
+
+      const venueName = selectedVenueLayout?.name?.replace(/\s+/g, '_') || 'Venue';
+      pdf.save(`SeatHarmony_FloorPlan_${venueName}_${formatDate()}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      setExportError('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   // Get selected layout
   const selectedLayout = layouts[selectedLayoutIndex] || null;
@@ -190,14 +311,53 @@ const ExportDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Error message */}
+          {exportError && (
+            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+              {exportError}
+            </div>
+          )}
+
           <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-            <button className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:-translate-y-0.5">
-              <span className="material-icons-round mr-2">description</span>
-              Download Final Excel
+            <button
+              onClick={handleExcelExport}
+              disabled={isExportingExcel}
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {isExportingExcel ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <span className="material-icons-round mr-2">description</span>
+                  Download Final Excel
+                </>
+              )}
             </button>
-            <button className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-primary bg-background-light dark:bg-gray-700 hover:bg-secondary/50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-all duration-200 transform hover:-translate-y-0.5">
-              <span className="material-icons-round mr-2">map</span>
-              Download PDF Map
+            <button
+              onClick={handlePdfExport}
+              disabled={isExportingPdf}
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-primary bg-background-light dark:bg-gray-700 hover:bg-secondary/50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {isExportingPdf ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <span className="material-icons-round mr-2">map</span>
+                  Download PDF Map
+                </>
+              )}
             </button>
             <button className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200">
               <span className="material-icons-round mr-2">link</span>
@@ -219,7 +379,7 @@ const ExportDashboard: React.FC = () => {
 
             {/* Functional Map Preview */}
             <div
-              className="bg-gray-50 dark:bg-gray-800 rounded-lg h-56 w-full relative overflow-hidden group cursor-pointer border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-colors"
+              className="floor-plan-preview bg-gray-50 dark:bg-gray-800 rounded-lg h-56 w-full relative overflow-hidden group cursor-pointer border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-colors"
               onClick={() => setShowPreview(true)}
             >
               {renderMap(true)}
@@ -244,14 +404,20 @@ const ExportDashboard: React.FC = () => {
           </div>
 
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-md p-6 border border-secondary/20 dark:border-gray-700 flex flex-col">
-            {/* ... Export Settings content unchanged ... */}
             <h3 className="flex items-center gap-2 font-display text-xl text-text-main dark:text-gray-200 mb-4">
               <span className="material-icons-round text-lg">settings</span> Export Settings
             </h3>
             <div className="space-y-4 flex-grow">
               <div className="flex items-start">
                 <div className="flex items-center h-5">
-                  <input id="dietary" name="dietary" type="checkbox" defaultChecked className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded" />
+                  <input
+                    id="dietary"
+                    name="dietary"
+                    type="checkbox"
+                    checked={exportOptions.includeDietary}
+                    onChange={(e) => setExportOptions(prev => ({ ...prev, includeDietary: e.target.checked }))}
+                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                  />
                 </div>
                 <div className="ml-3 text-sm">
                   <label htmlFor="dietary" className="font-medium text-gray-700 dark:text-gray-300">Include Dietary Restrictions</label>
@@ -260,7 +426,14 @@ const ExportDashboard: React.FC = () => {
               </div>
               <div className="flex items-start">
                 <div className="flex items-center h-5">
-                  <input id="vendor" name="vendor" type="checkbox" className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded" />
+                  <input
+                    id="vendor"
+                    name="vendor"
+                    type="checkbox"
+                    checked={exportOptions.vendorMealCount}
+                    onChange={(e) => setExportOptions(prev => ({ ...prev, vendorMealCount: e.target.checked }))}
+                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                  />
                 </div>
                 <div className="ml-3 text-sm">
                   <label htmlFor="vendor" className="font-medium text-gray-700 dark:text-gray-300">Vendor Meal Count</label>
@@ -269,7 +442,14 @@ const ExportDashboard: React.FC = () => {
               </div>
               <div className="flex items-start">
                 <div className="flex items-center h-5">
-                  <input id="print" name="print" type="checkbox" defaultChecked className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded" />
+                  <input
+                    id="print"
+                    name="print"
+                    type="checkbox"
+                    checked={exportOptions.highResForPrinting}
+                    onChange={(e) => setExportOptions(prev => ({ ...prev, highResForPrinting: e.target.checked }))}
+                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                  />
                 </div>
                 <div className="ml-3 text-sm">
                   <label htmlFor="print" className="font-medium text-gray-700 dark:text-gray-300">High-Res for Printing</label>
@@ -312,8 +492,24 @@ const ExportDashboard: React.FC = () => {
               >
                 Close
               </button>
-              <button className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-opacity-90 shadow-md transition flex items-center gap-2">
-                <span className="material-icons-round text-sm">download</span> Download PDF
+              <button
+                onClick={() => { setShowPreview(false); handlePdfExport(); }}
+                disabled={isExportingPdf}
+                className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-opacity-90 shadow-md transition flex items-center gap-2 disabled:opacity-50"
+              >
+                {isExportingPdf ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons-round text-sm">download</span> Download PDF
+                  </>
+                )}
               </button>
             </div>
           </div>

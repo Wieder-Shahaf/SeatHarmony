@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 import os
 import time
+import io
 
 # Load .env file early (before any other imports that might use env vars)
 from dotenv import load_dotenv
@@ -50,7 +51,7 @@ class SettingsIn(RootModel[Dict[str, Any]]):
 
 
 class TotParams(BaseModel):
-    depth: int = 2        # 2 levels of exploration
+    depth: int = 2        # 2 levels = 3 + 9 = 12 optimizations for diverse results
     branching: int = 3    # 3 children per node
     n_generate: int = 3   # Generate 3 thought variants
     n_evaluate: int = 3   # Evaluate top 3
@@ -74,6 +75,17 @@ class ExplainGuestsRequest(BaseModel):
     layout: Dict[str, Any]  # The layout with assignments
     weights: Dict[str, float]  # The weights used for this layout
     notes: str  # The strategy/thought name (e.g., "traditional_seating")
+
+
+class ExcelExportRequest(BaseModel):
+    guests: List[GuestIn]
+    tables: List[TableIn]
+    layout: Dict[str, Any]
+    options: Dict[str, bool] = {
+        "include_dietary": True,
+        "include_vendor_summary": False,
+        "include_table_details": True,
+    }
 
 
 app = FastAPI(title="SeatHarmony ToT API")
@@ -130,6 +142,9 @@ def _sequential_tot_bfs(
     logger.info(f"ToT BFS starting | depth={depth} branching={branching} n_generate={n_generate} n_evaluate={n_evaluate}")
 
     task = SeatHarmonyTask()
+    # Reset cache statistics for this ToT run
+    task.cache_hits = 0
+    task.cache_misses = 0
     root = task.get_initial_state(instance)
     logger.debug(f"Initial state created | guests={len(root.guests)} tables={len(root.venue.tables)}")
 
@@ -157,7 +172,7 @@ def _sequential_tot_bfs(
         # Process work items sequentially
         for idx, (state, thought) in enumerate(work_items):
             thought_start_time = time.time()
-            logger.debug(f"Processing thought {idx + 1}/{len(work_items)}: {thought}")
+            logger.info(f"ToT Processing thought {idx + 1}/{len(work_items)}: '{thought}'")
 
             try:
                 child_state = task.apply_thought(state, thought)
@@ -181,7 +196,9 @@ def _sequential_tot_bfs(
                 continue
 
         level_duration_ms = (time.time() - level_start_time) * 1000
-        logger.info(f"ToT Level {level + 1}/{depth} completed | success={completed_count} failed={failed_count} | {level_duration_ms:.0f}ms")
+        total_requests = task.cache_hits + task.cache_misses
+        cache_hit_rate = (task.cache_hits / total_requests * 100) if total_requests > 0 else 0
+        logger.info(f"ToT Level {level + 1}/{depth} completed | success={completed_count} failed={failed_count} | cache_hits={task.cache_hits} optimizations={task.cache_misses} (hit_rate={cache_hit_rate:.0f}%) | {level_duration_ms:.0f}ms")
 
         # Add this level's results to overall scored states
         scored_states.extend(level_scored)
@@ -200,7 +217,9 @@ def _sequential_tot_bfs(
             break
 
     tot_duration_ms = (time.time() - tot_start_time) * 1000
-    logger.info(f"ToT BFS completed | total_states={len(scored_states)} | {tot_duration_ms:.0f}ms")
+    total_requests = task.cache_hits + task.cache_misses
+    cache_hit_rate = (task.cache_hits / total_requests * 100) if total_requests > 0 else 0
+    logger.info(f"ToT BFS completed | total_states={len(scored_states)} | cache_hits={task.cache_hits} optimizations={task.cache_misses} (hit_rate={cache_hit_rate:.0f}%) | {tot_duration_ms:.0f}ms")
 
     return scored_states
 
@@ -241,24 +260,37 @@ def _sequential_tot_bfs_generator(
     logger.info(f"ToT BFS Generator starting | depth={depth} branching={branching}")
 
     task = SeatHarmonyTask()
+    # Reset cache statistics for this ToT run
+    task.cache_hits = 0
+    task.cache_misses = 0
     root = task.get_initial_state(instance)
     
     frontier: List[SeatHarmonyState] = [root]
     scored_states: List[Tuple[SeatHarmonyState, float]] = []
 
+    # Calculate total optimizations for progress tracking
+    # depth=1: branching optimizations (3)
+    # depth=2: branching + branching*branching optimizations (3 + 9 = 12)
+    total_optimizations = sum(branching ** (d + 1) for d in range(depth))
+    current_optimization = 0
+
     # Initial progress
     yield json.dumps({
         "type": "progress",
         "percent": 0,
-        "message": "Initializing optimization..."
+        "message": "Initializing optimization...",
+        "currentStep": 0,
+        "totalSteps": total_optimizations,
     }) + "\n"
 
     for level in range(depth):
         level_start_time = time.time()
         yield json.dumps({
             "type": "progress",
-            "percent": int((level / depth) * 100),
-            "message": f"Starting Level {level + 1} of {depth}..."
+            "percent": int((current_optimization / total_optimizations) * 100),
+            "message": f"Starting Level {level + 1} of {depth}...",
+            "currentStep": current_optimization,
+            "totalSteps": total_optimizations,
         }) + "\n"
 
         level_scored: List[Tuple[SeatHarmonyState, float]] = []
@@ -275,19 +307,20 @@ def _sequential_tot_bfs_generator(
             break
 
         completed_count = 0
-        
+
         # Process work items
         for idx, (state, thought) in enumerate(work_items):
-            # Calculate granular progress
-            # Base progress for level + fraction of current level
-            level_base = (level / depth) * 100
-            step_progress = ((idx + 1) / total_work) * (100 / depth)
-            current_percent = min(99, int(level_base + step_progress))
-            
+            current_optimization += 1
+            # Calculate progress as a percentage of total optimizations
+            current_percent = min(99, int((current_optimization / total_optimizations) * 100))
+
             yield json.dumps({
                 "type": "progress",
                 "percent": current_percent,
-                "message": f"Level {level + 1}: Analyzing strategy {idx + 1}/{total_work} ({thought})..."
+                "message": f"Analyzing strategy {current_optimization} of {total_optimizations}...",
+                "strategy": thought,
+                "currentStep": current_optimization,
+                "totalSteps": total_optimizations,
             }) + "\n"
 
             try:
@@ -312,20 +345,23 @@ def _sequential_tot_bfs_generator(
         if not frontier:
             break
 
-    # Final processing
+    # Final processing - deduplicate by exact assignments, keep top 3 by score
     unique_layouts = []
-    seen_ids = set()
+    seen_assignments = set()
     
+    # Sort by score (value) descending to ensure highest scores first
     for state, value in sorted(scored_states, key=lambda x: x[1], reverse=True):
         if state.layout is None:
             continue
         layout_dict = layout_to_dict(state.layout)
-        # Use simple ID + assignments hash to dedup
-        layout_id = (layout_dict["id"], tuple(sorted(layout_dict["assignments"].items())))
         
-        if layout_id in seen_ids:
-            continue
-        seen_ids.add(layout_id)
+        # Deduplicate by exact guest-to-table assignments
+        # Create unique key from sorted assignments
+        assignments_tuple = tuple(sorted(layout_dict["assignments"].items()))
+        
+        if assignments_tuple in seen_assignments:
+            continue  # Skip duplicate assignments
+        seen_assignments.add(assignments_tuple)
         
         unique_layouts.append({
             "value": value,
@@ -333,9 +369,8 @@ def _sequential_tot_bfs_generator(
             "notes": state.notes,
             "layout": layout_dict,
         })
-        # Note: top_k filtering should happen here or be passed in, 
-        # but for now we return all useful ones and let client filter or filter locally if needed.
-        # Let's limit to reasonable amount to avoid huge payloads
+        
+        # Return top 3 unique layouts with highest scores
         if len(unique_layouts) >= 3:
             break
 
@@ -389,20 +424,27 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
         n_evaluate=req.tot.n_evaluate,
     )
 
-    # Sort by value and take top_k distinct layouts
+    # Sort by value (score) descending and take top_k distinct layouts
+    # Deduplicate by exact guest-to-table assignments to ensure truly different seating arrangements
     unique_layouts: List[Dict[str, Any]] = []
-    seen_ids = set()
+    seen_assignments = set()
     duplicates_skipped = 0
 
+    # Sort by score (value) descending - highest scores first
     for state, value in sorted(scored_states, key=lambda x: x[1], reverse=True):
         if state.layout is None:
             continue
         layout_dict = layout_to_dict(state.layout)
-        layout_id = (layout_dict["id"], tuple(sorted(layout_dict["assignments"].items())))
-        if layout_id in seen_ids:
+        
+        # Deduplicate by exact assignments (not metrics)
+        # Create unique key from sorted guest-to-table assignments
+        assignments_tuple = tuple(sorted(layout_dict["assignments"].items()))
+        
+        if assignments_tuple in seen_assignments:
             duplicates_skipped += 1
-            continue
-        seen_ids.add(layout_id)
+            continue  # Skip duplicate assignments
+        seen_assignments.add(assignments_tuple)
+        
         unique_layouts.append(
             {
                 "value": value,
@@ -411,6 +453,8 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
                 "layout": layout_dict,
             }
         )
+        
+        # Return top_k unique layouts with highest scores
         if len(unique_layouts) >= req.tot.top_k:
             break
 
@@ -473,6 +517,46 @@ def explain_layout(req: ExplainRequest) -> Dict[str, Any]:
     return {"explanation": explanation}
 
 
+# Category sets for side detection (mirrored from optimizer.py)
+_GROOM_SIDE_CATEGORIES = {
+    "Groom's Family", "Groom's Extended Family", "Groom's Side",
+    "Groom's Work Colleagues", "Groom's Uni Friends", "Groom's Friends"
+}
+_BRIDE_SIDE_CATEGORIES = {
+    "Bride's Family", "Bride's Extended Family", "Bride's Side",
+    "Bride's Work Colleagues", "Bride's Uni Friends", "Bride's Friends"
+}
+_NEUTRAL_CATEGORIES = {"Mutual Friends", "Family Friends"}
+
+# Strategy names to human-readable descriptions
+_STRATEGY_DESCRIPTIONS = {
+    "baseline": "balanced approach",
+    "boost_family": "prioritizing keeping families together",
+    "boost_social": "prioritizing keeping friend groups together",
+    "max_cohesion": "maximizing group togetherness",
+    "max_mingling": "encouraging mixing between bride and groom sides",
+    "reduce_social": "flexible social groupings",
+}
+
+
+def _get_guest_side(category: Optional[str]) -> str:
+    """Determine which wedding side a guest belongs to based on their category."""
+    if not category:
+        return "neutral"
+    if category in _GROOM_SIDE_CATEGORIES:
+        return "groom's side"
+    if category in _BRIDE_SIDE_CATEGORIES:
+        return "bride's side"
+    return "neutral"
+
+
+def _get_strategy_description(notes: str) -> str:
+    """Convert strategy code to human-readable description."""
+    # Handle various formats: "boost_family", "Strategy: boost_family", etc.
+    strategy_key = notes.lower().replace("strategy:", "").strip()
+    return _STRATEGY_DESCRIPTIONS.get(strategy_key, "optimized arrangement")
+
+
 def _explain_guests_batch(
     table_guests: List[Dict[str, Any]],
     table: Dict[str, Any],
@@ -492,34 +576,66 @@ def _explain_guests_batch(
     batch_start_time = time.time()
 
     from tot.models import gpt
-    
+
+    # Get human-readable strategy description
+    strategy_desc = _get_strategy_description(notes)
+
     # Build table context
     table_guest_names = [g["name"] for g in table_guests]
     table_categories = {}
+    table_sides = {"groom's side": 0, "bride's side": 0, "neutral": 0}
+
     for g in table_guests:
         cat = g.get("group_id") or "Uncategorized"
         table_categories[cat] = table_categories.get(cat, 0) + 1
-    
-    # Build guest details with context about table composition and constraints
+        side = _get_guest_side(cat)
+        table_sides[side] += 1
+
+    # Build guest details with richer context
     guest_details = []
     table_guest_ids = {g["id"] for g in table_guests}
-    
+
+    # Find where other guests from same categories are seated (for context)
+    category_distribution = {}
+    for g in all_guests:
+        cat = g.get("group_id")
+        if cat:
+            assigned_table = assignments.get(g["id"])
+            if cat not in category_distribution:
+                category_distribution[cat] = {}
+            if assigned_table:
+                category_distribution[cat][assigned_table] = category_distribution[cat].get(assigned_table, 0) + 1
+
     for g in table_guests:
-        # Find other guests at this table with same category (family/social group)
-        same_category_guests = [other["name"] for other in table_guests 
-                               if other["id"] != g["id"] and other.get("group_id") == g.get("group_id") and g.get("group_id")]
-        
+        category = g.get("group_id") or "Uncategorized"
+        side = _get_guest_side(category)
+
+        # Find other guests at this table with same category
+        same_category_at_table = [
+            other["name"] for other in table_guests
+            if other["id"] != g["id"] and other.get("group_id") == category and category != "Uncategorized"
+        ]
+
+        # Check if category is split across tables
+        cat_tables = category_distribution.get(category, {})
+        is_category_split = len(cat_tables) > 1
+
         # Build context string for this guest
         context_parts = []
-        if same_category_guests:
-            context_parts.append(f"same category as: {', '.join(same_category_guests[:3])}")
+        if same_category_at_table:
+            context_parts.append(f"seated with {len(same_category_at_table)} others from same group")
+        if is_category_split and category != "Uncategorized":
+            other_tables = [t for t in cat_tables.keys() if t != table.get("id")]
+            if other_tables:
+                context_parts.append(f"some {category} guests are at other tables")
         if g.get("importance", 0) > 0:
-            context_parts.append(f"VIP/important guest")
-        
+            context_parts.append("VIP guest")
+
         guest_details.append({
             "name": g["name"],
-            "category": g.get("group_id") or "Uncategorized",
-            "context": "; ".join(context_parts) if context_parts else "no special constraints",
+            "category": category,
+            "side": side,
+            "context": "; ".join(context_parts) if context_parts else "flexible placement",
         })
     
     # Build natural context about the table
@@ -529,53 +645,112 @@ def _explain_guests_batch(
     else:
         main_category = max(table_categories.items(), key=lambda x: x[1])[0]
         table_summary.append(f"mostly {main_category} with some mixing")
-    
-    guest_list = "\n".join([f"- {g['name']} ({g['category']}) - {g['context']}" for g in guest_details])
-    
-    prompt = f"""You are explaining wedding seating decisions to the user. For each guest, provide ONE natural, concise sentence explaining the meaningful reason for their seating.
+
+    # Add side mixing info
+    groom_count = table_sides.get("groom's side", 0)
+    bride_count = table_sides.get("bride's side", 0)
+    if groom_count > 0 and bride_count > 0:
+        table_summary.append(f"mixed table with {groom_count} from groom's side and {bride_count} from bride's side")
+    elif groom_count > 0:
+        table_summary.append("primarily groom's side guests")
+    elif bride_count > 0:
+        table_summary.append("primarily bride's side guests")
+
+    # Format guest list with side information
+    guest_list = "\n".join([
+        f"- {g['name']} ({g['category']}, {g['side']}) — {g['context']}"
+        for g in guest_details
+    ])
+
+    # Describe the weights in natural language
+    family_weight = weights.get("family_cohesion", 0.5)
+    social_weight = weights.get("social_group_cohesion", 0.5)
+    mixing_weight = weights.get("side_mixing", 0.5)
+
+    weight_priorities = []
+    if family_weight >= 0.7:
+        weight_priorities.append("keeping families together was a high priority")
+    if social_weight >= 0.7:
+        weight_priorities.append("keeping friend groups together was important")
+    if mixing_weight >= 0.7:
+        weight_priorities.append("mixing bride and groom sides was encouraged")
+    if not weight_priorities:
+        weight_priorities.append("a balanced approach was used")
+
+    prompt = f"""You are explaining wedding seating decisions to the couple. For each guest, provide ONE natural, concise sentence explaining why they are seated at this table.
+
+SEATING STRATEGY:
+This arrangement was created {strategy_desc}. Specifically, {'; '.join(weight_priorities)}.
 
 TABLE CONTEXT:
-This table has {len(table_guests)} guests. {', '.join(table_summary)}.
+{table_name} has {len(table_guests)} guests. {'. '.join(table_summary)}.
 
 GUESTS AT THIS TABLE:
 {guest_list}
 
 INSTRUCTIONS:
-1. Write in THIRD PERSON (e.g., "Sarah Cohen sits with..." NOT "You sit...")
-2. ONE complete sentence per guest - be concise and meaningful
-3. DO NOT state the obvious (don't say "Sarah sits at Table 1" - the user already knows where they sit)
-4. Focus on the MEANINGFUL reason:
-   - If seated with family/friends: mention it naturally (e.g., "sits with family members")
-   - If a seating request was fulfilled: mention it briefly (e.g., "seated here to fulfill the request with...")
-   - If there's a CONFLICT: mention it elegantly and briefly (e.g., "placed here despite a seating constraint with...")
-   - If seated due to lack of better options: mention it naturally (e.g., "sits here due to lack of other appropriate seating options")
-   - If VIP/important: mention it subtly if relevant
-5. Be natural and conversational - avoid technical terms like "optimization", "weights", "cohesion", "algorithm"
-6. Complete each explanation fully before moving to the next guest
+1. Write in THIRD PERSON (e.g., "Sarah sits with..." NOT "You sit...")
+2. ONE sentence per guest — be concise but meaningful
+3. DO NOT state the table name or number — the user already knows where they sit
+4. Focus on WHY they are seated here:
+   - Seated with their group: "joins other [category] guests at this table"
+   - Group was split due to table size: "seated here while other [group] members are nearby"
+   - Mixed table for mingling: "seated here to bring together both sides of the family"
+   - VIP guest: mention their importance naturally
+   - Flexible placement: "seated here to balance the table"
+5. Be warm and natural — this is a wedding, not a corporate event
+6. NEVER use technical terms like "optimization", "algorithm", "constraints", or "cohesion"
 
 OUTPUT FORMAT:
 Guest: [Full Name]
-Explanation: [ONE natural sentence]
+Explanation: [ONE sentence]
 
-EXAMPLES OF GOOD EXPLANATIONS:
+EXAMPLES:
 Guest: Sarah Cohen
-Explanation: Sarah sits with her family members as part of the traditional seating arrangement.
+Explanation: Sarah joins her family members from the groom's side at this table.
 
-Guest: Rachel Cohen
-Explanation: Rachel sits with the family even due to lack of other appropriate seating options.
+Guest: David Miller
+Explanation: David is seated here alongside his college friends to keep the group together.
 
-Guest: Emma Johnson
-Explanation: Emma is placed here to balance the table composition.
+Guest: Emma Thompson
+Explanation: Emma brings a friendly connection between the bride's and groom's sides at this mixed table.
 
-Now generate ONE natural, concise sentence for each of the {len(table_guests)} guests:"""
+Guest: Michael Chen
+Explanation: Michael is placed here to round out the table with good company.
+
+Now write ONE natural sentence for each of the {len(table_guests)} guests:"""
 
     try:
         # Reduced max_tokens since we're generating one sentence per guest
-        logger.debug(f"Calling LLM for {table_name} explanations | model=gpt-4")
+        # Lower temperature (0.4) for more consistent, factual explanations
+        logger.debug(f"Calling LLM for {table_name} explanations | model=llama-3.3-70b-versatile (Groq) temp=0.4")
         llm_start_time = time.time()
-        response = gpt(prompt, model="gpt-4", temperature=0.7, max_tokens=400, n=1)[0]
-        llm_duration_ms = (time.time() - llm_start_time) * 1000
-        logger.debug(f"LLM response received | {llm_duration_ms:.0f}ms | response_len={len(response)}")
+        
+        # Retry logic with exponential backoff for rate limits
+        max_retries = 3
+        base_delay = 2  # seconds
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = gpt(prompt, model="gpt-4", temperature=0.4, max_tokens=400, n=1)[0]
+                llm_duration_ms = (time.time() - llm_start_time) * 1000
+                logger.debug(f"LLM response received | {llm_duration_ms:.0f}ms | response_len={len(response)}")
+                break  # Success, exit retry loop
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
+                        logger.warning(f"Rate limit hit for {table_name} | attempt {attempt + 1}/{max_retries} | retrying in {delay}s...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise  # Re-raise if all retries exhausted
+                else:
+                    raise  # Re-raise non-rate-limit errors immediately
+        
+        if response is None:
+            raise Exception("Failed to get LLM response after all retries")
         
         # Parse the response to extract individual explanations
         explanations = {}
@@ -719,6 +894,10 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
 
         logger.debug(f"Processing table {table_idx + 1}/{len(table_to_guests)} | {table.get('name', table_id)} | {len(table_guests)} guests")
 
+        # Add small delay between requests to avoid rate limits (except for first table)
+        if table_idx > 0:
+            time.sleep(0.5)  # 500ms delay between table requests
+
         # Generate batch explanation for this table
         table_explanations = _explain_guests_batch(
             table_guests=table_guests,
@@ -740,4 +919,218 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
     return {"explanations": all_explanations}
 
 
+@app.post("/api/export/excel")
+def export_excel(req: ExcelExportRequest):
+    """
+    Generate and return an Excel file with seating plan data.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    logger.info(f"POST /api/export/excel | guests={len(req.guests)} tables={len(req.tables)}")
+
+    # Create workbook
+    wb = Workbook()
+
+    # Get layout assignments
+    assignments = req.layout.get("assignments", {})
+
+    # Build guest and table lookups
+    guests_dict = {g.id: g for g in req.guests}
+    tables_dict = {t.id: t for t in req.tables}
+
+    # Group guests by table
+    table_to_guests: Dict[str, List[GuestIn]] = {}
+    for guest_id, table_id in assignments.items():
+        if table_id not in table_to_guests:
+            table_to_guests[table_id] = []
+        if guest_id in guests_dict:
+            table_to_guests[guest_id] = guests_dict[guest_id]
+            if table_id not in table_to_guests:
+                table_to_guests[table_id] = []
+            table_to_guests[table_id].append(guests_dict[guest_id])
+
+    # ============ SHEET 1: Seating Plan ============
+    ws1 = wb.active
+    ws1.title = "Seating Plan"
+
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="8A8E75", end_color="8A8E75", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    alt_fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+
+    # Headers
+    headers1 = ["Guest Name", "Table Name", "Table #", "Group/Category", "Dietary Restrictions", "Notes"]
+    for col, header in enumerate(headers1, 1):
+        cell = ws1.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center')
+
+    # Data rows - sorted by table, then alphabetically by guest name
+    row_num = 2
+    sorted_tables = sorted(
+        [(tid, tguests) for tid, tguests in table_to_guests.items() if isinstance(tguests, list)],
+        key=lambda x: tables_dict.get(x[0]).name if x[0] in tables_dict else ""
+    )
+
+    for table_id, guests_list in sorted_tables:
+        table = tables_dict.get(table_id)
+        if not table:
+            continue
+
+        # Sort guests alphabetically within each table
+        sorted_guests = sorted(guests_list, key=lambda g: g.name)
+
+        for guest in sorted_guests:
+            # Extract dietary from tags
+            dietary = ", ".join([t for t in guest.tags if t.lower() in ["vegetarian", "vegan", "gluten-free", "kosher", "halal", "allergies"]]) if req.options.get("include_dietary", True) else ""
+
+            ws1.cell(row=row_num, column=1, value=guest.name).border = border
+            ws1.cell(row=row_num, column=2, value=table.name).border = border
+            ws1.cell(row=row_num, column=3, value=int(table.name.replace("Table ", "")) if "Table " in table.name else row_num - 1).border = border
+            ws1.cell(row=row_num, column=4, value=guest.group_id or "Uncategorized").border = border
+            ws1.cell(row=row_num, column=5, value=dietary).border = border
+            ws1.cell(row=row_num, column=6, value="").border = border
+
+            # Alternating row color
+            if row_num % 2 == 0:
+                for col in range(1, 7):
+                    ws1.cell(row=row_num, column=col).fill = alt_fill
+
+            row_num += 1
+
+    # Auto-adjust column widths
+    for col_idx, col in enumerate(ws1.columns, 1):
+        max_length = 0
+        column_letter = get_column_letter(col_idx)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        ws1.column_dimensions[column_letter].width = min(max_length + 2, 40)
+
+    # ============ SHEET 2: Table Summary ============
+    if req.options.get("include_table_details", True):
+        ws2 = wb.create_sheet("Table Summary")
+
+        headers2 = ["Table Name", "Capacity", "Guests Seated", "Group Distribution", "Zone"]
+        for col, header in enumerate(headers2, 1):
+            cell = ws2.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center')
+
+        row_num = 2
+        for table in sorted(req.tables, key=lambda t: t.name):
+            guests_at_table = table_to_guests.get(table.id, [])
+            if not isinstance(guests_at_table, list):
+                guests_at_table = []
+
+            # Group distribution
+            group_counts: Dict[str, int] = {}
+            for g in guests_at_table:
+                group = g.group_id or "Uncategorized"
+                group_counts[group] = group_counts.get(group, 0) + 1
+
+            group_dist = ", ".join([f"{k}: {v}" for k, v in sorted(group_counts.items())])
+
+            ws2.cell(row=row_num, column=1, value=table.name).border = border
+            ws2.cell(row=row_num, column=2, value=table.capacity).border = border
+            ws2.cell(row=row_num, column=3, value=len(guests_at_table)).border = border
+            ws2.cell(row=row_num, column=4, value=group_dist).border = border
+            ws2.cell(row=row_num, column=5, value=table.zone or "").border = border
+
+            if row_num % 2 == 0:
+                for col in range(1, 6):
+                    ws2.cell(row=row_num, column=col).fill = alt_fill
+
+            row_num += 1
+
+        # Auto-adjust column widths
+        for col_idx in range(1, 6):
+            max_length = len(headers2[col_idx - 1])
+            column_letter = get_column_letter(col_idx)
+            for row in range(2, row_num):
+                cell_value = ws2.cell(row=row, column=col_idx).value
+                if cell_value and len(str(cell_value)) > max_length:
+                    max_length = len(str(cell_value))
+            ws2.column_dimensions[column_letter].width = min(max_length + 2, 50)
+
+    # ============ SHEET 3: Vendor Summary ============
+    if req.options.get("include_vendor_summary", False):
+        ws3 = wb.create_sheet("Vendor Summary")
+
+        headers3 = ["Category/Group", "Guest Count", "Dietary Notes"]
+        for col, header in enumerate(headers3, 1):
+            cell = ws3.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center')
+
+        # Aggregate by category
+        category_counts: Dict[str, int] = {}
+        category_dietary: Dict[str, List[str]] = {}
+
+        for guest in req.guests:
+            cat = guest.group_id or "Uncategorized"
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+            # Collect dietary restrictions
+            dietary_tags = [t for t in guest.tags if t.lower() in ["vegetarian", "vegan", "gluten-free", "kosher", "halal"]]
+            if dietary_tags:
+                if cat not in category_dietary:
+                    category_dietary[cat] = []
+                category_dietary[cat].extend(dietary_tags)
+
+        row_num = 2
+        for category in sorted(category_counts.keys()):
+            dietary_list = category_dietary.get(category, [])
+            dietary_summary = ", ".join(set(dietary_list)) if dietary_list else ""
+
+            ws3.cell(row=row_num, column=1, value=category).border = border
+            ws3.cell(row=row_num, column=2, value=category_counts[category]).border = border
+            ws3.cell(row=row_num, column=3, value=dietary_summary).border = border
+
+            if row_num % 2 == 0:
+                for col in range(1, 4):
+                    ws3.cell(row=row_num, column=col).fill = alt_fill
+
+            row_num += 1
+
+        # Total row
+        ws3.cell(row=row_num, column=1, value="TOTAL").font = Font(bold=True)
+        ws3.cell(row=row_num, column=2, value=len(req.guests)).font = Font(bold=True)
+        for col in range(1, 4):
+            ws3.cell(row=row_num, column=col).border = border
+
+        # Auto-adjust column widths
+        for col_idx in range(1, 4):
+            column_letter = get_column_letter(col_idx)
+            ws3.column_dimensions[column_letter].width = 25
+
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    logger.info(f"Excel export generated successfully | sheets={len(wb.worksheets)}")
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=SeatHarmony_SeatingPlan.xlsx"}
+    )
 

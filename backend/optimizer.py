@@ -72,6 +72,27 @@ BRIDE_SIDE_CATEGORIES = {
 
 NEUTRAL_CATEGORIES = {"Mutual Friends", "Family Friends"}
 
+# Weight for penalizing higher-numbered tables (small enough to not override main objectives)
+TABLE_ORDER_PENALTY_WEIGHT = 0.01
+
+
+def _extract_table_number(table_id: str) -> int:
+    """
+    Extract the numeric part from a table ID for sorting.
+
+    Examples:
+        "Table 1" -> 1
+        "Table 12" -> 12
+        "T5" -> 5
+        "VIP" -> 0 (fallback for non-numeric IDs)
+    """
+    import re
+    # Find all numbers in the string and take the last one
+    numbers = re.findall(r'\d+', table_id)
+    if numbers:
+        return int(numbers[-1])
+    return 0  # Fallback for tables without numbers
+
 
 def _get_category(guest: Guest) -> Optional[str]:
     """Get the category/group_id of a guest."""
@@ -96,6 +117,69 @@ def _is_groom_side(category: Optional[str]) -> bool:
 def _is_bride_side(category: Optional[str]) -> bool:
     """Check if category belongs to bride's side."""
     return category in BRIDE_SIDE_CATEGORIES if category else False
+
+
+def _consolidate_to_lower_tables(
+    assignments: Dict[str, str],
+    table_ids: List[str]
+) -> Dict[str, str]:
+    """
+    Reassign guests so they fill the lowest-numbered tables first.
+    This ensures empty tables are grouped together at the highest table numbers.
+
+    The function preserves guest groupings - guests who were seated together
+    remain seated together, just at a potentially different (lower-numbered) table.
+
+    Args:
+        assignments: Dict mapping guest_id -> table_id
+        table_ids: List of all table IDs
+
+    Returns:
+        New assignments dict with guests consolidated to lower-numbered tables
+
+    Example:
+        Before: {g1: "Table 3", g2: "Table 3", g3: "Table 5"} (Tables 1,2,4 empty)
+        After:  {g1: "Table 1", g2: "Table 1", g3: "Table 2"} (Tables 3,4,5 empty)
+    """
+    if not assignments or not table_ids:
+        return assignments
+
+    # Sort tables by number (lowest first)
+    sorted_tables = sorted(table_ids, key=_extract_table_number)
+
+    # Group guests by their current table, preserving table groupings
+    table_guests: Dict[str, List[str]] = {}
+    for guest_id, table_id in assignments.items():
+        if table_id not in table_guests:
+            table_guests[table_id] = []
+        table_guests[table_id].append(guest_id)
+
+    # Get list of occupied tables in their original order
+    # Sort by table number so we maintain relative ordering
+    occupied_tables = sorted(
+        [t for t in sorted_tables if t in table_guests],
+        key=_extract_table_number
+    )
+
+    # Reassign: move each group of guests to the next available low-numbered table
+    new_assignments: Dict[str, str] = {}
+    target_table_idx = 0
+
+    for source_table in occupied_tables:
+        guests_to_move = table_guests[source_table]
+        target_table = sorted_tables[target_table_idx]
+
+        for guest_id in guests_to_move:
+            new_assignments[guest_id] = target_table
+
+        target_table_idx += 1
+
+    logger.debug(
+        f"Table consolidation complete | "
+        f"occupied_tables={len(occupied_tables)} empty_tables={len(table_ids) - len(occupied_tables)}"
+    )
+
+    return new_assignments
 
 
 def _greedy_initial_assignment(
@@ -257,10 +341,11 @@ def generate_layout_for_weights(
         env = _get_gurobi_env()
         model = gp.Model("SeatHarmony", env=env)
         model.setParam('OutputFlag', 0)  # Suppress Gurobi output
-        model.setParam('MIPGap', 0.4)   # Accept solutions within 5% of optimal
+        model.setParam('MIPGap', 0.15)  # Accept solutions within 15% of optimal (faster termination)
         model.setParam('MIPFocus', 1)    # Focus on finding good feasible solutions quickly
         model.setParam('NonConvex', 2)   # Allow non-convex quadratic (needed for x*x products)
-        model.setParam('TimeLimit', 60)  # 60 seconds timeout
+        model.setParam('TimeLimit', 20)  # 20 seconds timeout (was 60s - still finds good solutions)
+        model.setParam('Heuristics', 0.5)  # Spend more time on heuristics for faster feasible solutions
         
         # ===========================================
         # DECISION VARIABLES
@@ -376,7 +461,30 @@ def generate_layout_for_weights(
         if n_tables > 0:
             for t_id in table_ids:
                 obj -= side_mixing_weight * diff[t_id]
-        
+
+        # ===========================================
+        # SOFT CONSTRAINT: Prefer lower-numbered tables
+        # ===========================================
+        # This encourages the optimizer to fill lower-numbered tables first,
+        # which helps keep empty tables grouped at the highest numbers.
+        # The weight is small (0.01) so it acts as a tiebreaker without
+        # overriding the main cohesion/mixing objectives.
+
+        # Create table order mapping (Table 1 -> 0, Table 2 -> 1, etc.)
+        sorted_table_ids = sorted(table_ids, key=_extract_table_number)
+        table_order = {t_id: idx for idx, t_id in enumerate(sorted_table_ids)}
+
+        # Penalty for using higher-numbered tables
+        # For each guest assigned to a table, add a small penalty based on table order
+        table_usage_penalty = gp.quicksum(
+            table_order[t_id] * x[g_id, t_id]
+            for t_id in table_ids
+            for g_id in guest_ids
+        )
+
+        # Subtract penalty from objective (we want to maximize, so penalty reduces score)
+        obj -= TABLE_ORDER_PENALTY_WEIGHT * table_usage_penalty
+
         model.setObjective(obj, GRB.MAXIMIZE)
         
         # Count variables for logging
@@ -431,14 +539,22 @@ def generate_layout_for_weights(
         # ===========================================
         # EXTRACT SOLUTION
         # ===========================================
-        
+
         assignments: Dict[str, str] = {}
         for g_id in guest_ids:
             for t_id in table_ids:
                 if x[g_id, t_id].x > 0.5:
                     assignments[g_id] = t_id
                     break
-        
+
+        # ===========================================
+        # CONSOLIDATE EMPTY TABLES
+        # ===========================================
+        # Move guests to lower-numbered tables so empty tables
+        # are grouped together at the highest table numbers.
+        # This preserves guest groupings (who sits with whom).
+        assignments = _consolidate_to_lower_tables(assignments, table_ids)
+
         # ===========================================
         # CALCULATE METRICS
         # ===========================================
