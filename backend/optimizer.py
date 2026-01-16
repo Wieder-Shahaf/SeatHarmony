@@ -1,15 +1,54 @@
 from typing import Dict, List, Tuple, Optional
+from pathlib import Path
 import time
+import os
 
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
+from dotenv import load_dotenv
 
 from .models import Guest, Table, VenueConfig, Layout, ConstraintSummary
 from .logger import get_logger
 
+# Load environment variables from .env file
+# Try project root first, then backend folder
+_project_root = Path(__file__).parent.parent
+_env_file = _project_root / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+elif (Path(__file__).parent / ".env").exists():
+    load_dotenv(Path(__file__).parent / ".env")
+
 # Initialize logger for this module
 logger = get_logger("optimizer")
+
+
+def _get_gurobi_env() -> gp.Env:
+    """
+    Create a Gurobi environment with WLS (Web License Service) if credentials are available.
+    Falls back to default local license if WLS credentials are not set.
+    
+    Accepts both formats:
+    - GRB_WLSACCESSID / GRB_WLSSECRET / GRB_LICENSEID (standard Gurobi env vars)
+    - WLSACCESSID / WLSSECRET / LICENSEID (from gurobi.lic file)
+    """
+    wls_access_id = os.getenv("GRB_WLSACCESSID") or os.getenv("WLSACCESSID")
+    wls_secret = os.getenv("GRB_WLSSECRET") or os.getenv("WLSSECRET")
+    wls_license_id = os.getenv("GRB_LICENSEID") or os.getenv("LICENSEID")
+    
+    if wls_access_id and wls_secret:
+        logger.info("Using Gurobi WLS (Web License Service)")
+        env = gp.Env(empty=True)
+        env.setParam("WLSACCESSID", wls_access_id)
+        env.setParam("WLSSECRET", wls_secret)
+        if wls_license_id:
+            env.setParam("LICENSEID", int(wls_license_id))
+        env.start()
+        return env
+    else:
+        logger.info("Using local Gurobi license (WLS credentials not found)")
+        return gp.Env()
 
 # Category definitions for wedding seating optimization
 IMMEDIATE_FAMILY_CATEGORIES = {"Groom's Family", "Bride's Family"}
@@ -210,12 +249,13 @@ def generate_layout_for_weights(
 
     logger.debug(f"Problem setup | groom_side={len(groom_side_guests)} bride_side={len(bride_side_guests)} family_pairs={len(family_pairs)} social_pairs={len(social_group_pairs)}")
 
-    # Create Gurobi model
+    # Create Gurobi model with WLS environment if available
     try:
         model_start_time = time.time()
         logger.debug("Creating Gurobi MIQP model...")
 
-        model = gp.Model("SeatHarmony")
+        env = _get_gurobi_env()
+        model = gp.Model("SeatHarmony", env=env)
         model.setParam('OutputFlag', 0)  # Suppress Gurobi output
         model.setParam('MIPGap', 0.4)   # Accept solutions within 5% of optimal
         model.setParam('MIPFocus', 1)    # Focus on finding good feasible solutions quickly
