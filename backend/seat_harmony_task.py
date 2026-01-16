@@ -38,8 +38,10 @@ class SeatHarmonyTask(Task):
         }
         self.value_cache = {}
         self.layout_cache: Dict[str, Tuple[Layout, ConstraintSummary]] = {}  # Cache for optimization results
-        self.steps = 2  # Depth of ToT search
+        self.steps = 1  # Depth of ToT search
         self.stops = ['\n'] * 2
+        self.cache_hits = 0
+        self.cache_misses = 0
 
     # ---- Required Task interface methods ----
 
@@ -112,14 +114,17 @@ class SeatHarmonyTask(Task):
         # Check cache first
         if cache_key in self.layout_cache:
             layout, summary = self.layout_cache[cache_key]
-            logger.debug(f"Cache HIT for weights | score={layout.score:.2f}")
+            self.cache_hits += 1
+            logger.info(f"📦 CACHE HIT | thought={thought} | weights=({new_weights['family_cohesion']:.2f}, {new_weights['social_group_cohesion']:.2f}, {new_weights['side_mixing']:.2f}) | score={layout.score:.2f} | ⚡ No optimization needed")
         else:
+            self.cache_misses += 1
+            logger.info(f"🔄 OPTIMIZATION CALL | thought={thought} | weights=({new_weights['family_cohesion']:.2f}, {new_weights['social_group_cohesion']:.2f}, {new_weights['side_mixing']:.2f}) | ⚙️ Calling Gurobi solver...")
             from .optimizer import generate_layout_for_weights
             layout, summary = generate_layout_for_weights(
                 guests=state.guests, venue=state.venue, weights=new_weights
             )
             self.layout_cache[cache_key] = (layout, summary)
-            logger.debug(f"Cache MISS - computed | score={layout.score:.2f}")
+            logger.info(f"✅ OPTIMIZATION COMPLETE | thought={thought} | score={layout.score:.2f} | 💾 Cached for future use")
         
         updated_layout = layout
         updated_layout.summary = summary

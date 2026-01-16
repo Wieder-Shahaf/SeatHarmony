@@ -17,12 +17,13 @@ const PlannerAI: React.FC = () => {
     layouts,
     selectedLayoutIndex,
     updateGuestAssignment,
+    explanations,
+    isLoadingExplanations,
+    fetchExplanationsForTables,
   } = useGuests();
 
   const [zoom, setZoom] = useState(1);
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
-  const [explanations, setExplanations] = useState<ExplanationCache>({});
-  const [loadingExplanation, setLoadingExplanation] = useState(false);
   const guestRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
 
 
@@ -56,56 +57,33 @@ const PlannerAI: React.FC = () => {
     return guests.filter(g => !assignments[g.id]);
   }, [guests, assignments]);
 
-  // Fetch explanation for a guest
-  const fetchExplanation = async (guestId: string) => {
-    if (explanations[guestId] || !selectedLayout) return;
-
-    setLoadingExplanation(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/layouts/explain-guests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          guests: guests.map(g => ({
-            id: g.id,
-            name: g.name,
-            group_id: g.group_id,
-            importance: g.importance,
-            tags: g.tags,
-          })),
-          tables: tables.map(t => ({
-            id: t.id,
-            name: t.name,
-            capacity: t.capacity,
-            zone: t.zone,
-            constraints: t.constraints,
-          })),
-          layout: selectedLayout.layout,
-          weights: selectedLayout.weights,
-          notes: selectedLayout.notes,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setExplanations(prev => ({ ...prev, ...data.explanations }));
-      }
-    } catch (err) {
-      console.error('Failed to fetch explanation:', err);
-    } finally {
-      setLoadingExplanation(false);
-    }
-  };
-
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
 
-  // When guest is selected, fetch explanation
-  useEffect(() => {
-    if (selectedGuestId && !explanations[selectedGuestId]) {
-      fetchExplanation(selectedGuestId);
-    }
-  }, [selectedGuestId]);
+  // Handle guest movement between tables
+  const handleGuestMove = (guestId: string, newTableId: string) => {
+    // Get the old table ID before the move
+    const oldTableId = assignments[guestId];
+
+    // Update the assignment
+    updateGuestAssignment(guestId, newTableId);
+
+    // Refresh explanations for affected tables after a short delay
+    // (to allow state to update)
+    setTimeout(() => {
+      const tablesToRefresh: string[] = [];
+      if (oldTableId && oldTableId !== newTableId) {
+        tablesToRefresh.push(oldTableId);
+      }
+      if (newTableId) {
+        tablesToRefresh.push(newTableId);
+      }
+
+      if (tablesToRefresh.length > 0) {
+        fetchExplanationsForTables(tablesToRefresh);
+      }
+    }, 200);
+  };
 
   // Scroll to guest in sidebar when selected
   useEffect(() => {
@@ -249,7 +227,7 @@ const PlannerAI: React.FC = () => {
                       <span className="material-icons-round text-primary text-sm">auto_awesome</span>
                       <span className="text-xs font-bold text-primary">AI Insight</span>
                     </div>
-                    {loadingExplanation ? (
+                    {isLoadingExplanations && !explanations[guest.id] ? (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <span className="material-icons-round animate-spin text-xs">progress_activity</span>
                         Loading...
@@ -259,7 +237,7 @@ const PlannerAI: React.FC = () => {
                         {explanations[guest.id]}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-400 italic">Click to load explanation</p>
+                      <p className="text-xs text-gray-400 italic">Explanation loading...</p>
                     )}
                   </div>
                 )}
@@ -339,7 +317,7 @@ const PlannerAI: React.FC = () => {
                     e.currentTarget.style.transform = 'scale(1)';
                     const guestId = e.dataTransfer.getData('guestId');
                     if (guestId) {
-                      updateGuestAssignment(guestId, table.id);
+                      handleGuestMove(guestId, table.id);
                     }
                   }}
                 >
@@ -410,7 +388,7 @@ const PlannerAI: React.FC = () => {
                                 </div>
                                 <p className="text-sm font-semibold text-gray-800 dark:text-white mb-1">{guest.name}</p>
 
-                                {loadingExplanation ? (
+                                {isLoadingExplanations && !explanations[guest.id] ? (
                                   <div className="flex items-center gap-2 py-2 text-primary">
                                     <span className="material-icons-round animate-spin text-sm">progress_activity</span>
                                     <span className="text-xs">Generating insight...</span>
@@ -420,7 +398,7 @@ const PlannerAI: React.FC = () => {
                                     {explanations[guest.id]}
                                   </p>
                                 ) : (
-                                  <p className="text-xs text-gray-400 italic">No specific insight available for this assignment.</p>
+                                  <p className="text-xs text-gray-400 italic">Insight will be available shortly...</p>
                                 )}
                               </div>
                             </div>
