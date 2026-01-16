@@ -32,9 +32,51 @@ To install the backend dependencies:
 pip install -r requirements.txt
 ```
 
-> Note: `gurobipy` requires a valid Gurobi installation and license.  
-> If you do not have Gurobi, you can remove `gurobipy` from `requirements.txt`; the backend will
-> automatically fall back to a simple heuristic seating layout.
+### Gurobi License Setup
+
+The optimizer uses **Gurobi** for solving the seating optimization problem. You have two options:
+
+#### Option 1: WLS (Web License Service) - Recommended for Teams
+
+WLS allows multiple users to share a single cloud-based license. No local Gurobi installation needed!
+
+1. Get WLS credentials from your license manager at https://license.gurobi.com/manager/licenses
+   - Or download your `gurobi.lic` file which contains the credentials
+
+2. Create a `.env` file in the **project root** (or `backend/` directory):
+
+```bash
+# Create .env in project root
+touch .env
+```
+
+3. Add the WLS credentials to `.env`:
+
+```
+GRB_WLSACCESSID=your-access-id-here
+GRB_WLSSECRET=your-secret-key-here
+GRB_LICENSEID=123456
+
+# Also add your Google API key for AI explanations
+GOOGLE_API_KEY=your-google-api-key
+```
+
+You can find these values in your downloaded `gurobi.lic` file:
+- `WLSACCESSID` → `GRB_WLSACCESSID`
+- `WLSSECRET` → `GRB_WLSSECRET`  
+- `LICENSEID` → `GRB_LICENSEID`
+
+4. The backend will automatically detect and use WLS credentials.
+
+#### Option 2: Local License (Academic/Individual)
+
+1. Create a Gurobi account at https://www.gurobi.com/downloads/
+2. Get a license (free for academics at https://www.gurobi.com/academia/)
+3. Run `grbgetkey xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` to activate
+
+#### Option 3: No Gurobi
+
+If you don't have Gurobi, remove `gurobipy` from `requirements.txt`. The backend will fall back to a heuristic seating algorithm (less optimal but functional).
 
 ### Installing Tree-of-Thought-LLM (`tot`)
 
