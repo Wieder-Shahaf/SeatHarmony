@@ -122,6 +122,34 @@ async def startup_event():
     logger.info("API startup complete - ready to receive requests")
 
 
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+
+def _group_guests_by_table(
+    assignments: Dict[str, str],
+    guests_dict: Dict[str, Any]
+) -> Dict[str, List[Any]]:
+    """
+    Group guests by their assigned table.
+
+    Args:
+        assignments: Dict mapping guest_id -> table_id
+        guests_dict: Dict mapping guest_id -> guest object/dict
+
+    Returns:
+        Dict mapping table_id -> list of guest objects/dicts
+    """
+    table_to_guests: Dict[str, List[Any]] = {}
+    for guest_id, table_id in assignments.items():
+        if table_id not in table_to_guests:
+            table_to_guests[table_id] = []
+        if guest_id in guests_dict:
+            table_to_guests[table_id].append(guests_dict[guest_id])
+    return table_to_guests
+
+
 def _sequential_tot_bfs(
     instance: Dict[str, Any],
     depth: int,
@@ -222,26 +250,6 @@ def _sequential_tot_bfs(
     logger.info(f"ToT BFS completed | total_states={len(scored_states)} | cache_hits={task.cache_hits} optimizations={task.cache_misses} (hit_rate={cache_hit_rate:.0f}%) | {tot_duration_ms:.0f}ms")
 
     return scored_states
-
-
-def _simple_tot_bfs(
-    instance: Dict[str, Any],
-    depth: int,
-    branching: int,
-    n_generate: int,
-    n_evaluate: int,
-) -> List[Tuple[SeatHarmonyState, float]]:
-    """
-    Wrapper that calls the sequential ToT implementation.
-    """
-    return _sequential_tot_bfs(
-        instance=instance,
-        depth=depth,
-        branching=branching,
-        n_generate=n_generate,
-        n_evaluate=n_evaluate,
-    )
-
 
 
 def _sequential_tot_bfs_generator(
@@ -345,31 +353,38 @@ def _sequential_tot_bfs_generator(
         if not frontier:
             break
 
-    # Final processing - deduplicate by exact assignments, keep top 3 by score
+    # Final processing - deduplicate by metrics similarity, keep top 3 by score
+    # Two solutions with the same family/social/mixing percentages are duplicates
+    # even if their exact assignments differ slightly
     unique_layouts = []
-    seen_assignments = set()
-    
+    seen_metrics = set()
+
     # Sort by score (value) descending to ensure highest scores first
     for state, value in sorted(scored_states, key=lambda x: x[1], reverse=True):
         if state.layout is None:
             continue
         layout_dict = layout_to_dict(state.layout)
-        
-        # Deduplicate by exact guest-to-table assignments
-        # Create unique key from sorted assignments
-        assignments_tuple = tuple(sorted(layout_dict["assignments"].items()))
-        
-        if assignments_tuple in seen_assignments:
-            continue  # Skip duplicate assignments
-        seen_assignments.add(assignments_tuple)
-        
+
+        # Deduplicate by metrics (rounded to nearest 1%)
+        # This ensures solutions with same objective percentages are considered duplicates
+        breakdown = layout_dict.get("objective_breakdown", {})
+        metrics_key = (
+            round(breakdown.get("family_cohesion", 0)),
+            round(breakdown.get("social_group_cohesion", 0)),
+            round(breakdown.get("side_mixing", 0)),
+        )
+
+        if metrics_key in seen_metrics:
+            continue  # Skip solutions with same metrics
+        seen_metrics.add(metrics_key)
+
         unique_layouts.append({
             "value": value,
             "weights": state.weights,
             "notes": state.notes,
             "layout": layout_dict,
         })
-        
+
         # Return top 3 unique layouts with highest scores
         if len(unique_layouts) >= 3:
             break
@@ -416,7 +431,7 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
         "settings": req.settings,
     }
 
-    scored_states = _simple_tot_bfs(
+    scored_states = _sequential_tot_bfs(
         instance=instance,
         depth=req.tot.depth,
         branching=req.tot.branching,
@@ -425,9 +440,10 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
     )
 
     # Sort by value (score) descending and take top_k distinct layouts
-    # Deduplicate by exact guest-to-table assignments to ensure truly different seating arrangements
+    # Deduplicate by metrics similarity - solutions with same family/social/mixing
+    # percentages are considered duplicates even if exact assignments differ
     unique_layouts: List[Dict[str, Any]] = []
-    seen_assignments = set()
+    seen_metrics = set()
     duplicates_skipped = 0
 
     # Sort by score (value) descending - highest scores first
@@ -435,16 +451,20 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
         if state.layout is None:
             continue
         layout_dict = layout_to_dict(state.layout)
-        
-        # Deduplicate by exact assignments (not metrics)
-        # Create unique key from sorted guest-to-table assignments
-        assignments_tuple = tuple(sorted(layout_dict["assignments"].items()))
-        
-        if assignments_tuple in seen_assignments:
+
+        # Deduplicate by metrics (rounded to nearest 1%)
+        breakdown = layout_dict.get("objective_breakdown", {})
+        metrics_key = (
+            round(breakdown.get("family_cohesion", 0)),
+            round(breakdown.get("social_group_cohesion", 0)),
+            round(breakdown.get("side_mixing", 0)),
+        )
+
+        if metrics_key in seen_metrics:
             duplicates_skipped += 1
-            continue  # Skip duplicate assignments
-        seen_assignments.add(assignments_tuple)
-        
+            continue  # Skip solutions with same metrics
+        seen_metrics.add(metrics_key)
+
         unique_layouts.append(
             {
                 "value": value,
@@ -453,7 +473,7 @@ def generate_layouts(req: LayoutRequest) -> Dict[str, Any]:
                 "layout": layout_dict,
             }
         )
-        
+
         # Return top_k unique layouts with highest scores
         if len(unique_layouts) >= req.tot.top_k:
             break
@@ -517,44 +537,41 @@ def explain_layout(req: ExplainRequest) -> Dict[str, Any]:
     return {"explanation": explanation}
 
 
-# Category sets for side detection (mirrored from optimizer.py)
-_GROOM_SIDE_CATEGORIES = {
-    "Groom's Family", "Groom's Extended Family", "Groom's Side",
-    "Groom's Work Colleagues", "Groom's Uni Friends", "Groom's Friends"
-}
-_BRIDE_SIDE_CATEGORIES = {
-    "Bride's Family", "Bride's Extended Family", "Bride's Side",
-    "Bride's Work Colleagues", "Bride's Uni Friends", "Bride's Friends"
-}
-_NEUTRAL_CATEGORIES = {"Mutual Friends", "Family Friends"}
-
-# Strategy names to human-readable descriptions
-_STRATEGY_DESCRIPTIONS = {
-    "baseline": "balanced approach",
-    "boost_family": "prioritizing keeping families together",
-    "boost_social": "prioritizing keeping friend groups together",
-    "max_cohesion": "maximizing group togetherness",
-    "max_mingling": "encouraging mixing between bride and groom sides",
-    "reduce_social": "flexible social groupings",
-}
-
-
-def _get_guest_side(category: Optional[str]) -> str:
-    """Determine which wedding side a guest belongs to based on their category."""
-    if not category:
-        return "neutral"
-    if category in _GROOM_SIDE_CATEGORIES:
-        return "groom's side"
-    if category in _BRIDE_SIDE_CATEGORIES:
-        return "bride's side"
-    return "neutral"
+# Category sets and helpers imported from centralized constants
+from .constants import (
+    STRATEGY_DESCRIPTIONS,
+    get_guest_side as _get_guest_side,
+)
 
 
 def _get_strategy_description(notes: str) -> str:
     """Convert strategy code to human-readable description."""
     # Handle various formats: "boost_family", "Strategy: boost_family", etc.
     strategy_key = notes.lower().replace("strategy:", "").strip()
-    return _STRATEGY_DESCRIPTIONS.get(strategy_key, "optimized arrangement")
+    return STRATEGY_DESCRIPTIONS.get(strategy_key, "optimized arrangement")
+
+
+def _generate_fallback_explanations(table_guests: List[Dict[str, Any]]) -> Dict[str, str]:
+    """
+    Generate fallback explanations for guests when LLM call fails or returns incomplete results.
+
+    Args:
+        table_guests: List of guest dicts with 'id', 'name', and optionally 'group_id'
+
+    Returns:
+        Dict mapping guest_id -> explanation string
+    """
+    explanations = {}
+    for g in table_guests:
+        guest_name = g["name"]
+        category = g.get("group_id") or "Uncategorized"
+
+        if "Family" in category:
+            explanations[g["id"]] = f"{guest_name} sits with family members as part of the seating arrangement."
+        else:
+            explanations[g["id"]] = f"{guest_name} is seated here as part of the optimized arrangement."
+
+    return explanations
 
 
 def _explain_guests_batch(
@@ -815,21 +832,11 @@ Now write ONE natural sentence for each of the {len(table_guests)} guests:"""
                 result[guest_id] = explanation
         
         # If parsing failed or incomplete, provide fallback explanations for missing guests
-        fallback_count = 0
-        for g in table_guests:
-            if g["id"] not in result:
-                # Create natural fallback explanation in third person
-                guest_name = g["name"]
-                category = g.get("group_id") or "Uncategorized"
-
-                # Build natural explanation
-                if "Family" in category:
-                    explanation = f"{guest_name} sits with family members as part of the seating arrangement."
-                else:
-                    explanation = f"{guest_name} is seated here as part of the optimized arrangement."
-
-                result[g["id"]] = explanation
-                fallback_count += 1
+        missing_guests = [g for g in table_guests if g["id"] not in result]
+        if missing_guests:
+            fallback = _generate_fallback_explanations(missing_guests)
+            result.update(fallback)
+        fallback_count = len(missing_guests)
 
         batch_duration_ms = (time.time() - batch_start_time) * 1000
         logger.debug(f"{table_name} explanations complete | parsed={len(result) - fallback_count} fallback={fallback_count} | {batch_duration_ms:.0f}ms")
@@ -841,17 +848,7 @@ Now write ONE natural sentence for each of the {len(table_guests)} guests:"""
         batch_duration_ms = (time.time() - batch_start_time) * 1000
         logger.error(f"LLM explanation failed for {table_name} | error={type(e).__name__}: {e} | {batch_duration_ms:.0f}ms")
         logger.info(f"Using fallback explanations for {table_name}")
-
-        fallback_explanations = {}
-        for g in table_guests:
-            guest_name = g["name"]
-            category = g.get("group_id") or "Uncategorized"
-
-            if "Family" in category:
-                fallback_explanations[g["id"]] = f"{guest_name} sits with family members as part of the seating arrangement."
-            else:
-                fallback_explanations[g["id"]] = f"{guest_name} is seated here as part of the optimized arrangement."
-        return fallback_explanations
+        return _generate_fallback_explanations(table_guests)
 
 
 @app.post("/api/layouts/explain-guests")
@@ -871,14 +868,8 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
     all_guests_dict = {g.id: g.dict() for g in req.guests}
     all_tables_dict = {t.id: t.dict() for t in req.tables}
 
-    # Group guests by table
-    table_to_guests: Dict[str, List[Dict[str, Any]]] = {}
-    for guest_id, table_id in assignments.items():
-        if table_id not in table_to_guests:
-            table_to_guests[table_id] = []
-        if guest_id in all_guests_dict:
-            table_to_guests[table_id].append(all_guests_dict[guest_id])
-
+    # Group guests by table using helper function
+    table_to_guests = _group_guests_by_table(assignments, all_guests_dict)
     logger.debug(f"Guests grouped into {len(table_to_guests)} tables")
 
     # Generate explanations for each table (batched)
@@ -940,16 +931,8 @@ def export_excel(req: ExcelExportRequest):
     guests_dict = {g.id: g for g in req.guests}
     tables_dict = {t.id: t for t in req.tables}
 
-    # Group guests by table
-    table_to_guests: Dict[str, List[GuestIn]] = {}
-    for guest_id, table_id in assignments.items():
-        if table_id not in table_to_guests:
-            table_to_guests[table_id] = []
-        if guest_id in guests_dict:
-            table_to_guests[guest_id] = guests_dict[guest_id]
-            if table_id not in table_to_guests:
-                table_to_guests[table_id] = []
-            table_to_guests[table_id].append(guests_dict[guest_id])
+    # Group guests by table using helper function
+    table_to_guests = _group_guests_by_table(assignments, guests_dict)
 
     # ============ SHEET 1: Seating Plan ============
     ws1 = wb.active

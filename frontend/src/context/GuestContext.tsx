@@ -11,6 +11,7 @@ import {
   groupGuestsByCategory,
   createDefaultTables,
 } from '../types/models';
+import { prepareDataForApi } from '../services/api';
 
 // localStorage keys
 const STORAGE_KEYS = {
@@ -20,6 +21,7 @@ const STORAGE_KEYS = {
   VENUE_LAYOUT: 'seatharmony_venue_layout',
   TOT_PARAMS: 'seatharmony_tot_params',
   LAYOUTS: 'seatharmony_layouts',
+  LAYOUTS_CACHE_KEY: 'seatharmony_layouts_cache_key',
   SELECTED_LAYOUT: 'seatharmony_selected_layout',
   EXPLANATIONS: 'seatharmony_explanations',
 } as const;
@@ -60,6 +62,30 @@ function clearStorage(): void {
   }
 }
 
+// Generate a cache key for layouts based on inputs that affect optimization results
+function generateLayoutsCacheKey(guests: Guest[], tables: Table[], totParams: TotParams): string {
+  // Create a deterministic string from the inputs that affect layout generation
+  const guestKey = guests
+    .map(g => `${g.id}:${g.group_id || ''}:${g.importance}:${(g.tags || []).sort().join(',')}`)
+    .sort()
+    .join('|');
+  const tableKey = tables
+    .map(t => `${t.id}:${t.capacity}:${t.zone || ''}`)
+    .sort()
+    .join('|');
+  const paramsKey = `${totParams.n_generate}:${totParams.n_evaluate}:${totParams.depth}`;
+
+  // Simple hash function for the combined key
+  const combined = `${guestKey}||${tableKey}||${paramsKey}`;
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString(36);
+}
+
 interface GuestContextType {
   // Guest data
   guests: Guest[];
@@ -87,6 +113,7 @@ interface GuestContextType {
   // Optimization results
   layouts: TotLayout[];
   setLayouts: (layouts: TotLayout[]) => void;
+  setLayoutsWithCacheKey: (layouts: TotLayout[]) => void;
   selectedLayoutIndex: number;
   setSelectedLayoutIndex: (index: number) => void;
 
@@ -113,6 +140,11 @@ interface GuestContextType {
   fetchAllExplanations: () => Promise<void>;
   fetchExplanationsForTables: (tableIds: string[]) => Promise<void>;
   isLoadingExplanations: boolean;
+
+  // Cache validation
+  layoutsCacheKey: string;
+  isLayoutsCacheValid: () => boolean;
+  invalidateLayoutsCache: () => void;
 }
 
 const GuestContext = createContext<GuestContextType | undefined>(undefined);
@@ -146,6 +178,9 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   );
   const [explanations, setExplanationsState] = useState<ExplanationCache>(() =>
     loadFromStorage(STORAGE_KEYS.EXPLANATIONS, {})
+  );
+  const [layoutsCacheKey, setLayoutsCacheKeyState] = useState<string>(() =>
+    loadFromStorage(STORAGE_KEYS.LAYOUTS_CACHE_KEY, '')
   );
 
   // UI state (not persisted)
@@ -190,6 +225,10 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.EXPLANATIONS, explanations);
   }, [explanations]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.LAYOUTS_CACHE_KEY, layoutsCacheKey);
+  }, [layoutsCacheKey]);
 
   // Guest management
   const setGuests = useCallback((newGuests: Guest[]) => {
@@ -271,20 +310,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guests: guests.map(g => ({
-            id: g.id,
-            name: g.name,
-            group_id: g.group_id,
-            importance: g.importance,
-            tags: g.tags,
-          })),
-          tables: tables.map(t => ({
-            id: t.id,
-            name: t.name,
-            capacity: t.capacity,
-            zone: t.zone,
-            constraints: t.constraints,
-          })),
+          ...prepareDataForApi(guests, tables),
           layout: selectedLayout.layout,
           weights: selectedLayout.weights,
           notes: selectedLayout.notes,
@@ -418,6 +444,33 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     return { oldTableId, newTableId: tableId };
   }, [layouts, selectedLayoutIndex]);
 
+  // Cache validation for layouts
+  const isLayoutsCacheValid = useCallback((): boolean => {
+    // No cache key means no valid cache
+    if (!layoutsCacheKey) return false;
+    // No layouts means cache is empty
+    if (layouts.length === 0) return false;
+    // Check if current inputs match the cache key
+    const currentKey = generateLayoutsCacheKey(guests, tables, totParams);
+    const isValid = currentKey === layoutsCacheKey;
+    console.log(`Cache validation: stored=${layoutsCacheKey}, current=${currentKey}, valid=${isValid}`);
+    return isValid;
+  }, [layoutsCacheKey, layouts, guests, tables, totParams]);
+
+  const invalidateLayoutsCache = useCallback(() => {
+    setLayoutsCacheKeyState('');
+    console.log('Layouts cache invalidated');
+  }, []);
+
+  // Update cache key when layouts are set (called from Recommendations page after fetch)
+  const setLayoutsWithCacheKey = useCallback((newLayouts: TotLayout[]) => {
+    setLayoutsState(newLayouts);
+    // Set cache key based on current inputs
+    const newCacheKey = generateLayoutsCacheKey(guests, tables, totParams);
+    setLayoutsCacheKeyState(newCacheKey);
+    console.log(`Layouts set with cache key: ${newCacheKey}`);
+  }, [guests, tables, totParams]);
+
   // Initialize from Excel upload
   const initializeFromExcel = useCallback((newGuests: Guest[]) => {
     setGuestsState(newGuests);
@@ -427,9 +480,10 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     setTablesState(defaultTables);
     setVenueConfigState({ tables: defaultTables, settings: {} });
 
-    // Clear previous results
+    // Clear previous results and cache
     setLayoutsState([]);
     setSelectedLayoutIndexState(0);
+    setLayoutsCacheKeyState('');
     setError(null);
 
     console.log(`Initialized ${newGuests.length} guests and ${defaultTables.length} tables (auto-saved to localStorage)`);
@@ -453,6 +507,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     setTotParams,
     layouts,
     setLayouts,
+    setLayoutsWithCacheKey,
     selectedLayoutIndex,
     setSelectedLayoutIndex,
     isLoading,
@@ -468,6 +523,9 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     fetchAllExplanations,
     fetchExplanationsForTables,
     isLoadingExplanations,
+    layoutsCacheKey,
+    isLayoutsCacheValid,
+    invalidateLayoutsCache,
   };
 
   return (
