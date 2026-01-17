@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { TotLayout, LayoutRequest } from '../src/types/models';
+import { prepareDataForApi } from '../src/services/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
@@ -13,21 +14,28 @@ const Recommendations: React.FC = () => {
     venueConfig,
     selectedVenueLayout,
     totParams,
-    setLayouts: saveLayoutsToContext,
+    layouts: cachedLayouts,
+    setLayoutsWithCacheKey,
     setSelectedLayoutIndex,
     setIsLoading,
     setError: setContextError,
     fetchAllExplanations,
     setExplanations,
+    isLayoutsCacheValid,
   } = useGuests();
 
-  const [layouts, setLayouts] = useState<TotLayout[]>([]);
+  // Initialize local layouts from cache if available
+  const [layouts, setLayouts] = useState<TotLayout[]>(() => {
+    // Check if we have valid cached layouts on mount
+    return cachedLayouts.length > 0 ? cachedLayouts : [];
+  });
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStrategy, setCurrentStrategy] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [totalSteps, setTotalSteps] = useState(12);
   const [error, setError] = useState<string | null>(null);
+  // Track if we've determined whether to fetch (either from cache hit or actual fetch)
   const [hasFetched, setHasFetched] = useState(false);
 
   // Strategy display names for loading experience
@@ -40,6 +48,100 @@ const Recommendations: React.FC = () => {
     'reduce_social': 'Flexible Groupings',
   };
 
+  // Compute all layout titles at once to ensure uniqueness
+  const layoutTitles = useMemo(() => {
+    if (layouts.length === 0) return [];
+    if (layouts.length === 1) return ['Your Optimized Seating'];
+
+    const titles: string[] = [];
+    const usedTitles = new Set<string>();
+
+    // Available title options in priority order
+    const titleOptions = [
+      { key: 'recommended', title: 'Recommended', condition: (idx: number) => idx === 0 },
+      { key: 'family', title: 'Family Focused', condition: (_: number, f: number, s: number, m: number) => f >= s && f >= m },
+      { key: 'social', title: 'Friends Together', condition: (_: number, f: number, s: number, m: number) => s > f && s >= m },
+      { key: 'mixing', title: 'Mix & Mingle', condition: (_: number, f: number, s: number, m: number) => m > f && m > s },
+    ];
+
+    // Fallback titles if primary ones are taken
+    const fallbackTitles = ['Alternative Plan', 'Option B', 'Option C'];
+
+    layouts.forEach((entry, index) => {
+      const family = entry.layout.objective_breakdown?.family_cohesion || 0;
+      const social = entry.layout.objective_breakdown?.social_group_cohesion || 0;
+      const mixing = entry.layout.objective_breakdown?.side_mixing || 0;
+
+      let assignedTitle = '';
+
+      // First option is always "Recommended"
+      if (index === 0) {
+        assignedTitle = 'Recommended';
+      } else {
+        // Find the best fitting title that hasn't been used
+        for (const opt of titleOptions.slice(1)) { // Skip 'recommended' for non-first
+          if (!usedTitles.has(opt.title) && opt.condition(index, family, social, mixing)) {
+            assignedTitle = opt.title;
+            break;
+          }
+        }
+
+        // If no unique title found, use fallback
+        if (!assignedTitle) {
+          for (const fallback of fallbackTitles) {
+            if (!usedTitles.has(fallback)) {
+              assignedTitle = fallback;
+              break;
+            }
+          }
+        }
+
+        // Last resort
+        if (!assignedTitle) {
+          assignedTitle = `Plan ${index + 1}`;
+        }
+      }
+
+      usedTitles.add(assignedTitle);
+      titles.push(assignedTitle);
+    });
+
+    return titles;
+  }, [layouts]);
+
+  // Helper to get value proposition text (always positive framing)
+  const getValueProposition = (title: string): string => {
+    // Always frame positively - focus on what IS achieved, not scores
+    if (title === 'Recommended') {
+      return 'Our top pick based on your guest relationships';
+    }
+    if (title === 'Your Optimized Seating') {
+      return 'The best arrangement for your celebration';
+    }
+    if (title === 'Family Focused') {
+      return 'Keeps family members close together';
+    }
+    if (title === 'Friends Together') {
+      return 'Friend groups stay at the same tables';
+    }
+    if (title === 'Mix & Mingle') {
+      return 'Great for making new connections';
+    }
+    if (title === 'Alternative Plan') {
+      return 'Another great option to consider';
+    }
+    // Default - always positive
+    return 'A balanced arrangement for your celebration';
+  };
+
+  // Helper to convert score to quality indicator (for bar display)
+  const getQualityLabel = (score: number): string => {
+    if (score >= 70) return 'Strong';
+    if (score >= 40) return 'Good';
+    return 'Mixed';
+  };
+
+
   // Use ref to prevent double-fetch in StrictMode (ref persists across re-renders)
   const fetchStartedRef = useRef(false);
 
@@ -51,20 +153,7 @@ const Recommendations: React.FC = () => {
     if (!hasRequiredData) return null;
 
     return {
-      guests: guests.map(g => ({
-        id: g.id,
-        name: g.name,
-        group_id: g.group_id,
-        importance: g.importance,
-        tags: g.tags,
-      })),
-      tables: tables.map(t => ({
-        id: t.id,
-        name: t.name,
-        capacity: t.capacity,
-        zone: t.zone,
-        constraints: t.constraints,
-      })),
+      ...prepareDataForApi(guests, tables),
       settings: venueConfig.settings,
       tot: totParams,
     };
@@ -76,6 +165,16 @@ const Recommendations: React.FC = () => {
     if (!hasRequiredData || hasFetched || !requestPayload || fetchStartedRef.current) {
       return;
     }
+
+    // Check if we have valid cached layouts
+    if (isLayoutsCacheValid()) {
+      console.log('Using cached layouts - cache is valid');
+      setLayouts(cachedLayouts);
+      setHasFetched(true);
+      return;
+    }
+
+    console.log('Cache invalid or empty - fetching new layouts');
 
     // Mark fetch as started immediately (before async call)
     fetchStartedRef.current = true;
@@ -139,7 +238,7 @@ const Recommendations: React.FC = () => {
               } else if (event.type === 'result') {
                 const fetchedLayouts = event.layouts ?? [];
                 setLayouts(fetchedLayouts);
-                saveLayoutsToContext(fetchedLayouts);
+                setLayoutsWithCacheKey(fetchedLayouts);
                 setHasFetched(true);
                 console.log(`Received ${fetchedLayouts.length} layout recommendations`);
               }
@@ -161,48 +260,7 @@ const Recommendations: React.FC = () => {
     };
 
     fetchLayouts();
-  }, [hasRequiredData, hasFetched, requestPayload]);
-
-
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
-
-
-  // Handle layout preview selection
-  const handlePreviewLayout = (index: number) => {
-    setPreviewIndex(index);
-  };
-
-  // Confirm selection, pre-fetch explanations, and navigate
-  const handleConfirmLayout = async () => {
-    if (previewIndex === null) return;
-
-    setIsConfirming(true);
-
-    // Set the selected layout index first
-    setSelectedLayoutIndex(previewIndex);
-
-    // Clear old explanations and fetch new ones for the selected layout
-    setExplanations({});
-
-    try {
-      // Pre-fetch explanations in the background
-      // We don't await this - let it run while navigating
-      fetchAllExplanations();
-
-      // Small delay to let the state update before navigating
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      navigate('/planner');
-    } catch (err) {
-      console.error('Error during layout confirmation:', err);
-      navigate('/planner');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
-
-  // ... (existing helper function map)
+  }, [hasRequiredData, hasFetched, requestPayload, isLayoutsCacheValid, cachedLayouts]);
 
 
 
@@ -243,7 +301,7 @@ const Recommendations: React.FC = () => {
               : "We've turned your guest list into a social masterpiece. Explore these AI-curated arrangements, each designed to create a unique atmosphere for your celebration."}
           </p>
           {selectedVenueLayout && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
               <span className="material-icons-round text-primary text-sm">{selectedVenueLayout.icon || 'location_on'}</span>
               <span className="font-medium">{selectedVenueLayout.name}</span>
               <span className="text-gray-400">•</span>
@@ -254,7 +312,7 @@ const Recommendations: React.FC = () => {
         </div>
 
         {loading && (
-          <div className="flex flex-col justify-center items-center py-32 relative overflow-hidden">
+          <div className="flex flex-col justify-center items-center py-12 relative overflow-hidden">
             <style>
               {`
         @keyframes heartbeat {
@@ -371,27 +429,27 @@ const Recommendations: React.FC = () => {
               {/* Wedding tips carousel - one per step */}
               {(() => {
                 const weddingTips = [
-                  "Send save-the-dates 6-8 months before your wedding date",
-                  "Book your photographer early — the best ones get reserved 12+ months ahead",
-                  "Create a wedding email address to keep all vendor communications organized",
-                  "Schedule your hair and makeup trial 2-3 months before the big day",
-                  "Break in your wedding shoes at home to avoid blisters on the dance floor",
-                  "Assign a point person to handle vendor questions on wedding day — not you!",
-                  "Write personal vows? Practice reading them aloud to time them perfectly",
-                  "Pack an emergency kit: stain remover, pain relievers, sewing kit, and snacks",
-                  "Feed your vendors! Happy photographers and DJs go the extra mile",
-                  "Schedule 15 minutes of alone time with your partner during the reception",
-                  "Tip: Guest book alternatives like Polaroid albums create lasting memories",
-                  "Almost there! Your seating plan will set the tone for an amazing celebration",
+                  "Send save-the-dates 6-8 months in advance",
+                  "Book your photographer at least 12 months ahead",
+                  "Create a dedicated wedding email address",
+                  "Schedule hair & makeup trial 2-3 months before",
+                  "Break in your wedding shoes at home first",
+                  "Assign a day-of point person for vendors",
+                  "Practice reading your vows aloud beforehand",
+                  "Pack an emergency kit for the big day",
+                  "Don't forget to feed your vendors!",
+                  "Schedule alone time with your partner",
+                  "Try a Polaroid guest book for memories",
+                  "Almost there! Great seating makes great parties",
                 ];
                 const tipIndex = Math.min(currentStep, weddingTips.length) - 1;
                 const tip = weddingTips[Math.max(0, tipIndex)] || weddingTips[0];
 
                 return (
-                  <div className="mt-2 px-4 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg max-w-sm">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center italic animate-fade-slide-in"
+                  <div className="mt-4 px-5 py-3 bg-secondary/20 dark:bg-secondary/10 rounded-xl border border-secondary/30 max-w-md">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 text-center font-medium animate-fade-slide-in whitespace-nowrap"
                        key={`tip-${currentStep}`}>
-                      💡 {tip}
+                      <span className="mr-2">💡</span>{tip}
                     </p>
                   </div>
                 );
@@ -425,7 +483,7 @@ const Recommendations: React.FC = () => {
 
         {/* Optimal Solution Message - Show when only 1 unique layout found */}
         {!loading && !error && layouts.length === 1 && (
-          <div className="mb-8 p-6 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30">
+          <div className="mb-8 p-6 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30 max-w-md mx-auto">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 w-12 h-12 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
                 <span className="material-icons-round text-primary text-2xl">auto_awesome</span>
@@ -435,10 +493,9 @@ const Recommendations: React.FC = () => {
                   We Found Your Optimal Seating!
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
-                  Based on your guest list and constraints, we've identified the best possible seating arrangement. 
-                  This layout maximizes family cohesion, social connections, and table balance.
+                  Based on your guest list and constraints, we've identified the best possible seating arrangement.
                   <span className="block mt-2 font-medium text-primary dark:text-primary-light">
-                    Feel free to select it and make any personal adjustments in the Planner.
+                    Select it below and make any personal adjustments in the Planner.
                   </span>
                 </p>
               </div>
@@ -446,9 +503,51 @@ const Recommendations: React.FC = () => {
           </div>
         )}
 
+        {/* Legend - Explains metrics once for all cards */}
+        {!loading && !error && layouts.length > 0 && (
+          <div className="mb-8 max-w-4xl mx-auto">
+            <div className="bg-white/60 dark:bg-surface-dark/60 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
+              <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <span className="material-icons-round text-sm text-primary">family_restroom</span>
+                  <span><strong>Family</strong> — keeps relatives together</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="material-icons-round text-sm text-secondary">groups</span>
+                  <span><strong>Friends</strong> — keeps friend groups together</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="material-icons-round text-sm text-accent">sync_alt</span>
+                  <span><strong>Mixing</strong> — bride & groom sides interact</span>
+                </div>
+              </div>
+              <div className="flex justify-center items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-500">
+                <span className="flex items-center gap-1">
+                  <span className="inline-flex gap-0.5">
+                    {[...Array(5)].map((_, i) => <span key={i} className="w-1.5 h-2 rounded-sm bg-gray-400" />)}
+                  </span>
+                  Strong
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-flex gap-0.5">
+                    {[...Array(5)].map((_, i) => <span key={i} className={`w-1.5 h-2 rounded-sm ${i < 3 ? 'bg-gray-400' : 'bg-gray-200'}`} />)}
+                  </span>
+                  Good
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-flex gap-0.5">
+                    {[...Array(5)].map((_, i) => <span key={i} className={`w-1.5 h-2 rounded-sm ${i < 2 ? 'bg-gray-400' : 'bg-gray-200'}`} />)}
+                  </span>
+                  Mixed
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={`grid gap-8 items-start ${
           layouts.length === 1
-            ? 'grid-cols-1 max-w-lg mx-auto'
+            ? 'grid-cols-1 max-w-md mx-auto'
             : layouts.length === 2
               ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
               : 'grid-cols-1 md:grid-cols-3'
@@ -461,130 +560,98 @@ const Recommendations: React.FC = () => {
             const social = layout.objective_breakdown?.social_group_cohesion || 0;
             const mixing = layout.objective_breakdown?.side_mixing || 0;
 
-            // Compare against other layouts to find what makes THIS one unique
-            const allMetrics = layouts.map(l => ({
-              family: l.layout.objective_breakdown?.family_cohesion || 0,
-              social: l.layout.objective_breakdown?.social_group_cohesion || 0,
-              mixing: l.layout.objective_breakdown?.side_mixing || 0,
-            }));
-
-            // Find max values across all layouts
-            const maxFamily = Math.max(...allMetrics.map(m => m.family));
-            const maxSocial = Math.max(...allMetrics.map(m => m.social));
-            const maxMixing = Math.max(...allMetrics.map(m => m.mixing));
-
-            // Determine what this layout is BEST at (relative to others)
-            const isBestFamily = family === maxFamily && family > Math.min(...allMetrics.map(m => m.family)) + 5;
-            const isBestSocial = social === maxSocial && social > Math.min(...allMetrics.map(m => m.social)) + 5;
-            const isBestMixing = mixing === maxMixing && mixing > Math.min(...allMetrics.map(m => m.mixing)) + 5;
-
-            // Calculate the key differentiator - what stands out most
-            const familyDiff = family - (allMetrics.reduce((sum, m) => sum + m.family, 0) / allMetrics.length);
-            const socialDiff = social - (allMetrics.reduce((sum, m) => sum + m.social, 0) / allMetrics.length);
-            const mixingDiff = mixing - (allMetrics.reduce((sum, m) => sum + m.mixing, 0) / allMetrics.length);
-
-            // Determine title and highlight based on what's unique about this option
-            let title = '';
-            let highlight = '';
-            let highlightValue = '';
-
-            if (isBestMixing && Math.abs(mixingDiff) >= Math.abs(familyDiff) && Math.abs(mixingDiff) >= Math.abs(socialDiff)) {
-              title = 'Maximum Mingling';
-              highlight = 'Best for mixing both sides';
-              highlightValue = `${Math.round(mixing)}% mixing`;
-            } else if (isBestFamily && Math.abs(familyDiff) >= Math.abs(socialDiff)) {
-              title = 'Family Priority';
-              highlight = 'Best for keeping families together';
-              highlightValue = `${Math.round(family)}% family cohesion`;
-            } else if (isBestSocial) {
-              title = 'Friends First';
-              highlight = 'Best for keeping friend groups intact';
-              highlightValue = `${Math.round(social)}% friend groups`;
-            } else if (mixing > family && mixing > social) {
-              title = 'Social Mix';
-              highlight = 'Encourages mingling';
-              highlightValue = `${Math.round(mixing)}% mixing`;
-            } else if (family > social) {
-              title = 'Family Focused';
-              highlight = 'Prioritizes family seating';
-              highlightValue = `${Math.round(family)}% family cohesion`;
-            } else {
-              title = 'Balanced';
-              highlight = 'Well-rounded arrangement';
-              highlightValue = `${Math.round((family + social + mixing) / 3)}% overall`;
-            }
-
-            // If no clear differentiator, use index-based naming
-            if (!isBestFamily && !isBestSocial && !isBestMixing && layouts.length > 1) {
-              const indexTitles = ['Primary Choice', 'Alternative A', 'Alternative B'];
-              title = indexTitles[index] || `Option ${index + 1}`;
-            }
+            // Get unique title from pre-computed array
+            const title = layoutTitles[index] || `Plan ${index + 1}`;
+            const valueProposition = getValueProposition(title);
 
             return (
               <div
                 key={index}
-                onClick={() => handlePreviewLayout(index)}
+                onClick={() => {
+                  setSelectedLayoutIndex(index);
+                  setExplanations({});
+                  fetchAllExplanations();
+                  navigate('/planner');
+                }}
                 className={`group relative bg-white dark:bg-surface-dark rounded-xl transition-all duration-300 overflow-hidden border cursor-pointer h-full flex flex-col
-                  ${previewIndex === index
-                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-background-light dark:ring-offset-background-dark border-primary shadow-lg'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'}`}
+                  border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg`}
               >
                 {/* Minimal top accent */}
                 <div className={`h-1 ${index === 0 ? 'bg-primary' : index === 1 ? 'bg-secondary' : 'bg-accent'}`}></div>
 
-                <div className="p-6 flex-grow">
-                  {/* Header with unique title */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
-                        Option {index + 1}
-                      </span>
-                      <h2 className="font-display text-xl text-text-main dark:text-white mt-1">
-                        {title}
-                      </h2>
-                    </div>
-                    {previewIndex === index && (
-                      <span className="text-xs font-semibold text-primary border border-primary rounded-full px-2 py-0.5">
-                        Selected
+                <div className="p-6 flex-grow flex flex-col">
+                  {/* Badge row - fixed height for alignment */}
+                  <div className="h-5 mb-1">
+                    {index === 0 && layouts.length > 1 && (
+                      <span className="inline-block text-[10px] font-bold text-white bg-primary px-2 py-0.5 rounded-full uppercase tracking-wide">
+                        Top Pick
                       </span>
                     )}
                   </div>
 
-                  {/* Key differentiator - what makes this option unique */}
-                  {highlight && (
-                    <div className={`mb-5 p-3 rounded-lg border-l-4 ${
-                      index === 0 ? 'border-l-primary bg-primary/5' :
-                      index === 1 ? 'border-l-secondary bg-secondary/5' :
-                      'border-l-accent bg-accent/5'
-                    }`}>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{highlight}</p>
-                      <p className={`text-lg font-display mt-1 ${
-                        index === 0 ? 'text-primary' :
-                        index === 1 ? 'text-secondary' :
-                        'text-accent'
-                      }`}>{highlightValue}</p>
-                    </div>
-                  )}
+                  {/* Title - fixed height */}
+                  <h2 className="font-display text-xl text-text-main dark:text-white h-7 mb-3">
+                    {title}
+                  </h2>
 
-                  {/* Metrics breakdown - compact */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Family groups</span>
-                      <span className={`font-medium ${isBestFamily ? 'text-primary font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {Math.round(family)}%
+                  {/* Value proposition - fixed height container */}
+                  <div className={`mb-5 p-3 rounded-lg border-l-4 min-h-[52px] flex items-center ${
+                    index === 0 ? 'border-l-primary bg-primary/5' :
+                    index === 1 ? 'border-l-secondary bg-secondary/5' :
+                    'border-l-accent bg-accent/5'
+                  }`}>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{valueProposition}</p>
+                  </div>
+
+                  {/* Metrics breakdown */}
+                  <div className="space-y-2.5 mb-4">
+                    <div className="flex items-center text-sm h-5">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
+                        <span className="material-icons-round text-xs text-gray-400">family_restroom</span>
+                        Family
                       </span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex gap-0.5 w-[52px]">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(family / 20) ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
+                          {getQualityLabel(family)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Friend groups</span>
-                      <span className={`font-medium ${isBestSocial ? 'text-secondary font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {Math.round(social)}%
+                    <div className="flex items-center text-sm h-5">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
+                        <span className="material-icons-round text-xs text-gray-400">groups</span>
+                        Friends
                       </span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex gap-0.5 w-[52px]">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(social / 20) ? 'bg-secondary' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
+                          {getQualityLabel(social)}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Side mixing</span>
-                      <span className={`font-medium ${isBestMixing ? 'text-accent font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {Math.round(mixing)}%
+                    <div className="flex items-center text-sm h-5">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
+                        <span className="material-icons-round text-xs text-gray-400">sync_alt</span>
+                        Mixing
                       </span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex gap-0.5 w-[52px]">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(mixing / 20) ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
+                          {getQualityLabel(mixing)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -597,11 +664,8 @@ const Recommendations: React.FC = () => {
                   )}
                 </div>
                 <div className="px-6 pb-5 mt-auto">
-                  <button className={`w-full py-2 text-sm font-medium rounded-lg transition-colors
-                    ${previewIndex === index
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'}`}>
-                    {previewIndex === index ? 'Selected' : 'Select this option'}
+                  <button className="w-full py-2.5 text-sm font-medium rounded-lg transition-colors bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-primary group-hover:text-white">
+                    Select & Continue
                   </button>
                 </div>
               </div>
@@ -609,51 +673,15 @@ const Recommendations: React.FC = () => {
           })}
         </div>
 
-        {/* Sticky Bottom Bar */}
-        {previewIndex !== null && layouts[previewIndex] && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-surface-dark/95 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 z-50">
-            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-              <div>
-                <h4 className="font-display text-lg text-text-main dark:text-white">
-                  Option {previewIndex + 1} selected
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Continue to customize your seating arrangement
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setPreviewIndex(null)}
-                  disabled={isConfirming}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-primary transition-colors font-medium text-sm disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmLayout}
-                  disabled={isConfirming}
-                  className="px-8 py-3 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-70"
-                >
-                  {isConfirming ? (
-                    <>
-                      <span className="material-icons-round text-sm animate-spin">progress_activity</span>
-                      <span>Preparing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Select & Refine</span>
-                      <span className="material-icons-round text-sm">arrow_forward</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+        {/* Helpful note */}
+        {!loading && layouts.length > 0 && (
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="material-icons-round text-xs align-middle mr-1">info</span>
+              You can always come back here to try a different arrangement
+            </p>
           </div>
         )}
-
-        {/* Spacer for bottom bar */}
-        {previewIndex !== null && <div className="h-24"></div>}
       </div >
     </div >
   );

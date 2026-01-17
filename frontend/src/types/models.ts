@@ -354,3 +354,48 @@ export function createDefaultTables(guestCount: number, seatsPerTable: number = 
   }));
 }
 
+// =============================================================================
+// UI CONSTANTS
+// =============================================================================
+
+/**
+ * Color palette for table visualization.
+ * These Tailwind classes are used to color-code tables in the seating chart.
+ */
+export const TABLE_COLORS = [
+  'bg-slate-400',
+  'bg-red-300',
+  'bg-primary',
+  'bg-secondary',
+  'bg-amber-400',
+  'bg-emerald-400',
+] as const;
+
+/**
+ * Border color palette matching TABLE_COLORS.
+ */
+export const TABLE_BORDER_COLORS = [
+  'border-slate-400',
+  'border-red-300',
+  'border-primary',
+  'border-secondary',
+  'border-amber-400',
+  'border-emerald-400',
+] as const;
+
+/**
+ * Get the color class for a table based on its index.
+ * Cycles through the color palette.
+ */
+export function getTableColor(tableIndex: number): string {
+  return TABLE_COLORS[tableIndex % TABLE_COLORS.length];
+}
+
+/**
+ * Get the border color class for a table based on its index.
+ * Cycles through the border color palette.
+ */
+export function getTableBorderColor(tableIndex: number): string {
+  return TABLE_BORDER_COLORS[tableIndex % TABLE_BORDER_COLORS.length];
+}
+

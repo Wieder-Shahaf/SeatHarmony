@@ -3,8 +3,9 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Link } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
-import { Guest } from '../src/types/models';
+import { Guest, getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/types/models';
 import { getVisualLayout } from '../src/utils/visualLayouts';
+import { prepareDataForApi } from '../src/services/api';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
@@ -12,6 +13,8 @@ const Confirmation: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
   const [zoom, setZoom] = useState(0.9);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
@@ -23,6 +26,9 @@ const Confirmation: React.FC = () => {
 
   const handleExportPDF = async () => {
     if (!layoutRef.current || !selectedVenueLayout) return;
+
+    setIsExportingPdf(true);
+    setExportError(null);
 
     try {
       // Temporarily reset zoom for capture
@@ -53,7 +59,9 @@ const Confirmation: React.FC = () => {
       setZoom(currentZoom);
     } catch (err) {
       console.error('PDF Export failed:', err);
-      alert('Failed to generate PDF. Please try again.');
+      setExportError('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -69,26 +77,14 @@ const Confirmation: React.FC = () => {
     if (!selectedLayout) return;
 
     setIsExportingExcel(true);
+    setExportError(null);
 
     try {
       const response = await fetch(`${API_BASE}/api/export/excel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guests: guests.map(g => ({
-            id: g.id,
-            name: g.name,
-            group_id: g.group_id,
-            importance: g.importance,
-            tags: g.tags,
-          })),
-          tables: tables.map(t => ({
-            id: t.id,
-            name: t.name,
-            capacity: t.capacity,
-            zone: t.zone,
-            constraints: t.constraints,
-          })),
+          ...prepareDataForApi(guests, tables),
           layout: selectedLayout.layout,
           options: {
             include_dietary: true,
@@ -114,7 +110,7 @@ const Confirmation: React.FC = () => {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Excel export failed:', err);
-      alert('Failed to export Excel file. Please try again.');
+      setExportError('Failed to export Excel file. Please try again.');
     } finally {
       setIsExportingExcel(false);
     }
@@ -203,11 +199,10 @@ const Confirmation: React.FC = () => {
               </h3>
               <div className="space-y-3">
                 {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
-                  const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
                   return (
                     <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className={`w-4 h-4 rounded-full ${colors[i % colors.length]} block shadow-sm`}></span>
+                        <span className={`w-4 h-4 rounded-full ${getTableColor(i)} block shadow-sm`}></span>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-[140px]">{category}</span>
                       </div>
                       <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">{count} Tables</span>
@@ -349,9 +344,9 @@ const Confirmation: React.FC = () => {
                   const primaryCategory = tableGuests.length > 0
                     ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
                     : 'Empty';
-                  const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
-                  const borderColors = ['border-slate-400', 'border-red-300', 'border-primary', 'border-secondary', 'border-amber-400', 'border-emerald-400'];
-                  const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % colors.length;
+                  const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+                  const bgColor = getTableColor(colorIndex);
+                  const borderColor = getTableBorderColor(colorIndex);
                   const isRound = table.constraints?.tableType !== 'rectangular';
 
                   // Get position from visual layout, fallback to grid if index exceeds defined positions
@@ -373,8 +368,8 @@ const Confirmation: React.FC = () => {
                         transform: `translate(-50%, -50%) rotate(${position.rotation}deg)`
                       }}
                     >
-                      <div className={`${tableSizeClass} ${isRound ? 'rounded-full' : 'rounded-lg'} ${colors[colorIndex]}/20 dark:${colors[colorIndex]}/10 border-2 ${borderColors[colorIndex]} flex items-center justify-center shadow-md relative backdrop-blur-sm`}>
-                        <span className={`font-bold ${fontSizeClass} ${colors[colorIndex].replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
+                      <div className={`${tableSizeClass} ${isRound ? 'rounded-full' : 'rounded-lg'} ${bgColor}/20 dark:${bgColor}/10 border-2 ${borderColor} flex items-center justify-center shadow-md relative backdrop-blur-sm`}>
+                        <span className={`font-bold ${fontSizeClass} ${bgColor.replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
                           {table.name.replace('Table ', '')}
                         </span>
                         <span className={`absolute bg-white dark:bg-gray-700 rounded-full shadow text-gray-500 font-mono ${badgeSizeClass}`}>
@@ -402,17 +397,17 @@ const Confirmation: React.FC = () => {
                 const primaryCategory = tableGuests.length > 0
                   ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
                   : 'Empty';
-                const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
-                const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % colors.length;
+                const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+                const tableBgColor = getTableColor(colorIndex);
                 const isRound = table.constraints?.tableType !== 'rectangular';
 
                 return (
                   <div key={table.id} className="bg-white dark:bg-surface-dark rounded-xl border border-secondary/20 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition">
-                    <div className={`h-2 ${colors[colorIndex]} w-full`}></div>
+                    <div className={`h-2 ${tableBgColor} w-full`}></div>
                     <div className="p-4">
                       <div className="flex justify-between items-start mb-3 gap-2">
                         <h4 className="font-bold text-gray-800 dark:text-gray-200">{table.name}</h4>
-                        <span className={`text-xs font-medium ${colors[colorIndex]}/20 px-2 py-1 rounded whitespace-nowrap`}>
+                        <span className={`text-xs font-medium ${tableBgColor}/20 px-2 py-1 rounded whitespace-nowrap`}>
                           {primaryCategory}
                         </span>
                       </div>
@@ -457,6 +452,23 @@ const Confirmation: React.FC = () => {
       </div>
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up">
+        {/* Error Banner */}
+        {exportError && (
+          <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-6 py-2">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <span className="material-icons-round text-sm">error</span>
+                <span className="text-sm">{exportError}</span>
+              </div>
+              <button
+                onClick={() => setExportError(null)}
+                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
+              >
+                <span className="material-icons-round text-sm">close</span>
+              </button>
+            </div>
+          </div>
+        )}
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary">
@@ -496,11 +508,24 @@ const Confirmation: React.FC = () => {
             </button>
             <button
               onClick={handleExportPDF}
-              className="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+              disabled={isExportingPdf}
+              className="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="flex items-center gap-2">
-                <span className="material-icons-round">picture_as_pdf</span>
-                <span className="hidden sm:inline">Export PDF</span>
+                {isExportingPdf ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="hidden sm:inline">Exporting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-icons-round">picture_as_pdf</span>
+                    <span className="hidden sm:inline">Export PDF</span>
+                  </>
+                )}
               </span>
             </button>
             <Link

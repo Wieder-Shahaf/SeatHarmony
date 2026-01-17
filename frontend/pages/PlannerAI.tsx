@@ -18,7 +18,6 @@ const PlannerAI: React.FC = () => {
     selectedLayoutIndex,
     updateGuestAssignment,
     explanations,
-    isLoadingExplanations,
     fetchExplanationsForTables,
   } = useGuests();
 
@@ -227,17 +226,15 @@ const PlannerAI: React.FC = () => {
                       <span className="material-icons-round text-primary text-sm">auto_awesome</span>
                       <span className="text-xs font-bold text-primary">AI Insight</span>
                     </div>
-                    {isLoadingExplanations && !explanations[guest.id] ? (
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <span className="material-icons-round animate-spin text-xs">progress_activity</span>
-                        Loading...
-                      </p>
-                    ) : explanations[guest.id] ? (
+                    {explanations[guest.id] ? (
                       <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                         {explanations[guest.id]}
                       </p>
                     ) : (
-                      <p className="text-xs text-gray-400 italic">Explanation loading...</p>
+                      <p className="text-xs text-primary flex items-center gap-1">
+                        <span className="material-icons-round animate-spin text-xs">progress_activity</span>
+                        Generating insight...
+                      </p>
                     )}
                   </div>
                 )}
@@ -355,7 +352,7 @@ const PlannerAI: React.FC = () => {
                             e.stopPropagation();
                             setSelectedGuestId(isSelectedGuest ? null : guest.id);
                           }}
-                          className={`relative cursor-pointer transition-all ${isSelectedGuest ? 'scale-110 z-10' : 'hover:scale-105'}`}
+                          className={`relative cursor-pointer transition-all ${isSelectedGuest ? 'scale-110 z-[100]' : 'hover:scale-105'}`}
                           title={`${guest.name} (${guest.group_id || 'No category'})`}
                         >
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 transition-transform duration-200 ${isSelectedGuest
@@ -377,28 +374,30 @@ const PlannerAI: React.FC = () => {
                           {/* Popup explanation */}
                           {isSelectedGuest && (
                             <div
-                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 z-50 cursor-default"
+                              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[9999] cursor-default"
+                              style={{ width: '256px' }}
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-primary/20 dark:border-gray-600 p-4">
+                              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-primary/20 dark:border-gray-600 p-4 relative z-[9999]">
+                                {/* Arrow */}
                                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-800 border-b border-r border-primary/20 dark:border-gray-600 rotate-45"></div>
+                                {/* Header */}
                                 <div className="flex items-center gap-2 mb-2 border-b border-gray-100 dark:border-gray-700 pb-2">
                                   <span className="material-icons-round text-primary text-sm">auto_awesome</span>
                                   <span className="text-xs font-bold text-primary">AI Insight</span>
                                 </div>
-                                <p className="text-sm font-semibold text-gray-800 dark:text-white mb-1">{guest.name}</p>
-
-                                {isLoadingExplanations && !explanations[guest.id] ? (
-                                  <div className="flex items-center gap-2 py-2 text-primary">
-                                    <span className="material-icons-round animate-spin text-sm">progress_activity</span>
-                                    <span className="text-xs">Generating insight...</span>
-                                  </div>
-                                ) : explanations[guest.id] ? (
+                                {/* Guest name */}
+                                <p className="text-sm font-semibold text-gray-800 dark:text-white mb-2">{guest.name}</p>
+                                {/* Content - Loading or explanation */}
+                                {explanations[guest.id] ? (
                                   <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                                     {explanations[guest.id]}
                                   </p>
                                 ) : (
-                                  <p className="text-xs text-gray-400 italic">Insight will be available shortly...</p>
+                                  <p className="text-xs text-primary">
+                                    <span className="material-icons-round animate-spin text-sm align-middle mr-1">progress_activity</span>
+                                    Generating insight...
+                                  </p>
                                 )}
                               </div>
                             </div>

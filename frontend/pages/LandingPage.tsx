@@ -362,7 +362,7 @@ const LandingPage: React.FC = () => {
       <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-8 bg-white/40 dark:bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-text-main/60 dark:text-text-light/60">
-            © 2024 SeatHarmony. All rights reserved.
+            © 2026 SeatHarmony. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-sm text-text-main/60 dark:text-text-light/60 hover:text-primary">Privacy</a>

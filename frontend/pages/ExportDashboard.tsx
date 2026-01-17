@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { getVisualLayout } from '../src/utils/visualLayouts';
+import { prepareDataForApi } from '../src/services/api';
+import { getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/types/models';
 import confetti from 'canvas-confetti';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
@@ -59,20 +61,7 @@ const ExportDashboard: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guests: guests.map(g => ({
-            id: g.id,
-            name: g.name,
-            group_id: g.group_id,
-            importance: g.importance,
-            tags: g.tags,
-          })),
-          tables: tables.map(t => ({
-            id: t.id,
-            name: t.name,
-            capacity: t.capacity,
-            zone: t.zone,
-            constraints: t.constraints,
-          })),
+          ...prepareDataForApi(guests, tables),
           layout: selectedLayout.layout,
           options: {
             include_dietary: exportOptions.includeDietary,
@@ -234,9 +223,9 @@ const ExportDashboard: React.FC = () => {
         const primaryCategory = tableGuests.length > 0
           ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
           : 'Empty';
-        const colors = ['bg-slate-400', 'bg-red-300', 'bg-primary', 'bg-secondary', 'bg-amber-400', 'bg-emerald-400'];
-        const borderColors = ['border-slate-400', 'border-red-300', 'border-primary', 'border-secondary', 'border-amber-400', 'border-emerald-400'];
-        const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % colors.length;
+        const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+        const bgColor = getTableColor(colorIndex);
+        const borderColor = getTableBorderColor(colorIndex);
         const isRound = table.constraints?.tableType !== 'rectangular';
 
         // Get position from visual layout, fallback to grid
@@ -253,14 +242,14 @@ const ExportDashboard: React.FC = () => {
             }}
           >
             <div className={`
-                 ${isSmall ? 'w-8 h-8' : 'w-16 h-16'} 
-                 ${isRound ? 'rounded-full' : 'rounded-lg'} 
-                 ${colors[colorIndex]}/20 dark:${colors[colorIndex]}/10 
-                 border-2 ${borderColors[colorIndex]} 
+                 ${isSmall ? 'w-8 h-8' : 'w-16 h-16'}
+                 ${isRound ? 'rounded-full' : 'rounded-lg'}
+                 ${bgColor}/20 dark:${bgColor}/10
+                 border-2 ${borderColor}
                  flex items-center justify-center shadow-md relative backdrop-blur-sm
                `}>
               {!isSmall && (
-                <span className={`font-bold text-sm ${colors[colorIndex].replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
+                <span className={`font-bold text-sm ${bgColor.replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
                   {table.name.replace('Table ', '')}
                 </span>
               )}

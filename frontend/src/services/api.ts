@@ -122,6 +122,30 @@ export function prepareGuestsForApi(guests: Guest[]): Guest[] {
 }
 
 /**
+ * Helper to convert frontend table data to API format
+ */
+export function prepareTablesForApi(tables: Table[]): Table[] {
+  return tables.map(table => ({
+    id: table.id,
+    name: table.name,
+    capacity: table.capacity,
+    zone: table.zone ?? null,
+    constraints: table.constraints || {},
+  }));
+}
+
+/**
+ * Helper to prepare both guests and tables for API requests
+ * Combines prepareGuestsForApi and prepareTablesForApi for convenience
+ */
+export function prepareDataForApi(guests: Guest[], tables: Table[]): { guests: Guest[]; tables: Table[] } {
+  return {
+    guests: prepareGuestsForApi(guests),
+    tables: prepareTablesForApi(tables),
+  };
+}
+
+/**
  * Helper to create API-ready tables from basic config
  */
 export function createTablesForApi(
