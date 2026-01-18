@@ -310,11 +310,44 @@ const Dashboard: React.FC = () => {
     <div className="flex-grow p-6 md:p-10 max-w-7xl mx-auto w-full">
       {/* Header */}
       {/* Header */}
-      <div className="mb-12 text-center max-w-2xl mx-auto">
+      <div className="mb-8 text-center max-w-2xl mx-auto">
         <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Guest Group Overview</h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
           Review and organize your guests into logical groups beneath. This helps the AI understand relationships and ensure everyone is seated with their group.
         </p>
+      </div>
+
+      {/* Quick Tip CTA */}
+      <div className="max-w-3xl mx-auto mb-10">
+        <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10 dark:to-transparent rounded-2xl border border-primary/20 p-5 shadow-sm">
+          {/* Decorative background element */}
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+
+          <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+            <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-surface-dark rounded-full flex items-center justify-center shadow-sm text-primary">
+              <span className="material-icons-round text-2xl animate-bounce">lightbulb</span>
+            </div>
+
+            <div className="flex-grow text-center md:text-left">
+              <h3 className="font-display text-lg font-semibold text-text-main dark:text-white mb-1">
+                Interactive Guest Cards
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
+                <strong className="text-primary">Click</strong> any card to reveal its guest list.
+                <strong className="text-primary ml-1.5">Drag & drop</strong> guests between cards to reassign them.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
+                <span className="material-icons-round text-sm">touch_app</span> Click to Flip
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
+                <span className="material-icons-round text-sm">drag_indicator</span> Drag Guests
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -408,9 +441,9 @@ const Dashboard: React.FC = () => {
           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
             <span className="material-icons-round text-sm">people</span> Total Guests
           </span>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-3">
             <span className="font-display text-3xl font-bold text-text-main dark:text-white lining-nums">{totalGuests}</span>
-            <span className="text-green-800 dark:text-green-300 text-sm flex items-center bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
+            <span className="text-green-800 dark:text-green-300 text-sm flex items-center bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full mt-1">
               <span className="material-icons-round text-xs mr-1">check_circle</span> Confirmed
             </span>
           </div>
@@ -419,7 +452,7 @@ const Dashboard: React.FC = () => {
           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
             <span className="material-icons-round text-sm">workspaces</span> Groups
           </span>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
             <span className="font-display text-3xl font-bold text-primary lining-nums">{totalGroups}</span>
             <span className="text-gray-400 text-sm mt-1">Groups Detected</span>
           </div>
@@ -428,7 +461,7 @@ const Dashboard: React.FC = () => {
           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
             <span className="material-icons-round text-md">person_search</span> Uncategorized
           </span>
-          <div className="flex items-baseline gap-2">
+          <div className="flex items-center gap-2">
             <span className="font-display text-3xl font-bold text-orange-400 lining-nums">{unassignedCount}</span>
             <span className="text-gray-400 text-sm mt-1">Guests Pending</span>
           </div>

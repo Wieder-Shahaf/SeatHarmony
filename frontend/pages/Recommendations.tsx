@@ -16,6 +16,7 @@ const Recommendations: React.FC = () => {
     totParams,
     layouts: cachedLayouts,
     setLayoutsWithCacheKey,
+    selectedLayoutIndex,
     setSelectedLayoutIndex,
     setIsLoading,
     setError: setContextError,
@@ -289,30 +290,30 @@ const Recommendations: React.FC = () => {
 
   return (
     <div className="flex-grow w-full min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
         {/* Header - Matching Venue Style */}
-        <div className="mb-12 text-center max-w-3xl mx-auto">
-          <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">
+        <div className="mb-6 text-center max-w-3xl mx-auto">
+          <h2 className="flex items-center justify-center gap-3 font-display text-4xl text-text-main dark:text-white mb-2">
             Optimized Seating Plans
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
-            {layouts.length <= 1 
+          <p className="text-gray-600 dark:text-gray-300 text-base font-light leading-relaxed">
+            {layouts.length <= 1
               ? "We've analyzed your guest list and found the optimal seating arrangement based on your constraints."
               : "We've turned your guest list into a social masterpiece. Explore these AI-curated arrangements, each designed to create a unique atmosphere for your celebration."}
           </p>
           {selectedVenueLayout && (
-            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-              <span className="material-icons-round text-primary text-sm">{selectedVenueLayout.icon || 'location_on'}</span>
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 rounded-full text-xs text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+              <span className="material-icons-round text-primary text-xs">{selectedVenueLayout.icon || 'location_on'}</span>
               <span className="font-medium">{selectedVenueLayout.name}</span>
               <span className="text-gray-400">•</span>
-              <span className="material-icons-outlined text-sm text-gray-500">people</span>
+              <span className="material-icons-outlined text-xs text-gray-500">people</span>
               <span>{guests.length} Guests</span>
             </div>
           )}
         </div>
 
         {loading && (
-          <div className="flex flex-col justify-center items-center py-12 relative overflow-hidden">
+          <div className="flex flex-col justify-center items-center py-8 relative overflow-hidden">
             <style>
               {`
         @keyframes heartbeat {
@@ -352,9 +353,9 @@ const Recommendations: React.FC = () => {
             </div>
 
             {/* Animated Logo Construction */}
-            <div className="relative flex items-center gap-3 mb-8 z-10 scale-125 transform">
-              <span className="material-icons-round text-5xl text-primary animate-heartbeat drop-shadow-sm">favorite</span>
-              <h1 className="font-display text-5xl text-text-main dark:text-secondary tracking-tight">
+            <div className="relative flex items-center gap-3 mb-6 z-10 scale-110 transform">
+              <span className="material-icons-round text-4xl text-primary animate-heartbeat drop-shadow-sm">favorite</span>
+              <h1 className="font-display text-4xl text-text-main dark:text-secondary tracking-tight">
                 Seat<span className="italic relative">
                   Harmony
                 </span>
@@ -362,20 +363,20 @@ const Recommendations: React.FC = () => {
             </div>
 
             {/* Time Estimate Banner */}
-            <div className="mb-6 px-4 py-3 bg-white/50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-700 max-w-sm z-10">
-              <p className="text-sm text-gray-600 dark:text-gray-300 text-center">
+            <div className="mb-4 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-gray-700 max-w-sm z-10">
+              <p className="text-xs text-gray-600 dark:text-gray-300 text-center">
                 Estimated time: <strong>~4 minutes</strong>
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center mt-1">
                 Analyzing {totalSteps} seating strategies to find your best options
               </p>
             </div>
 
             {/* Loading Progress & Text */}
-            <div className="flex flex-col items-center gap-4 z-10 w-full max-w-md">
+            <div className="flex flex-col items-center gap-3 z-10 w-full max-w-md">
               {/* Progress bar with step indicators */}
               <div className="w-full">
-                <div className="h-2 w-full bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden relative shadow-inner">
+                <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden relative shadow-inner">
                   <div
                     className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${Math.max(5, progress)}%` }}
@@ -390,39 +391,38 @@ const Recommendations: React.FC = () => {
               </div>
 
               {/* Carousel-style live text */}
-              <div className="h-24 flex flex-col items-center justify-center overflow-hidden">
+              <div className="h-20 flex flex-col items-center justify-center overflow-hidden">
                 {/* Current strategy with animated icon */}
-                <div className="flex items-center gap-2 mb-2 animate-fade-slide-in" key={currentStrategy || 'init'}>
-                  <span className={`material-icons-round text-2xl animate-float ${
-                    currentStrategy === 'boost_family' ? 'text-primary' :
+                <div className="flex items-center gap-2 mb-1 animate-fade-slide-in" key={currentStrategy || 'init'}>
+                  <span className={`material-icons-round text-xl animate-float ${currentStrategy === 'boost_family' ? 'text-primary' :
                     currentStrategy === 'boost_social' ? 'text-secondary' :
-                    currentStrategy === 'max_mingling' ? 'text-accent' :
-                    currentStrategy === 'max_cohesion' ? 'text-primary' :
-                    'text-gray-500'
-                  }`}>
+                      currentStrategy === 'max_mingling' ? 'text-accent' :
+                        currentStrategy === 'max_cohesion' ? 'text-primary' :
+                          'text-gray-500'
+                    }`}>
                     {currentStrategy === 'boost_family' ? 'family_restroom' :
-                     currentStrategy === 'boost_social' ? 'groups' :
-                     currentStrategy === 'max_mingling' ? 'sync_alt' :
-                     currentStrategy === 'max_cohesion' ? 'hub' :
-                     currentStrategy === 'reduce_social' ? 'tune' :
-                     currentStrategy === 'baseline' ? 'balance' :
-                     'auto_awesome'}
+                      currentStrategy === 'boost_social' ? 'groups' :
+                        currentStrategy === 'max_mingling' ? 'sync_alt' :
+                          currentStrategy === 'max_cohesion' ? 'hub' :
+                            currentStrategy === 'reduce_social' ? 'tune' :
+                              currentStrategy === 'baseline' ? 'balance' :
+                                'auto_awesome'}
                   </span>
-                  <p className="font-display text-xl text-gray-700 dark:text-gray-200">
+                  <p className="font-display text-lg text-gray-700 dark:text-gray-200">
                     {currentStrategy ? (strategyDisplayNames[currentStrategy] || currentStrategy) : 'Initializing...'}
                   </p>
                 </div>
 
                 {/* Strategy-specific description */}
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs animate-fade-slide-in"
-                   key={`desc-${currentStrategy || 'init'}`}>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs animate-fade-slide-in"
+                  key={`desc-${currentStrategy || 'init'}`}>
                   {currentStrategy === 'boost_family' ? 'Keeping your loved ones close at every table' :
-                   currentStrategy === 'boost_social' ? 'Ensuring friend groups stay together' :
-                   currentStrategy === 'max_mingling' ? 'Creating connections between both families' :
-                   currentStrategy === 'max_cohesion' ? 'Maximizing togetherness for all groups' :
-                   currentStrategy === 'reduce_social' ? 'Exploring flexible seating options' :
-                   currentStrategy === 'baseline' ? 'Finding the perfect balance for everyone' :
-                   'Preparing your personalized seating analysis...'}
+                    currentStrategy === 'boost_social' ? 'Ensuring friend groups stay together' :
+                      currentStrategy === 'max_mingling' ? 'Creating connections between both families' :
+                        currentStrategy === 'max_cohesion' ? 'Maximizing togetherness for all groups' :
+                          currentStrategy === 'reduce_social' ? 'Exploring flexible seating options' :
+                            currentStrategy === 'baseline' ? 'Finding the perfect balance for everyone' :
+                              'Preparing your personalized seating analysis...'}
                 </p>
               </div>
 
@@ -446,9 +446,9 @@ const Recommendations: React.FC = () => {
                 const tip = weddingTips[Math.max(0, tipIndex)] || weddingTips[0];
 
                 return (
-                  <div className="mt-4 px-5 py-3 bg-secondary/20 dark:bg-secondary/10 rounded-xl border border-secondary/30 max-w-md">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 text-center font-medium animate-fade-slide-in whitespace-nowrap"
-                       key={`tip-${currentStep}`}>
+                  <div className="mt-2 px-4 py-2 bg-secondary/20 dark:bg-secondary/10 rounded-xl border border-secondary/30 max-w-md">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 text-center font-medium animate-fade-slide-in whitespace-nowrap"
+                      key={`tip-${currentStep}`}>
                       <span className="mr-2">💡</span>{tip}
                     </p>
                   </div>
@@ -460,12 +460,12 @@ const Recommendations: React.FC = () => {
 
         {
           error && (
-            <div className="max-w-xl mx-auto mb-8 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-200 flex items-start gap-2">
+            <div className="max-w-xl mx-auto mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-200 flex items-start gap-2">
               <span className="material-icons-round text-base mt-0.5">error</span>
               <div>
                 <p className="font-semibold mb-1">Couldn&apos;t reach the ToT backend</p>
                 <p>{error}</p>
-                <p className="mt-2 text-xs text-red-600/80 dark:text-red-200/80">
+                <p className="mt-1 text-xs text-red-600/80 dark:text-red-200/80">
                   Make sure the Python backend (FastAPI/Streamlit) is running and reachable at <code>{API_BASE || window.location.origin}</code>.
                 </p>
               </div>
@@ -483,18 +483,18 @@ const Recommendations: React.FC = () => {
 
         {/* Optimal Solution Message - Show when only 1 unique layout found */}
         {!loading && !error && layouts.length === 1 && (
-          <div className="mb-8 p-6 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30 max-w-md mx-auto">
+          <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30 max-w-md mx-auto">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
-                <span className="material-icons-round text-primary text-2xl">auto_awesome</span>
+              <div className="flex-shrink-0 w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+                <span className="material-icons-round text-primary text-xl">auto_awesome</span>
               </div>
               <div>
-                <h3 className="font-display text-lg text-text-main dark:text-white mb-1">
+                <h3 className="font-display text-base text-text-main dark:text-white mb-1">
                   We Found Your Optimal Seating!
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">
                   Based on your guest list and constraints, we've identified the best possible seating arrangement.
-                  <span className="block mt-2 font-medium text-primary dark:text-primary-light">
+                  <span className="block mt-1 font-medium text-primary dark:text-primary-light">
                     Select it below and make any personal adjustments in the Planner.
                   </span>
                 </p>
@@ -505,53 +505,32 @@ const Recommendations: React.FC = () => {
 
         {/* Legend - Explains metrics once for all cards */}
         {!loading && !error && layouts.length > 0 && (
-          <div className="mb-8 max-w-4xl mx-auto">
-            <div className="bg-white/60 dark:bg-surface-dark/60 rounded-xl border border-gray-100 dark:border-gray-700 p-4">
-              <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-gray-600 dark:text-gray-400">
-                <div className="flex items-center gap-2">
-                  <span className="material-icons-round text-sm text-primary">family_restroom</span>
+          <div className="mb-6 max-w-4xl mx-auto">
+            <div className="bg-white/60 dark:bg-surface-dark/60 rounded-xl border border-gray-100 dark:border-gray-700 p-3">
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-icons-round text-xs text-primary">family_restroom</span>
                   <span><strong>Family</strong> — keeps relatives together</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="material-icons-round text-sm text-secondary">groups</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-icons-round text-xs text-secondary">groups</span>
                   <span><strong>Friends</strong> — keeps friend groups together</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="material-icons-round text-sm text-accent">sync_alt</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-icons-round text-xs text-accent">sync_alt</span>
                   <span><strong>Mixing</strong> — bride & groom sides interact</span>
                 </div>
-              </div>
-              <div className="flex justify-center items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-[10px] text-gray-500">
-                <span className="flex items-center gap-1">
-                  <span className="inline-flex gap-0.5">
-                    {[...Array(5)].map((_, i) => <span key={i} className="w-1.5 h-2 rounded-sm bg-gray-400" />)}
-                  </span>
-                  Strong
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-flex gap-0.5">
-                    {[...Array(5)].map((_, i) => <span key={i} className={`w-1.5 h-2 rounded-sm ${i < 3 ? 'bg-gray-400' : 'bg-gray-200'}`} />)}
-                  </span>
-                  Good
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-flex gap-0.5">
-                    {[...Array(5)].map((_, i) => <span key={i} className={`w-1.5 h-2 rounded-sm ${i < 2 ? 'bg-gray-400' : 'bg-gray-200'}`} />)}
-                  </span>
-                  Mixed
-                </span>
               </div>
             </div>
           </div>
         )}
 
-        <div className={`grid gap-8 items-start ${
-          layouts.length === 1
-            ? 'grid-cols-1 max-w-md mx-auto'
-            : layouts.length === 2
-              ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
-              : 'grid-cols-1 md:grid-cols-3'
-        }`}>
+        <div className={`grid gap-6 items-start ${layouts.length === 1
+          ? 'grid-cols-1 max-w-md mx-auto'
+          : layouts.length === 2
+            ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto'
+            : 'grid-cols-1 md:grid-cols-3'
+          }`}>
           {layouts.map((entry: TotLayout, index: number) => {
             const { layout } = entry;
 
@@ -569,19 +548,16 @@ const Recommendations: React.FC = () => {
                 key={index}
                 onClick={() => {
                   setSelectedLayoutIndex(index);
-                  setExplanations({});
-                  fetchAllExplanations();
-                  navigate('/planner');
                 }}
-                className={`group relative bg-white dark:bg-surface-dark rounded-xl transition-all duration-300 overflow-hidden border cursor-pointer h-full flex flex-col
+                className={`group relative bg-white dark:bg-surface-dark rounded-xl transition-all duration-300 overflow-hidden border cursor-pointer h-full flex flex-col scale-95 hover:scale-100
                   border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg`}
               >
                 {/* Minimal top accent */}
                 <div className={`h-1 ${index === 0 ? 'bg-primary' : index === 1 ? 'bg-secondary' : 'bg-accent'}`}></div>
 
-                <div className="p-6 flex-grow flex flex-col">
+                <div className="p-5 flex-grow flex flex-col">
                   {/* Badge row - fixed height for alignment */}
-                  <div className="h-5 mb-1">
+                  <div className="h-4 mb-1">
                     {index === 0 && layouts.length > 1 && (
                       <span className="inline-block text-[10px] font-bold text-white bg-primary px-2 py-0.5 rounded-full uppercase tracking-wide">
                         Top Pick
@@ -590,82 +566,75 @@ const Recommendations: React.FC = () => {
                   </div>
 
                   {/* Title - fixed height */}
-                  <h2 className="font-display text-xl text-text-main dark:text-white h-7 mb-3">
+                  <h2 className="font-display text-lg text-text-main dark:text-white h-6 mb-2">
                     {title}
                   </h2>
 
                   {/* Value proposition - fixed height container */}
-                  <div className={`mb-5 p-3 rounded-lg border-l-4 min-h-[52px] flex items-center ${
-                    index === 0 ? 'border-l-primary bg-primary/5' :
+                  <div className={`mb-3 p-2.5 rounded-lg border-l-4 min-h-[44px] flex items-center ${index === 0 ? 'border-l-primary bg-primary/5' :
                     index === 1 ? 'border-l-secondary bg-secondary/5' :
-                    'border-l-accent bg-accent/5'
-                  }`}>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{valueProposition}</p>
+                      'border-l-accent bg-accent/5'
+                    }`}>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{valueProposition}</p>
                   </div>
 
                   {/* Metrics breakdown */}
-                  <div className="space-y-2.5 mb-4">
-                    <div className="flex items-center text-sm h-5">
-                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
-                        <span className="material-icons-round text-xs text-gray-400">family_restroom</span>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center text-xs h-4">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-16 flex-shrink-0">
+                        <span className="material-icons-round text-[10px] text-gray-400">family_restroom</span>
                         Family
                       </span>
                       <div className="flex items-center gap-2 ml-auto">
                         <div className="flex gap-0.5 w-[52px]">
                           {[...Array(5)].map((_, i) => (
-                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(family / 20) ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                            <div key={i} className={`w-2 h-2.5 rounded-sm ${i < Math.ceil(family / 20) ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'}`} />
                           ))}
                         </div>
-                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
-                          {getQualityLabel(family)}
-                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center text-sm h-5">
-                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
-                        <span className="material-icons-round text-xs text-gray-400">groups</span>
+                    <div className="flex items-center text-xs h-4">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-16 flex-shrink-0">
+                        <span className="material-icons-round text-[10px] text-gray-400">groups</span>
                         Friends
                       </span>
                       <div className="flex items-center gap-2 ml-auto">
                         <div className="flex gap-0.5 w-[52px]">
                           {[...Array(5)].map((_, i) => (
-                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(social / 20) ? 'bg-secondary' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                            <div key={i} className={`w-2 h-2.5 rounded-sm ${i < Math.ceil(social / 20) ? 'bg-secondary' : 'bg-gray-200 dark:bg-gray-700'}`} />
                           ))}
                         </div>
-                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
-                          {getQualityLabel(social)}
-                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center text-sm h-5">
-                      <span className="text-gray-500 flex items-center gap-1.5 w-20 flex-shrink-0">
-                        <span className="material-icons-round text-xs text-gray-400">sync_alt</span>
+                    <div className="flex items-center text-xs h-4">
+                      <span className="text-gray-500 flex items-center gap-1.5 w-16 flex-shrink-0">
+                        <span className="material-icons-round text-[10px] text-gray-400">sync_alt</span>
                         Mixing
                       </span>
                       <div className="flex items-center gap-2 ml-auto">
                         <div className="flex gap-0.5 w-[52px]">
                           {[...Array(5)].map((_, i) => (
-                            <div key={i} className={`w-2 h-3 rounded-sm ${i < Math.ceil(mixing / 20) ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'}`} />
+                            <div key={i} className={`w-2 h-2.5 rounded-sm ${i < Math.ceil(mixing / 20) ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-700'}`} />
                           ))}
                         </div>
-                        <span className="text-xs font-medium text-gray-500 w-10 text-right">
-                          {getQualityLabel(mixing)}
-                        </span>
                       </div>
                     </div>
                   </div>
 
                   {layout.summary && layout.summary.hard_violations.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-                      <p className="text-xs text-red-600 dark:text-red-400">
-                        {layout.summary.hard_violations.length} constraint{layout.summary.hard_violations.length > 1 ? 's' : ''} could not be met
+                    <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <p className="text-[10px] text-red-600 dark:text-red-400">
+                        {layout.summary.hard_violations.length} constraint{layout.summary.hard_violations.length > 1 ? 's' : ''} un-met
                       </p>
                     </div>
                   )}
                 </div>
-                <div className="px-6 pb-5 mt-auto">
-                  <button className="w-full py-2.5 text-sm font-medium rounded-lg transition-colors bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-primary group-hover:text-white">
-                    Select & Continue
+                <div className="px-5 pb-4 mt-auto">
+                  <button className={`w-full py-2 text-xs font-medium rounded-lg transition-colors ${layouts[selectedLayoutIndex]?.layout === layout // Check if this layout is currently selected
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:bg-primary/10 group-hover:text-primary'
+                    }`}>
+                    {layouts[selectedLayoutIndex]?.layout === layout ? 'Selected' : 'Select'}
                   </button>
                 </div>
               </div>
@@ -675,14 +644,51 @@ const Recommendations: React.FC = () => {
 
         {/* Helpful note */}
         {!loading && layouts.length > 0 && (
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              <span className="material-icons-round text-xs align-middle mr-1">info</span>
+          <div className="mt-6 text-center pb-24">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="material-icons-round text-[10px] align-middle mr-1">info</span>
               You can always come back here to try a different arrangement
             </p>
           </div>
         )}
       </div >
+
+      {/* Sticky Bottom Bar */}
+      {selectedLayoutIndex !== -1 && layouts[selectedLayoutIndex] && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                <span className="material-icons-round text-2xl">auto_awesome</span>
+              </div>
+              <div>
+                <h4 className="font-display text-lg text-text-main dark:text-white">
+                  {layoutTitles[selectedLayoutIndex] || 'Selected Plan'}
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {getValueProposition(layoutTitles[selectedLayoutIndex])}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setExplanations({});
+                  fetchAllExplanations();
+                  navigate('/planner');
+                }}
+                className="px-6 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2 bg-primary text-white hover:bg-[#777b63]"
+              >
+                Confirm & Continue
+                <span className="material-icons-round">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer for bottom bar */}
+      {selectedLayoutIndex !== -1 && layouts[selectedLayoutIndex] && <div className="h-24"></div>}
     </div >
   );
 };

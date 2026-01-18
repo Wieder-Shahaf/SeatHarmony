@@ -437,7 +437,7 @@ const PlannerAI: React.FC = () => {
                 to="/confirmation"
                 className="px-8 py-3 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
               >
-                <span>Continue to Export</span>
+                <span>Continue to Final Review</span>
                 <span className="material-icons-round text-sm">arrow_forward</span>
               </Link>
             </div>

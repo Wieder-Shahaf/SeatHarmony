@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+
 import { Link } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { Guest, getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/types/models';
@@ -12,9 +11,6 @@ const API_BASE = import.meta.env.VITE_API_BASE || '';
 const Confirmation: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
   const [zoom, setZoom] = useState(0.9);
-  const [isExportingExcel, setIsExportingExcel] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
@@ -23,98 +19,6 @@ const Confirmation: React.FC = () => {
   const [showAllTables, setShowAllTables] = useState(false);
 
   const layoutRef = useRef<HTMLDivElement>(null);
-
-  const handleExportPDF = async () => {
-    if (!layoutRef.current || !selectedVenueLayout) return;
-
-    setIsExportingPdf(true);
-    setExportError(null);
-
-    try {
-      // Temporarily reset zoom for capture
-      const currentZoom = zoom;
-      setZoom(1);
-
-      // Wait for zoom reset to render
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const canvas = await html2canvas(layoutRef.current, {
-        scale: 2, // Higher quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save(`SeatHarmony_Layout_${selectedVenueLayout.name.replace(/\s+/g, '_')}.pdf`);
-
-      // Restore zoom
-      setZoom(currentZoom);
-    } catch (err) {
-      console.error('PDF Export failed:', err);
-      setExportError('Failed to generate PDF. Please try again.');
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
-  // Format date for filename
-  const formatDate = () => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  };
-
-  // Handle Excel export
-  const handleExcelExport = async () => {
-    const selectedLayout = layouts[selectedLayoutIndex];
-    if (!selectedLayout) return;
-
-    setIsExportingExcel(true);
-    setExportError(null);
-
-    try {
-      const response = await fetch(`${API_BASE}/api/export/excel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...prepareDataForApi(guests, tables),
-          layout: selectedLayout.layout,
-          options: {
-            include_dietary: true,
-            include_vendor_summary: false,
-            include_table_details: true,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate Excel file');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const venueName = selectedVenueLayout?.name?.replace(/\s+/g, '_') || 'Venue';
-      a.download = `SeatHarmony_SeatingPlan_${venueName}_${formatDate()}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Excel export failed:', err);
-      setExportError('Failed to export Excel file. Please try again.');
-    } finally {
-      setIsExportingExcel(false);
-    }
-  };
 
   // Get selected layout
   const selectedLayout = layouts[selectedLayoutIndex] || null;
@@ -177,16 +81,16 @@ const Confirmation: React.FC = () => {
   }
 
   return (
-    <div className="flex-grow w-full bg-background-light dark:bg-background-dark min-h-screen">
+    <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Header */}
-      <div className="mb-12 text-center max-w-2xl mx-auto pt-12 text-center">
+      <div className="mb-2 text-center max-w-2xl mx-auto pt-8 text-center">
         <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Finalize & Export</h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
           Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
         {/* Main Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[max(600px,calc(100vh-250px))]">
@@ -286,16 +190,20 @@ const Confirmation: React.FC = () => {
                       key={`feat-${i}`}
                       className={`absolute flex justify-center
                       ${isZone
-                          ? 'items-center pb-0 border-none' // Centered for zones
-                          : 'items-center border-2 shadow-sm backdrop-blur-sm'}
+                          ? 'items-end pb-1 border-none' // Bottom aligned for zones
+                          : `items-center border-2 shadow-sm ${feature.type === 'canopy' ? '' : 'backdrop-blur-sm'}`}
                       ${feature.type === 'bar' ? 'bg-amber-100/50 border-amber-400 dark:bg-amber-900/30' :
                           feature.type === 'restroom' ? 'bg-blue-100/50 border-blue-400 dark:bg-blue-900/30' :
                             feature.type === 'zone' && feature.label === 'Garden' ? 'bg-green-50/80 dark:bg-green-900/20' : // Soft natural green
                               feature.type === 'zone' && feature.label === 'Beach' ? 'bg-sky-400/60 dark:bg-sky-900/50' : // Beachy blue
                                 feature.type === 'zone' && feature.label === 'Indoor Hall' ? 'bg-slate-200/50 dark:bg-slate-800/30' : // Increased opacity
-                                  feature.type === 'canopy' ? 'bg-pink-50/80 border-pink-300 border-dashed dark:bg-pink-900/30' :
+                                  feature.type === 'canopy' ? 'bg-pink-50/20 border-pink-300 border-dashed dark:bg-pink-900/10' :
                                     feature.type === 'lifeguard' ? 'bg-red-100/80 border-red-500 border-2 dark:bg-red-900/40' :
-                                      'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                      feature.type === 'present-table' ? 'bg-purple-100/80 border-purple-400 border-2 border-dotted dark:bg-purple-900/40' :
+                                        feature.type === 'cake' ? 'bg-sky-100/90 border-sky-300/60 border-2 dark:bg-sky-900/40' :
+                                          feature.type === 'aisle' ? 'bg-amber-700/20 border-amber-600 border-dashed dark:bg-amber-600/20' :
+                                            feature.type === 'resting-area' ? 'bg-rose-900/10 border-rose-900/30 border-2 dark:bg-rose-500/10 dark:border-rose-400/30' :
+                                              'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
                       style={{
                         left: `${feature.x}%`,
                         top: `${feature.y}%`,
@@ -307,7 +215,7 @@ const Confirmation: React.FC = () => {
                       }}
                     >
                       <span
-                        className={`uppercase tracking-wider whitespace-nowrap px-1 ${isZone
+                        className={`uppercase tracking-wider whitespace-pre-wrap text-center leading-3 px-1 ${isZone
                           ? 'text-xs md:text-sm font-extrabold text-gray-600 dark:text-gray-400' // Darker and centered
                           : 'text-[10px] font-bold text-gray-700 dark:text-gray-300'}`}
                         style={{
@@ -353,10 +261,15 @@ const Confirmation: React.FC = () => {
                   const position = visualLayout.tables[i] || { x: 50, y: 50, rotation: 0 };
 
                   // Dynamic sizing for large venues
+                  // Dynamic sizing for large venues
                   const isLargeVenue = tables.length > 30;
-                  const tableSizeClass = isLargeVenue ? 'w-10 h-10' : 'w-16 h-16';
-                  const fontSizeClass = isLargeVenue ? 'text-[8px]' : 'text-sm';
-                  const badgeSizeClass = isLargeVenue ? 'text-[7px] -bottom-1 -right-1 px-0.5' : 'text-[9px] -bottom-1 -right-1 px-1';
+                  // distinct sizing for rectangular tables
+                  const tableSizeClass = isLargeVenue
+                    ? (isRound ? 'w-14 h-14' : 'w-16 h-8')
+                    : (isRound ? 'w-16 h-16' : 'w-20 h-10');
+
+                  const fontSizeClass = isLargeVenue ? 'text-[10px]' : 'text-sm';
+                  const badgeSizeClass = isLargeVenue ? 'text-[8px] -bottom-1 -right-1 px-1' : 'text-[9px] -bottom-1 -right-1 px-1';
 
                   return (
                     <div
@@ -452,23 +365,7 @@ const Confirmation: React.FC = () => {
       </div>
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up">
-        {/* Error Banner */}
-        {exportError && (
-          <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-6 py-2">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
-                <span className="material-icons-round text-sm">error</span>
-                <span className="text-sm">{exportError}</span>
-              </div>
-              <button
-                onClick={() => setExportError(null)}
-                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
-              >
-                <span className="material-icons-round text-sm">close</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Error Banner - Removed */}
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary">
@@ -484,50 +381,7 @@ const Confirmation: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleExcelExport}
-              disabled={isExportingExcel}
-              className="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="flex items-center gap-2">
-                {isExportingExcel ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="hidden sm:inline">Exporting...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons-round">description</span>
-                    <span className="hidden sm:inline">Export Excel</span>
-                  </>
-                )}
-              </span>
-            </button>
-            <button
-              onClick={handleExportPDF}
-              disabled={isExportingPdf}
-              className="px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="flex items-center gap-2">
-                {isExportingPdf ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="hidden sm:inline">Exporting...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons-round">picture_as_pdf</span>
-                    <span className="hidden sm:inline">Export PDF</span>
-                  </>
-                )}
-              </span>
-            </button>
+
             <Link
               to="/export"
               className="px-8 py-3 bg-primary text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:bg-[#777b63] transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"

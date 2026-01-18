@@ -214,18 +214,18 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Hero Content */}
-      <div className="max-w-4xl w-full text-center mt-7 md:mt-7 mb-4 animate-[fadeInUp_1s_ease-out]">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 dark:bg-surface-dark/60 border border-secondary/30 backdrop-blur-sm mb-6">
+      <div className="max-w-4xl w-full text-center mt-2 md:mt-4 mb-4 animate-[fadeInUp_1s_ease-out]">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-surface-dark/60 border border-secondary/30 backdrop-blur-sm mb-4">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
           <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary">
             <span className="material-icons-round text-sm">auto_awesome</span> AI-Powered Planning
           </span>
         </div>
-        <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-medium leading-tight text-text-main dark:text-text-light mb-6">
+        <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-medium leading-tight text-text-main dark:text-text-light mb-4">
           Create harmonious seating plans <br className="hidden md:block" />
           <span className="italic text-primary">without the stress.</span>
         </h1>
-        <p className="text-lg md:text-xl text-text-main/80 dark:text-text-light/80 max-w-2xl mx-auto leading-relaxed mb-3">
+        <p className="text-lg text-text-main/80 dark:text-text-light/80 max-w-2xl mx-auto leading-relaxed mb-4">
           Upload your guest list and let our intelligent algorithm design the perfect layout for social harmony.
         </p>
 
@@ -250,27 +250,27 @@ const LandingPage: React.FC = () => {
       />
 
       {/* Upload Card */}
-      <div className="w-full max-w-2xl mx-auto mb-20 relative z-10">
+      <div className="w-full max-w-[600px] mx-auto mb-8 relative z-10">
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={handleUploadAreaClick}
-          className={`group relative bg-white dark:bg-surface-dark rounded-3xl p-8 md:p-12 shadow-soft border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer ${isDragging
+          className={`group relative bg-white dark:bg-surface-dark rounded-3xl min-h-[300px] flex flex-col justify-center p-6 md:p-8 shadow-soft border-2 border-dashed transition-all duration-300 ease-in-out cursor-pointer ${isDragging
             ? 'border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]'
             : 'border-accent-beige dark:border-gray-600 hover:border-primary dark:hover:border-primary'
             }`}
         >
 
           <div className={`absolute inset-0 bg-primary/5 rounded-3xl transition-opacity pointer-events-none ${isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}></div>
-          <div className="flex flex-col items-center justify-center text-center space-y-4 relative z-10">
-            <div className={`w-20 h-20 rounded-full bg-background-light dark:bg-gray-800 flex items-center justify-center mb-2 transition-transform duration-300 ${isDragging ? 'scale-110' : 'group-hover:scale-110'}`}>
-              <span className="material-icons-outlined text-4xl text-primary">cloud_upload</span>
+          <div className="flex flex-col items-center justify-center text-center space-y-2 relative z-10">
+            <div className={`w-10 h-10 rounded-full bg-background-light dark:bg-gray-800 flex items-center justify-center mb-1 transition-transform duration-300 ${isDragging ? 'scale-110' : 'group-hover:scale-110'}`}>
+              <span className="material-icons-outlined text-3xl text-primary">cloud_upload</span>
             </div>
-            <h3 className="font-display text-2xl text-text-main dark:text-text-light">
+            <h3 className="font-display text-xl text-text-main dark:text-text-light">
               {isDragging ? 'Drop file here' : 'Upload your guest list'}
             </h3>
-            <p className="text-text-main/60 dark:text-text-light/60 max-w-sm">
+            <p className="text-text-main/60 dark:text-text-light/60 max-w-sm text-sm">
               Drag & drop your Excel or CSV file here to get started, or click the button below.
             </p>
             <div className="pt-4 w-full max-w-xs relative z-20">
@@ -287,7 +287,7 @@ const LandingPage: React.FC = () => {
                     fileInputRef.current.click();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2 bg-text-main dark:bg-accent-beige text-white dark:text-text-main font-bold py-3 px-6 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all shadow-md cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 bg-text-main dark:bg-accent-beige text-white dark:text-text-main font-bold py-2 px-6 rounded-lg hover:bg-primary dark:hover:bg-primary dark:hover:text-white transition-all shadow-md cursor-pointer"
               >
                 <span className="material-icons-outlined text-lg">folder_open</span>
                 <span>Choose File</span>
@@ -310,7 +310,7 @@ const LandingPage: React.FC = () => {
         {/* Floating Elements */}
         <div className="hidden md:block absolute -right-16 top-1/2 transform -translate-y-1/2 bg-white dark:bg-surface-dark p-4 rounded-xl shadow-lg border border-accent-beige/20 rotate-6 animate-bounce" style={{ animationDuration: '3s' }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center text-primary">
+            <div className="w-6 h-6 rounded-full bg-secondary/30 flex items-center justify-center text-primary">
               <span className="material-icons-outlined text-lg">groups</span>
             </div>
             <div>
@@ -328,38 +328,38 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Feature Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16 w-full">
-        <div className="bg-white/50 dark:bg-surface-dark/50 p-6 rounded-2xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-4 text-primary">
-            <span className="material-icons-outlined">psychology</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-6xl mx-auto mb-8 w-full">
+        <div className="bg-white/50 dark:bg-surface-dark/50 p-4 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center mb-2 text-primary">
+            <span className="material-icons-outlined text-lg">psychology</span>
           </div>
-          <h3 className="font-display text-xl mb-2 text-text-main dark:text-text-light">Smart Grouping</h3>
-          <p className="text-sm text-text-main/70 dark:text-text-light/70 leading-relaxed">
+          <h3 className="font-display text-lg mb-1 text-text-main dark:text-text-light">Smart Grouping</h3>
+          <p className="text-xs text-text-main/70 dark:text-text-light/70 leading-relaxed">
             Our AI analyzes relationships to ensure everyone sits next to someone they enjoy.
           </p>
         </div>
-        <div className="bg-white/50 dark:bg-surface-dark/50 p-6 rounded-2xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-4 text-primary">
-            <span className="material-icons-outlined">spa</span>
+        <div className="bg-white/50 dark:bg-surface-dark/50 p-4 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center mb-2 text-primary">
+            <span className="material-icons-outlined text-lg">spa</span>
           </div>
-          <h3 className="font-display text-xl mb-2 text-text-main dark:text-text-light">Stress Reduction</h3>
-          <p className="text-sm text-text-main/70 dark:text-text-light/70 leading-relaxed">
+          <h3 className="font-display text-lg mb-1 text-text-main dark:text-text-light">Stress Reduction</h3>
+          <p className="text-xs text-text-main/70 dark:text-text-light/70 leading-relaxed">
             Save hours of manual shuffling. Let the algorithm do the heavy lifting for you.
           </p>
         </div>
-        <div className="bg-white/50 dark:bg-surface-dark/50 p-6 rounded-2xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-full bg-secondary/30 flex items-center justify-center mb-4 text-primary">
-            <span className="material-icons-outlined">table_restaurant</span>
+        <div className="bg-white/50 dark:bg-surface-dark/50 p-4 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center mb-2 text-primary">
+            <span className="material-icons-outlined text-lg">table_restaurant</span>
           </div>
-          <h3 className="font-display text-xl mb-2 text-text-main dark:text-text-light">Visual Layouts</h3>
-          <p className="text-sm text-text-main/70 dark:text-text-light/70 leading-relaxed">
+          <h3 className="font-display text-lg mb-1 text-text-main dark:text-text-light">Visual Layouts</h3>
+          <p className="text-xs text-text-main/70 dark:text-text-light/70 leading-relaxed">
             Visualize your reception floor plan and drag-and-drop to make final tweaks easily.
           </p>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-8 bg-white/40 dark:bg-black/20 backdrop-blur-md">
+      <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-4 bg-white/40 dark:bg-black/20 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-text-main/60 dark:text-text-light/60">
             © 2026 SeatHarmony. All rights reserved.
