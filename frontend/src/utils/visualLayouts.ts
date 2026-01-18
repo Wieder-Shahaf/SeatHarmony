@@ -95,21 +95,33 @@ const grandBallroom: VisualLayoutDef = {
     ]
 };
 
-// 2. Garden Pavilion (21 tables)
+// 2. Garden Pavilion (20 tables)
 // Pavilion area (top) + Lawn (bottom)
 const gardenPavilion: VisualLayoutDef = {
     venueId: 'garden-pavilion',
     width: 1200,
     height: 1000,
-    danceFloor: { x: 50, y: 30, width: 25, height: 15, shape: 'rect' },
+    danceFloor: { x: 40, y: 51, width: 55, height: 34, shape: 'rect' },
     tables: [
-        // Pavilion (7 tables) - around dance floor
-        ...createCircle(50, 30, 25, 15, 7, 0, 1),
-        // Lawn Left (7 tables)
-        ...createGrid(20, 60, 3, 3, 12, 12, 8),
-        // Lawn Right (7 tables)
-        ...createGrid(80, 60, 3, 3, -12, 12, 15),
+        // Pavilion (8 tables) - Grid 4x2
+        ...createGrid(22, 15, 4, 2, 12, 12, 1),
+
+        // Lawn Left (6 tables) - Grid 2x3
+        ...createGrid(20, 76, 2, 3, 12, 12, 9),
+
+        // Lawn Right (6 tables) - Grid 2x3
+        ...createGrid(50, 76, 2, 3, 12, 12, 15),
     ],
+    features: [
+        { x: 40, y: -4, width: 48, height: 18, type: 'bar', label: 'Main Bar', shape: 'rect' },
+        { x: 0, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 0, y: 5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 0, y: 90, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 0, y: 100, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 1, y: 50, width: 10, height: 18, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 90, y: 50, width: 25, height: 55, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+        { x: 90, y: 94, width: 25, height: 25, type: 'resting-area', label: 'Resting\nArea', shape: 'rect' },
+    ]
 };
 
 // 3. Modern Banquet (15 tables)
@@ -121,15 +133,24 @@ const modernBanquet: VisualLayoutDef = {
     danceFloor: { x: 50, y: 85, width: 40, height: 15, shape: 'rect' },
     tables: [
         // Row 1 (2 large head tables)
-        { id: 'table-1', x: 35, y: 20, rotation: 0 },
-        { id: 'table-2', x: 65, y: 20, rotation: 0 },
+        ...createGrid(42, 25, 2, 1, 15, 0, 1),
         // Row 2 (4 tables)
-        ...createGrid(20, 40, 4, 1, 20, 0, 3),
+        ...createGrid(38, 32, 5, 1, 15, 0, 3),
         // Row 3 (4 tables)
-        ...createGrid(20, 55, 4, 1, 20, 0, 7),
+        ...createGrid(38, 50, 5, 1, 15, 0, 7),
         // Row 4 (5 tables)
-        ...createGrid(10, 70, 5, 1, 20, 0, 11),
+        ...createGrid(38, 68, 5, 1, 15, 0, 11),
     ],
+    features: [
+        { x: 4, y: 2, width: 18, height: 20, type: 'bar', label: 'Main Bar', shape: 'circle' },
+        { x: 96, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 86, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 50, y: 96, width: 16, height: 15, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 8, y: 50, width: 25, height: 45, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+        { x: 80, y: 96, width: 16, height: 10, type: 'present-table', label: 'Presents', shape: 'rect' },
+        { x: 25, y: 20, width: 8, height: 8, type: 'cake', label: 'Cake', shape: 'circle' },
+        { x: 80, y: 20, width: 12, height: 8, type: 'buffet', label: 'Desserts', shape: 'rect' },
+    ]
 };
 
 // 4. Rooftop Terrace (19 tables)
@@ -148,6 +169,16 @@ const rooftopTerrace: VisualLayoutDef = {
         // High tops (5 tables)
         ...createGrid(60, 80, 5, 1, 8, 0, 15),
     ],
+    features: [
+        { x: 4, y: 2, width: 18, height: 20, type: 'bar', label: 'Main Bar', shape: 'circle' },
+        { x: 96, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 86, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 50, y: 96, width: 16, height: 15, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 8, y: 50, width: 25, height: 45, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+        { x: 80, y: 96, width: 16, height: 10, type: 'present-table', label: 'Presents', shape: 'rect' },
+        { x: 25, y: 20, width: 8, height: 8, type: 'cake', label: 'Cake', shape: 'circle' },
+        { x: 80, y: 20, width: 12, height: 8, type: 'buffet', label: 'Desserts', shape: 'rect' },
+    ]
 };
 
 // 5. Rustic Barn (12 tables)
@@ -190,9 +221,9 @@ const beachResort: VisualLayoutDef = {
     //danceFloor: { x: 0, y: 90, width: 10, height: 10, shape: 'circle' },
     tables: [
         // Left Side (2 columns x 6 rows)
-        ...createGrid(22, 34, 2, 6, 12, 11, 10),
+        ...createGrid(22, 30, 2, 6, 12, 13, 10),
         // Right Side (2 columns x 6 rows)
-        ...createGrid(67, 34, 2, 6, 12, 11, 10),
+        ...createGrid(68, 30, 2, 6, 12, 13, 10),
 
     ],
     features: [
@@ -206,6 +237,7 @@ const beachResort: VisualLayoutDef = {
         { x: 52, y: 106, width: 16, height: 8, type: 'entrance', label: 'Entrance', shape: 'rect' },
         { x: 52, y: 16, width: 25, height: 16, type: 'canopy', label: 'Wedding Canopy', shape: 'circle' },
         { x: 98, y: 104, width: 12, height: 12, type: 'lifeguard', label: 'Lifeguard', shape: 'rect' },
+        { x: 52, y: 63, width: 16, height: 72, type: 'aisle', label: 'Down the\nAisle walk', shape: 'rect' },
 
     ]
 
@@ -241,7 +273,7 @@ export interface VenueFeature {
     y: number;
     width: number;
     height: number;
-    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard';
+    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard' | 'present-table' | 'cake' | 'aisle' | 'resting-area';
     label: string;
     rotation?: number;
     labelRotation?: number;
@@ -264,12 +296,15 @@ const luxuryGardenEstate: VisualLayoutDef = {
     venueId: 'luxury-garden-estate',
     width: 1200,
     height: 1000,
+    danceFloor: { x: 23, y: 85, width: 35, height: 20, shape: 'rect' },
 
     tables: [
         // --- INDOOR (Left Side) ---
         // Grid x=10, 28
         ...createGrid(10, 8, 2, 8, 10, 8, 1),
-        ...createGrid(55, 10, 4, 8, 8, 8, 17),
+        // Garden Split Grid to allow label visibility
+        ...createGrid(55, 6, 4, 4, 8, 10, 17),
+        ...createGrid(55, 46, 4, 4, 8, 10, 33),
 
     ],
     features: [
@@ -277,13 +312,13 @@ const luxuryGardenEstate: VisualLayoutDef = {
         { x: 23, y: 50, width: 40, height: 100, type: 'zone', label: 'Indoor Hall', shape: 'rect' },
         { x: 75, y: 50, width: 50, height: 100, type: 'zone', label: 'Garden', shape: 'rect' },
 
-        { x: 38, y: 35, width: 8, height: 65, type: 'bar', label: 'Main Bar', shape: 'rect' },
+        { x: 36, y: 36, width: 9, height: 65, type: 'bar', label: 'Main Bar', shape: 'rect' },
         { x: 92, y: 30, width: 10, height: 35, type: 'bar', label: 'Garden Bar', shape: 'circle' },
         { x: -1, y: 4, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
         { x: -1, y: 96, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
         { x: 105, y: 96, width: 10, height: 8, type: 'restroom', label: 'Garden WC', shape: 'rect' },
         { x: 90, y: -3, width: 14, height: 6, type: 'entrance', label: 'Entrance', shape: 'rect' },
-        { x: 65, y: 88, width: 25, height: 14, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+        { x: 67, y: 85, width: 28, height: 18, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
     ]
 };
 
@@ -299,4 +334,3 @@ export const getVisualLayout = (venueId: string | undefined, tableCount: number)
     }
     return getDefaultLayout(tableCount);
 };
-

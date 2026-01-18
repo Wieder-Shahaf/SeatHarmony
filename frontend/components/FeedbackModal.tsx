@@ -13,8 +13,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ onClose }) => {
       <div className="w-full max-w-4xl bg-white dark:bg-surface-dark rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
         <div className="w-full md:w-2/5 relative h-48 md:h-auto bg-primary overflow-hidden group">
           <img
-            src="https://images.unsplash.com/photo-1510076857177-7470076d4098?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
-            alt="Wedding setting"
+            src="/assets/happy_marriage.jpg"
+            alt="Wedding celebration"
             className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary/90 to-transparent flex flex-col justify-end p-8">

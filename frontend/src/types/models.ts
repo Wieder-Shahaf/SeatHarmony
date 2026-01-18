@@ -155,29 +155,29 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     icon: 'local_florist',
     image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
     category: 'outdoor',
-    totalCapacity: 194, // 7×10 + 6×10 + 8×8 = 70 + 60 + 64
+    totalCapacity: 188, // 8×10 + 6×10 + 6×8 = 80 + 60 + 48
     tableTemplates: [
-      { type: 'round', capacity: 10, count: 7, zone: 'pavilion', nearDanceFloor: 'adjacent', placement: 'covered' },
-      { type: 'round', capacity: 10, count: 6, zone: 'lawn', nearDanceFloor: 'near', placement: 'outdoor' },
-      { type: 'round', capacity: 8, count: 8, zone: 'garden', nearDanceFloor: 'far', placement: 'outdoor' },
+      { type: 'rectangular', capacity: 10, count: 8, zone: 'pavilion', nearDanceFloor: 'adjacent', placement: 'covered' },
+      { type: 'rectangular', capacity: 10, count: 6, zone: 'lawn', nearDanceFloor: 'near', placement: 'outdoor' },
+      { type: 'rectangular', capacity: 8, count: 6, zone: 'garden', nearDanceFloor: 'far', placement: 'outdoor' },
     ],
     features: ['Natural Light', 'Garden Views', 'Covered Area', 'Photo Spots'],
   },
   {
     id: 'modern-banquet',
     name: 'Modern Banquet',
-    description: 'Contemporary design with long communal tables. Great for intimate, family-style dining with elegant rectangular seating.',
+    description: 'Contemporary design with elegant round tables. Great for intimate, family-style dining with classic seating.',
     icon: 'wine_bar',
     image: 'https://cdn.greenvelope.com/blog/wp-content/uploads/Wedding-reception.jpeg',
     category: 'banquet',
     totalCapacity: 174, // 2×14 + 4×12 + 4×12 + 5×10 = 28 + 48 + 48 + 50
     tableTemplates: [
-      { type: 'rectangular', capacity: 14, count: 2, zone: 'front', nearDanceFloor: 'adjacent', placement: 'indoor' },
-      { type: 'rectangular', capacity: 12, count: 4, zone: 'center', nearDanceFloor: 'near', placement: 'indoor' },
-      { type: 'rectangular', capacity: 12, count: 4, zone: 'main', nearDanceFloor: 'near', placement: 'indoor' },
-      { type: 'rectangular', capacity: 10, count: 5, zone: 'sides', nearDanceFloor: 'far', placement: 'indoor' },
+      { type: 'round', capacity: 14, count: 2, zone: 'front', nearDanceFloor: 'adjacent', placement: 'indoor' },
+      { type: 'round', capacity: 12, count: 4, zone: 'center', nearDanceFloor: 'near', placement: 'indoor' },
+      { type: 'round', capacity: 12, count: 4, zone: 'main', nearDanceFloor: 'near', placement: 'indoor' },
+      { type: 'round', capacity: 10, count: 5, zone: 'sides', nearDanceFloor: 'far', placement: 'indoor' },
     ],
-    features: ['Family Style', 'Communal Dining', 'Modern Aesthetic', 'Intimate Feel'],
+    features: ['Family Style', 'Classic Dining', 'Modern Aesthetic', 'Intimate Feel'],
     popular: true,
   },
   {
@@ -334,12 +334,23 @@ export function groupGuestsByCategory(guests: Guest[]): GuestGroup[] {
     groupMap.get(groupId)!.push(guest);
   });
 
-  return Array.from(groupMap.entries()).map(([name, guests], index) => ({
-    id: `group-${index + 1}`,
-    name,
-    guests,
-    guestCount: guests.length,
-  }));
+  return Array.from(groupMap.entries()).map(([name, guests]) => {
+    // Generate a stable ID based on the group name
+    // Use base64 encoding to ensure it's a valid HTML ID string, falling back to a sanitized string
+    let stableId: string;
+    try {
+      stableId = `group-${btoa(name).replace(/[^a-zA-Z0-9]/g, '')}`;
+    } catch (e) {
+      stableId = `group-${name.replace(/[^a-zA-Z0-9]/g, '-')}`;
+    }
+
+    return {
+      id: stableId,
+      name,
+      guests,
+      guestCount: guests.length,
+    };
+  });
 }
 
 // Helper to create default tables based on guest count

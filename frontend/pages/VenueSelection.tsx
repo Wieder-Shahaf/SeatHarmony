@@ -11,6 +11,7 @@ const VenueSelection: React.FC = () => {
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(savedVenueLayout?.id || null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedFeatures, setExpandedFeatures] = useState<Record<string, boolean>>({});
 
   // Filter venues based on category and search
   const filteredVenues = useMemo(() => {
@@ -202,7 +203,7 @@ const VenueSelection: React.FC = () => {
 
                 {/* Features */}
                 <div className="flex flex-wrap gap-1 mb-4">
-                  {venue.features.slice(0, 3).map((feature, idx) => (
+                  {(expandedFeatures[venue.id] ? venue.features : venue.features.slice(0, 3)).map((feature, idx) => (
                     <span
                       key={idx}
                       className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full"
@@ -210,10 +211,16 @@ const VenueSelection: React.FC = () => {
                       {feature}
                     </span>
                   ))}
-                  {venue.features.length > 3 && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
+                  {!expandedFeatures[venue.id] && venue.features.length > 3 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedFeatures(prev => ({ ...prev, [venue.id]: true }));
+                      }}
+                      className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    >
                       +{venue.features.length - 3} more
-                    </span>
+                    </button>
                   )}
                 </div>
 

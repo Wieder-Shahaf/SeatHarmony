@@ -202,6 +202,55 @@ const ExportDashboard: React.FC = () => {
   const renderMap = (isSmall = false) => (
     <div className="relative w-full h-full">
       <div className="absolute inset-0 pattern-grid opacity-20 pointer-events-none"></div>
+
+      {/* Visual Features (Bars, Restrooms, etc.) */}
+      {visualLayout.features?.map((feature, i) => {
+        const isZone = feature.type === 'zone';
+        return (
+          <div
+            key={`feat-${i}`}
+            className={`absolute flex justify-center
+            ${isZone
+                ? 'items-end pb-1 border-none' // Bottom aligned for zones
+                : `items-center border-2 shadow-sm ${feature.type === 'canopy' ? '' : 'backdrop-blur-sm'}`}
+            ${feature.type === 'bar' ? 'bg-amber-100/50 border-amber-400 dark:bg-amber-900/30' :
+                feature.type === 'restroom' ? 'bg-blue-100/50 border-blue-400 dark:bg-blue-900/30' :
+                  feature.type === 'zone' && feature.label === 'Garden' ? 'bg-green-50/80 dark:bg-green-900/20' : // Soft natural green
+                    feature.type === 'zone' && feature.label === 'Beach' ? 'bg-sky-400/60 dark:bg-sky-900/50' : // Beachy blue
+                      feature.type === 'zone' && feature.label === 'Indoor Hall' ? 'bg-slate-200/50 dark:bg-slate-800/30' : // Increased opacity
+                        feature.type === 'canopy' ? 'bg-pink-50/20 border-pink-300 border-dashed dark:bg-pink-900/10' :
+                          feature.type === 'lifeguard' ? 'bg-red-100/80 border-red-500 border-2 dark:bg-red-900/40' :
+                            feature.type === 'present-table' ? 'bg-purple-100/80 border-purple-400 border-2 border-dotted dark:bg-purple-900/40' :
+                              feature.type === 'cake' ? 'bg-sky-100/90 border-sky-300/60 border-2 dark:bg-sky-900/40' :
+                                feature.type === 'aisle' ? 'bg-amber-700/20 border-amber-600 border-dashed dark:bg-amber-600/20' :
+                                  feature.type === 'resting-area' ? 'bg-rose-900/10 border-rose-900/30 border-2 dark:bg-rose-500/10 dark:border-rose-400/30' :
+                                    'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+            style={{
+              left: `${feature.x}%`,
+              top: `${feature.y}%`,
+              width: `${feature.width}%`,
+              height: `${feature.height}%`,
+              transform: `translate(-50%, -50%) rotate(${feature.rotation || 0}deg)`,
+              borderRadius: feature.shape === 'circle' ? '9999px' : isZone ? '16px' : '8px',
+              zIndex: isZone ? 0 : 5 // Zones are background (0), others are foreground (5)
+            }}
+          >
+            {(!isSmall || isZone) && (
+              <span
+                className={`uppercase tracking-wider whitespace-pre-wrap text-center leading-3 px-1 ${isZone
+                  ? isSmall ? 'text-[10px] font-extrabold text-gray-500' : 'text-xs md:text-sm font-extrabold text-gray-600 dark:text-gray-400'
+                  : 'text-[10px] font-bold text-gray-700 dark:text-gray-300'}`}
+                style={{
+                  display: 'inline-block',
+                  transform: `rotate(${feature.labelRotation || 0}deg)`
+                }}
+              >
+                {feature.label}
+              </span>
+            )}
+          </div>
+        );
+      })}
       {/* Visual Dance Floor */}
       <div
         className="absolute border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center opacity-50"
@@ -242,7 +291,9 @@ const ExportDashboard: React.FC = () => {
             }}
           >
             <div className={`
-                 ${isSmall ? 'w-8 h-8' : 'w-16 h-16'}
+                 ${isSmall
+                ? (isRound ? 'w-8 h-8' : 'w-10 h-5')
+                : (isRound ? 'w-16 h-16' : 'w-20 h-10')}
                  ${isRound ? 'rounded-full' : 'rounded-lg'}
                  ${bgColor}/20 dark:${bgColor}/10
                  border-2 ${borderColor}
@@ -261,191 +312,198 @@ const ExportDashboard: React.FC = () => {
   );
 
   return (
-    <div className="flex-grow flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-background-light dark:bg-background-dark">
+    <div className="flex-grow flex flex-col items-center justify-center py-6 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-background-lighter dark:bg-background-dark">
       {/* Decorative Blobs */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-accent opacity-20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse dark:opacity-5"></div>
-      <div className="absolute top-0 right-0 w-64 h-64 bg-secondary opacity-20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000 dark:opacity-5"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-primary opacity-20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-2000 dark:opacity-5"></div>
+      {/* Decorative Blobs - Removed per user request */}
 
-      <div className="max-w-4xl w-full space-y-8 relative z-10 animate-[fadeInUp_0.8s_ease-out]">
-        <div className="bg-white dark:bg-surface-dark shadow-xl rounded-2xl p-10 text-center border border-secondary/20 dark:border-gray-700">
-          <div ref={iconRef} className="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-green-100 dark:bg-green-900 mb-6 animate-[bounce_1s_infinite]">
-            <span className="material-icons-round text-5xl text-primary dark:text-green-300">check_circle</span>
-          </div>
-          <h2 className="flex items-center justify-center gap-3 font-display text-4xl text-text-main dark:text-gray-100 mb-2">
-            <span className="material-icons-round text-primary text-4xl">celebration</span> Seating Plan Optimized!
+      <div className="max-w-5xl w-full space-y-8 relative z-10 animate-[fadeInUp_0.8s_ease-out]">
+
+        {/* Success Hero Card */}
+        <div ref={iconRef} className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md shadow-2xl rounded-3xl px-8 pb-8 pt-6 md:px-12 md:pb-12 md:pt-8 text-center border border-white/50 dark:border-gray-700 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-secondary via-primary to-secondary opacity-50"></div>
+
+
+
+          <h2 className="flex flex-col items-center justify-center gap-0 font-display text-5xl text-text-main dark:text-gray-100 mb-6 tracking-tight">
+            <span className="text-primary font-script text-6xl block transform -rotate-2">Optimization Complete!</span>
+            <span className="text-3xl opacity-90">Ready for your big day</span>
           </h2>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-light max-w-lg mx-auto">
-            Your wedding seating arrangement at {selectedVenueLayout?.name || 'your venue'} has been successfully generated by our AI. Every guest has been placed according to your preferences and harmony rules.
+
+          <p className="text-xl text-gray-600 dark:text-gray-300 font-light max-w-2xl mx-auto leading-relaxed">
+            Your seating plan for <strong className="font-medium text-primary">{selectedVenueLayout?.name || 'your venue'}</strong> is perfected.
+            Every guest has been harmoniously placed to ensure a memorable celebration.
           </p>
 
-          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div className="px-4 py-5 bg-background-light dark:bg-gray-800 shadow rounded-lg overflow-hidden sm:p-6 border border-secondary/30">
-              <dt className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                <span className="material-icons-round text-sm">people</span> Total Guests Seated
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-primary dark:text-gray-200">{seatedCount}</dd>
-            </div>
-            <div className="px-4 py-5 bg-background-light dark:bg-gray-800 shadow rounded-lg overflow-hidden sm:p-6 border border-secondary/30">
-              <dt className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                <span className="material-icons-round text-sm">restaurant</span> Tables Filled
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-primary dark:text-gray-200">{tables.length}</dd>
-            </div>
-            <div className="px-4 py-5 bg-background-light dark:bg-gray-800 shadow rounded-lg overflow-hidden sm:p-6 border border-secondary/30">
-              <dt className="flex items-center gap-1 text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                <span className="material-icons-round text-sm">favorite</span> Harmony Score
-              </dt>
-              <dd className="mt-1 text-3xl font-semibold text-primary dark:text-gray-200">{Math.round(score)}%</dd>
-            </div>
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-3xl mx-auto">
+            {[
+              { label: 'Guests Seated', value: seatedCount, icon: 'groups' },
+              { label: 'Tables Arranged', value: tables.length, icon: 'table_restaurant' },
+              { label: 'Harmony Score', value: `${Math.round(score)}%`, icon: 'auto_graph' },
+            ].map((stat, idx) => (
+              <div key={idx} className="relative group/stat px-6 py-3.5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-secondary/20 hover:border-primary/30 hover:-translate-y-1">
+                <div className="absolute top-3.5 right-5 transition-colors">
+                  <span className="material-icons-outlined text-xl text-primary opacity-80">{stat.icon}</span>
+                </div>
+                <dt className="text-[12px] font-bold text-gray-400 dark:text-gray-500 text-left uppercase tracking-widest mt-1">
+                  {stat.label}
+                </dt>
+                <dd className="mt-0.5 text-3xl font-display font-medium text-text-main dark:text-white text-left">
+                  {stat.value}
+                </dd>
+              </div>
+            ))}
           </div>
 
           {/* Error message */}
           {exportError && (
-            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            <div className="mt-8 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-300 text-sm flex items-center justify-center gap-2">
+              <span className="material-icons-outlined">error_outline</span>
               {exportError}
             </div>
           )}
 
-          <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
+          <div className="mt-12 flex flex-col sm:flex-row justify-center gap-5">
             <button
               onClick={handleExcelExport}
               disabled={isExportingExcel}
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium rounded-2xl shadow-lg shadow-primary/20 text-white bg-gradient-to-br from-primary to-[#777b63] hover:to-[#666a54] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isExportingExcel ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Generating...
+                  Processing...
                 </>
               ) : (
                 <>
-                  <span className="material-icons-round mr-2">description</span>
-                  Download Final Excel
+                  <span className="material-icons-outlined mr-2">table_view</span>
+                  Download Excel
                 </>
               )}
             </button>
             <button
               onClick={handlePdfExport}
               disabled={isExportingPdf}
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-primary bg-background-light dark:bg-gray-700 hover:bg-secondary/50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-medium rounded-2xl shadow-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-all duration-200 transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isExportingPdf ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Generating...
+                  Processing...
                 </>
               ) : (
                 <>
-                  <span className="material-icons-round mr-2">map</span>
+                  <span className="material-icons-outlined mr-2">picture_as_pdf</span>
                   Download PDF Map
                 </>
               )}
             </button>
-            <button className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200">
-              <span className="material-icons-round mr-2">link</span>
-              Share Link
-            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-surface-dark rounded-xl shadow-md p-6 border border-secondary/20 dark:border-gray-700 flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="flex items-center gap-2 font-display text-xl text-text-main dark:text-gray-200">
-                <span className="material-icons-round text-lg">visibility</span> Floor Plan Preview
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Floor Plan Preview Card */}
+          <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col group hover:shadow-xl transition-all duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="flex items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200">
+                <div className="text-primary">
+                  <span className="material-icons-outlined text-2xl">space_dashboard</span>
+                </div>
+                Visual Preview
               </h3>
-              <button onClick={() => setShowPreview(true)} className="text-sm text-primary hover:text-accent font-medium outline-none focus:text-accent">
-                View Full Screen
-              </button>
+
             </div>
 
             {/* Functional Map Preview */}
             <div
-              className="floor-plan-preview bg-gray-50 dark:bg-gray-800 rounded-lg h-56 w-full relative overflow-hidden group cursor-pointer border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-colors"
+              className="floor-plan-preview bg-gray-50 dark:bg-gray-800 rounded-2xl h-64 w-full relative overflow-hidden cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-all duration-300"
               onClick={() => setShowPreview(true)}
             >
               {renderMap(true)}
 
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-gray-800/90 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100">
-                  <span className="material-icons-round text-primary text-2xl">zoom_in</span>
+                <div className="bg-white/90 dark:bg-gray-800/90 px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100 flex items-center gap-2">
+                  <span className="material-icons-outlined text-primary">zoom_in</span>
+                  <span className="text-sm font-medium">Click to Zoom</span>
                 </div>
               </div>
             </div>
 
-            <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-              {selectedVenueLayout ? (
-                <>
-                  Venue: <span className="font-semibold">{selectedVenueLayout.name}</span>.
-                  Includes {tables.length} tables with capacity for {tables.reduce((sum, t) => sum + t.capacity, 0)} guests.
-                </>
-              ) : (
-                <>Custom venue with {tables.length} tables.</>
-              )}
-            </p>
+            <div className="mt-6 flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+              <span className="material-icons-outlined text-gray-400 mt-0.5">info</span>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                {selectedVenueLayout ? (
+                  <>
+                    Previewing <span className="font-semibold text-gray-700 dark:text-gray-300">{selectedVenueLayout.name}</span> layout.
+                    Arranged across <span className="font-semibold">{tables.length} tables</span>.
+                  </>
+                ) : (
+                  <>Custom venue with {tables.length} tables.</>
+                )}
+              </p>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-surface-dark rounded-xl shadow-md p-6 border border-secondary/20 dark:border-gray-700 flex flex-col">
-            <h3 className="flex items-center gap-2 font-display text-xl text-text-main dark:text-gray-200 mb-4">
-              <span className="material-icons-round text-lg">settings</span> Export Settings
+          {/* Export Settings Card */}
+          <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col hover:shadow-xl transition-all duration-300">
+            <h3 className="flex items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200 mb-6">
+              <div className="text-primary">
+                <span className="material-icons-outlined text-2xl">tune</span>
+              </div>
+              Export Options
             </h3>
+
             <div className="space-y-4 flex-grow">
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="dietary"
-                    name="dietary"
-                    type="checkbox"
-                    checked={exportOptions.includeDietary}
-                    onChange={(e) => setExportOptions(prev => ({ ...prev, includeDietary: e.target.checked }))}
-                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
-                  />
+              {[
+                {
+                  id: 'dietary',
+                  label: 'Include Dietary Info',
+                  desc: 'Add columns for allergies & restrictions',
+                  checked: exportOptions.includeDietary,
+                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, includeDietary: checked }))
+                },
+                {
+                  id: 'vendor',
+                  label: 'Vendor Meal Summary',
+                  desc: 'Separate sheet for catering counts',
+                  checked: exportOptions.vendorMealCount,
+                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, vendorMealCount: checked }))
+                },
+                {
+                  id: 'print',
+                  label: 'Print-Ready Resolution',
+                  desc: 'Generate high-DPI PDF (slower)',
+                  checked: exportOptions.highResForPrinting,
+                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, highResForPrinting: checked }))
+                }
+              ].map((opt) => (
+                <div key={opt.id} className="group/opt flex items-start p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer" onClick={() => opt.setter(!opt.checked)}>
+                  <div className="flex items-center h-5 mt-1">
+                    <input
+                      id={opt.id}
+                      type="checkbox"
+                      checked={opt.checked}
+                      onChange={(e) => opt.setter(e.target.checked)}
+                      className="focus:ring-primary h-5 w-5 text-primary border-gray-300 rounded cursor-pointer transition-transform group-active/opt:scale-95"
+                    />
+                  </div>
+                  <div className="ml-4">
+                    <label htmlFor={opt.id} className="font-medium text-gray-800 dark:text-gray-200 text-lg cursor-pointer">
+                      {opt.label}
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {opt.desc}
+                    </p>
+                  </div>
                 </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="dietary" className="font-medium text-gray-700 dark:text-gray-300">Include Dietary Restrictions</label>
-                  <p className="text-gray-500 dark:text-gray-400">Add a column for allergies and preferences in the Excel file.</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="vendor"
-                    name="vendor"
-                    type="checkbox"
-                    checked={exportOptions.vendorMealCount}
-                    onChange={(e) => setExportOptions(prev => ({ ...prev, vendorMealCount: e.target.checked }))}
-                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="vendor" className="font-medium text-gray-700 dark:text-gray-300">Vendor Meal Count</label>
-                  <p className="text-gray-500 dark:text-gray-400">Generate a separate summary sheet for catering vendors.</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="flex items-center h-5">
-                  <input
-                    id="print"
-                    name="print"
-                    type="checkbox"
-                    checked={exportOptions.highResForPrinting}
-                    onChange={(e) => setExportOptions(prev => ({ ...prev, highResForPrinting: e.target.checked }))}
-                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
-                  />
-                </div>
-                <div className="ml-3 text-sm">
-                  <label htmlFor="print" className="font-medium text-gray-700 dark:text-gray-300">High-Res for Printing</label>
-                  <p className="text-gray-500 dark:text-gray-400">Ensure PDF map is 300 DPI ready for large format printing.</p>
-                </div>
-              </div>
+              ))}
             </div>
+
           </div>
         </div>
 
@@ -457,54 +515,56 @@ const ExportDashboard: React.FC = () => {
       </div>
 
       {/* Full Screen Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col relative overflow-hidden animate-slide-up">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="font-display text-2xl text-text-main dark:text-white">Full Floor Plan Preview</h3>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <span className="material-icons-round text-gray-500 dark:text-gray-400">close</span>
-              </button>
-            </div>
-            <div className="flex-grow relative bg-gray-50 dark:bg-gray-900 p-8 overflow-auto flex items-center justify-center">
-              <div className="w-full h-full max-w-4xl max-h-[800px] aspect-[5/4] relative">
-                {renderMap(false)}
+      {
+        showPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col relative overflow-hidden animate-slide-up">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="font-display text-2xl text-text-main dark:text-white">Full Floor Plan Preview</h3>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span className="material-icons-outlined text-gray-500 dark:text-gray-400">close</span>
+                </button>
+              </div>
+              <div className="flex-grow relative bg-gray-50 dark:bg-gray-900 p-8 overflow-auto flex items-center justify-center">
+                <div className="w-full h-full max-w-4xl max-h-[800px] aspect-[5/4] relative">
+                  {renderMap(false)}
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-white dark:hover:bg-gray-700 transition"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => { setShowPreview(false); handlePdfExport(); }}
+                  disabled={isExportingPdf}
+                  className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-opacity-90 shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isExportingPdf ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-icons-outlined text-sm">download</span> Download PDF
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3">
-              <button
-                onClick={() => setShowPreview(false)}
-                className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-white dark:hover:bg-gray-700 transition"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => { setShowPreview(false); handlePdfExport(); }}
-                disabled={isExportingPdf}
-                className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-opacity-90 shadow-md transition flex items-center gap-2 disabled:opacity-50"
-              >
-                {isExportingPdf ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons-round text-sm">download</span> Download PDF
-                  </>
-                )}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 
