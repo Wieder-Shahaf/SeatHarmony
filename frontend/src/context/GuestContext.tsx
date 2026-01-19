@@ -174,7 +174,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     loadFromStorage(STORAGE_KEYS.LAYOUTS, [])
   );
   const [selectedLayoutIndex, setSelectedLayoutIndexState] = useState<number>(() =>
-    loadFromStorage(STORAGE_KEYS.SELECTED_LAYOUT, 0)
+    loadFromStorage(STORAGE_KEYS.SELECTED_LAYOUT, -1)
   );
   const [explanations, setExplanationsState] = useState<ExplanationCache>(() =>
     loadFromStorage(STORAGE_KEYS.EXPLANATIONS, {})
@@ -287,7 +287,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     setVenueConfigState({ tables: [], settings: {} });
     setSelectedVenueLayoutState(null);
     setLayoutsState([]);
-    setSelectedLayoutIndexState(0);
+    setSelectedLayoutIndexState(-1);
     setExplanationsState({});
     setError(null);
     clearStorage();
@@ -482,7 +482,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
 
     // Clear previous results and cache
     setLayoutsState([]);
-    setSelectedLayoutIndexState(0);
+    setSelectedLayoutIndexState(-1);
     setLayoutsCacheKeyState('');
     setError(null);
 

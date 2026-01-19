@@ -43,41 +43,51 @@ const Layout: React.FC = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          {!isLanding && prevRoute && (
-            <button
-              onClick={() => navigate(prevRoute)}
-              className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
-              aria-label="Previous Page"
-            >
-              <span className="material-icons-round text-xl">chevron_left</span>
-            </button>
-          )}
-
-          <div className="flex items-center gap-6">
-            {!isLanding &&
-              navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${location.pathname === link.path
-                    ? 'text-primary font-bold border-b-2 border-primary pb-0.5'
-                    : 'text-gray-500 hover:text-primary dark:text-gray-300 dark:hover:text-white'
-                    }`}
+          {isLanding ? (
+            <div className="absolute left-1/2 -translate-x-1/2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 dark:bg-surface-dark/60 border border-secondary/30 backdrop-blur-sm mt-3">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+              <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary">
+                <span className="material-icons-round text-sm">auto_awesome</span> AI-Powered Planning
+              </span>
+            </div>
+          ) : (
+            <>
+              {prevRoute && (
+                <button
+                  onClick={() => navigate(prevRoute)}
+                  className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
+                  aria-label="Previous Page"
                 >
-                  <span className="material-icons-round text-lg">{link.icon}</span>
-                  {link.label}
-                </Link>
-              ))}
-          </div>
+                  <span className="material-icons-round text-xl">chevron_left</span>
+                </button>
+              )}
 
-          {!isLanding && nextRoute && (
-            <button
-              onClick={() => navigate(nextRoute)}
-              className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
-              aria-label="Next Page"
-            >
-              <span className="material-icons-round text-xl">chevron_right</span>
-            </button>
+              <div className="flex items-center gap-6">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${location.pathname === link.path
+                      ? 'text-primary font-bold border-b-2 border-primary pb-0.5'
+                      : 'text-gray-500 hover:text-primary dark:text-gray-300 dark:hover:text-white'
+                      }`}
+                  >
+                    <span className="material-icons-round text-lg">{link.icon}</span>
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
+              {nextRoute && (
+                <button
+                  onClick={() => navigate(nextRoute)}
+                  className="p-1.5 rounded-full text-gray-400 hover:text-primary hover:bg-secondary/20 transition-colors"
+                  aria-label="Next Page"
+                >
+                  <span className="material-icons-round text-xl">chevron_right</span>
+                </button>
+              )}
+            </>
           )}
         </div>
 
