@@ -183,6 +183,7 @@ const Recommendations: React.FC = () => {
     const fetchLayouts = async () => {
       setLoading(true);
       setIsLoading(true);
+      setSelectedLayoutIndex(-1);
       setError(null);
       setProgress(0);
       setCurrentStrategy(null);

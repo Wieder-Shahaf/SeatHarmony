@@ -318,121 +318,124 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Tip CTA */}
-      <div className="max-w-3xl mx-auto mb-10">
-        <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10 dark:to-transparent rounded-2xl border border-primary/20 p-5 shadow-sm">
-          {/* Decorative background element */}
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+      {/* Quick Tip CTA & Filter Wrapper */}
+      <div className="relative mb-10">
+        <div className="max-w-3xl mx-auto">
+          <div className="relative overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-transparent dark:from-primary/20 dark:via-primary/10 dark:to-transparent rounded-2xl border border-primary/20 p-5 shadow-sm">
+            {/* Decorative background element */}
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
 
-          <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
-            <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-surface-dark rounded-full flex items-center justify-center shadow-sm text-primary">
-              <span className="material-icons-round text-2xl animate-bounce">lightbulb</span>
-            </div>
-
-            <div className="flex-grow text-center md:text-left">
-              <h3 className="font-display text-lg font-semibold text-text-main dark:text-white mb-1">
-                Interactive Guest Cards
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                <strong className="text-primary">Click</strong> any card to reveal its guest list.
-                <strong className="text-primary ml-1.5">Drag & drop</strong> guests between cards to reassign them.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
-                <span className="material-icons-round text-sm">touch_app</span> Click to Flip
+            <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+              <div className="flex-shrink-0 w-12 h-12 bg-white dark:bg-surface-dark rounded-full flex items-center justify-center shadow-sm text-primary">
+                <span className="material-icons-round text-2xl animate-bounce">lightbulb</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
-                <span className="material-icons-round text-sm">drag_indicator</span> Drag Guests
+
+              <div className="flex-grow text-center md:text-left">
+                <h3 className="font-display text-lg font-semibold text-text-main dark:text-white mb-1">
+                  Interactive Guest Cards
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  <strong className="text-primary">Click</strong> any card to reveal its guest list.
+                  <strong className="text-primary ml-1.5">Drag & drop</strong> guests between cards to reassign them.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
+                  <span className="material-icons-round text-sm">touch_app</span> Click to Flip
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg">
+                  <span className="material-icons-round text-sm">drag_indicator</span> Drag Guests
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="flex justify-end mb-8 relative" ref={filterRef}>
-        <button
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border transition-colors bg-white dark:bg-transparent ${selectedFilters.length > 0
-            ? 'border-primary text-primary'
-            : 'border-secondary text-text-main dark:text-accent hover:bg-secondary/10'
-            }`}
-        >
-          <span className="material-icons-round text-sm">filter_list</span>
-          {selectedFilters.length === 0
-            ? 'Filter'
-            : selectedFilters.length === 1
-              ? selectedFilters[0]
-              : `${selectedFilters.length} selected`}
-          <span className="material-icons-round text-sm">{isFilterOpen ? 'expand_less' : 'expand_more'}</span>
-        </button>
+        {/* Filter Bar */}
+        <div className="mt-4 md:mt-0 md:absolute md:right-10 md:bottom-0 z-20 flex justify-end relative" ref={filterRef}>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border transition-colors bg-white dark:bg-transparent ${selectedFilters.length > 0
+              ? 'border-primary text-primary'
+              : 'border-secondary text-text-main dark:text-accent hover:bg-secondary/10'
+              }`}
+          >
+            <span className="material-icons-round text-sm">filter_list</span>
+            {selectedFilters.length === 0
+              ? 'Filter'
+              : selectedFilters.length === 1
+                ? selectedFilters[0]
+                : `${selectedFilters.length} selected`}
+            <span className="material-icons-round text-sm">{isFilterOpen ? 'expand_less' : 'expand_more'}</span>
+          </button>
 
-        {/* Dropdown Menu */}
-        {isFilterOpen && (
-          <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-secondary/20 dark:border-gray-700 z-50 overflow-hidden">
-            <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-              <div className="relative">
-                <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
-                <input
-                  type="text"
-                  placeholder="Find category..."
-                  value={filterSearch}
-                  onChange={(e) => setFilterSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-text-main dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary"
-                  autoFocus
-                />
+          {/* Dropdown Menu */}
+          {isFilterOpen && (
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-surface-dark rounded-xl shadow-lg border border-secondary/20 dark:border-gray-700 z-50 overflow-hidden">
+              <div className="p-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="relative">
+                  <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                  <input
+                    type="text"
+                    placeholder="Find category..."
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-text-main dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
               </div>
-            </div>
-            <div className="p-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <p className="text-xs text-gray-500 dark:text-gray-300 uppercase tracking-wider font-medium px-2">Filter by Category</p>
+              <div className="p-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <p className="text-xs text-gray-500 dark:text-gray-300 uppercase tracking-wider font-medium px-2">Filter by Category</p>
+                {selectedFilters.length > 0 && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{selectedFilters.length}</span>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {filteredCategories.map((category) => {
+                  const isSelected = category === 'All Groups'
+                    ? selectedFilters.length === 0
+                    : selectedFilters.includes(category);
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => toggleFilter(category)}
+                      className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${isSelected
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        {category === 'All Groups' && <span className="material-icons-round text-sm">apps</span>}
+                        {category}
+                      </span>
+                      <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
+                        ? 'bg-primary border-primary'
+                        : 'border-gray-300 dark:border-gray-600'
+                        }`}>
+                        {isSelected && <span className="material-icons-round text-xs text-white">check</span>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
               {selectedFilters.length > 0 && (
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{selectedFilters.length}</span>
+                <div className="p-2 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      setSelectedFilters([]);
+                      setFilterSearch('');
+                    }}
+                    className="w-full text-center text-sm text-gray-500 hover:text-primary py-2"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
               )}
             </div>
-            <div className="max-h-64 overflow-y-auto">
-              {filteredCategories.map((category) => {
-                const isSelected = category === 'All Groups'
-                  ? selectedFilters.length === 0
-                  : selectedFilters.includes(category);
-                return (
-                  <button
-                    key={category}
-                    onClick={() => toggleFilter(category)}
-                    className={`w-full text-left px-4 py-3 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${isSelected
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {category === 'All Groups' && <span className="material-icons-round text-sm">apps</span>}
-                      {category}
-                    </span>
-                    <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isSelected
-                      ? 'bg-primary border-primary'
-                      : 'border-gray-300 dark:border-gray-600'
-                      }`}>
-                      {isSelected && <span className="material-icons-round text-xs text-white">check</span>}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedFilters.length > 0 && (
-              <div className="p-2 border-t border-gray-100 dark:border-gray-700">
-                <button
-                  onClick={() => {
-                    setSelectedFilters([]);
-                    setFilterSearch('');
-                  }}
-                  className="w-full text-center text-sm text-gray-500 hover:text-primary py-2"
-                >
-                  Clear All Filters
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Stats Row */}

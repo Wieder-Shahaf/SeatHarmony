@@ -203,7 +203,12 @@ const Confirmation: React.FC = () => {
                                         feature.type === 'cake' ? 'bg-sky-100/90 border-sky-300/60 border-2 dark:bg-sky-900/40' :
                                           feature.type === 'aisle' ? 'bg-amber-700/20 border-amber-600 border-dashed dark:bg-amber-600/20' :
                                             feature.type === 'resting-area' ? 'bg-rose-900/10 border-rose-900/30 border-2 dark:bg-rose-500/10 dark:border-rose-400/30' :
-                                              'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                              feature.type === 'binoculars' ? 'bg-purple-500/80 border-purple-700 border-2 dark:bg-purple-600/60' :
+                                                feature.type === 'viewing-platform' ? 'bg-rose-900/80 border-rose-950 border-2 dark:bg-rose-800/60' :
+                                                  feature.type === 'magnets-board' ? 'bg-teal-500/80 border-teal-700 border-2 dark:bg-teal-600/60' :
+                                                    feature.type === 'emergency-exit' ? 'bg-red-500/80 border-red-700 border-2 dark:bg-red-600/60' :
+                                                      feature.type === 'piano' ? 'bg-gray-900/90 border-black border-2 dark:bg-black/80' :
+                                                        'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
                       style={{
                         left: `${feature.x}%`,
                         top: `${feature.y}%`,
@@ -217,7 +222,7 @@ const Confirmation: React.FC = () => {
                       <span
                         className={`uppercase tracking-wider whitespace-pre-wrap text-center leading-3 px-1 ${isZone
                           ? 'text-xs md:text-sm font-extrabold text-gray-600 dark:text-gray-400' // Darker and centered
-                          : 'text-[10px] font-bold text-gray-700 dark:text-gray-300'}`}
+                          : (['binoculars', 'viewing-platform', 'magnets-board', 'emergency-exit', 'piano'].includes(feature.type) ? 'text-[10px] font-bold text-white' : 'text-[10px] font-bold text-gray-700 dark:text-gray-300')}`}
                         style={{
                           display: 'inline-block',
                           transform: `rotate(${feature.labelRotation || 0}deg)`

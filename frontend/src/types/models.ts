@@ -189,10 +189,10 @@ export const VENUE_LAYOUTS: VenueLayout[] = [
     category: 'outdoor',
     totalCapacity: 142, // 4×8 + 6×8 + 4×8 + 5×6 = 32 + 48 + 32 + 30
     tableTemplates: [
-      { type: 'round', capacity: 8, count: 4, zone: 'front', nearDanceFloor: 'adjacent', placement: 'covered' },
-      { type: 'round', capacity: 8, count: 6, zone: 'main', nearDanceFloor: 'near', placement: 'covered' },
-      { type: 'round', capacity: 8, count: 4, zone: 'lounge', nearDanceFloor: 'far', placement: 'indoor' },
-      { type: 'round', capacity: 6, count: 5, zone: 'terrace', nearDanceFloor: 'far', placement: 'outdoor' },
+      { type: 'rectangular', capacity: 8, count: 4, zone: 'front', nearDanceFloor: 'adjacent', placement: 'covered' },
+      { type: 'rectangular', capacity: 8, count: 6, zone: 'main', nearDanceFloor: 'near', placement: 'covered' },
+      { type: 'rectangular', capacity: 8, count: 4, zone: 'lounge', nearDanceFloor: 'far', placement: 'indoor' },
+      { type: 'rectangular', capacity: 6, count: 5, zone: 'terrace', nearDanceFloor: 'far', placement: 'outdoor' },
     ],
     features: ['City Views', 'Sunset Location', 'Open Air', 'Cocktail Space'],
   },
