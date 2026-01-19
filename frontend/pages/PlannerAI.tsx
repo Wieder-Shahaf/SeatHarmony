@@ -5,6 +5,62 @@ import { Guest, Table } from '../src/types/models';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
+// Color palette for groups (elegant, sophisticated colors that complement the UI theme)
+const GROUP_COLORS = [
+  { bg: '#8A8E75', name: 'Sage Green' },        // Primary - sage green
+  { bg: '#68604D', name: 'Dark Brown' },        // Text-main - dark brown
+  { bg: '#D5C7AD', name: 'Light Beige' },       // Secondary - light beige
+  { bg: '#BEC5A4', name: 'Light Sage' },        // Accent - light sage
+  { bg: '#A67C7C', name: 'Dusty Rose' },        // Muted rose
+  { bg: '#7A8B8B', name: 'Slate Blue' },        // Muted blue-grey
+  { bg: '#B8A082', name: 'Warm Taupe' },        // Warm taupe
+  { bg: '#8B9A7A', name: 'Olive Green' },        // Olive green
+  { bg: '#9B8B7A', name: 'Muted Terracotta' },   // Muted terracotta
+  { bg: '#7B8A9B', name: 'Steel Blue' },        // Steel blue
+  { bg: '#C4A88A', name: 'Sandy Beige' },       // Sandy beige
+  { bg: '#6B7A6B', name: 'Forest Green' },       // Forest green
+  { bg: '#A89B8C', name: 'Warm Grey' },         // Warm grey
+  { bg: '#8B7A9B', name: 'Lavender Grey' },      // Lavender grey
+  { bg: '#9B7A7A', name: 'Muted Mauve' },       // Muted mauve
+  { bg: '#7A9B8B', name: 'Teal Green' },         // Teal green
+  { bg: '#B89B7A', name: 'Golden Beige' },      // Golden beige
+  { bg: '#8B8A7A', name: 'Sage Grey' },          // Sage grey
+];
+
+// Get color for a group
+const getGroupColor = (groupIndex: number): string => {
+  return GROUP_COLORS[groupIndex % GROUP_COLORS.length].bg;
+};
+
+// Animated ellipsis component for loading states
+const AnimatedEllipsis: React.FC = () => {
+  return (
+    <span className="inline-flex items-baseline gap-0.5">
+      <span 
+        className="inline-block"
+        style={{
+          animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
+          animationDelay: '0s'
+        }}
+      >.</span>
+      <span 
+        className="inline-block"
+        style={{
+          animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
+          animationDelay: '0.2s'
+        }}
+      >.</span>
+      <span 
+        className="inline-block"
+        style={{
+          animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
+          animationDelay: '0.4s'
+        }}
+      >.</span>
+    </span>
+  );
+};
+
 // Guest explanation cache
 type ExplanationCache = Record<string, string>;
 
@@ -19,10 +75,15 @@ const PlannerAI: React.FC = () => {
     updateGuestAssignment,
     explanations,
     fetchExplanationsForTables,
+    originalLayout,
+    saveOriginalLayout,
+    restoreOriginalLayout,
   } = useGuests();
 
   const [zoom, setZoom] = useState(1);
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
+  const [capacityError, setCapacityError] = useState<string | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
   const guestRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
 
 
@@ -64,6 +125,33 @@ const PlannerAI: React.FC = () => {
     // Get the old table ID before the move
     const oldTableId = assignments[guestId];
 
+    // Check if moving to a different table
+    if (oldTableId === newTableId) {
+      return; // No change needed
+    }
+
+    // Find the target table
+    const targetTable = tables.find(t => t.id === newTableId);
+    if (!targetTable) {
+      return;
+    }
+
+    // Count current guests at the target table
+    const currentGuestsAtTable = guestsByTable[newTableId] || [];
+    
+    // Check if table is already at capacity
+    // Note: We don't need to subtract the guest being moved because:
+    // - If they're moving FROM another table TO this table, currentGuestsAtTable doesn't include them yet
+    // - If they're already at this table, we return early above
+    if (currentGuestsAtTable.length >= targetTable.capacity) {
+      setCapacityError(`Table ${targetTable.name.replace('Table ', '')} is full (${targetTable.capacity}/${targetTable.capacity} seats)`);
+      setTimeout(() => setCapacityError(null), 3000); // Clear error after 3 seconds
+      return;
+    }
+
+    // Clear any previous errors
+    setCapacityError(null);
+
     // Update the assignment
     updateGuestAssignment(guestId, newTableId);
 
@@ -94,6 +182,18 @@ const PlannerAI: React.FC = () => {
     }
   }, [selectedGuestId]);
 
+  // Save original layout when first entering PlannerAI if not already saved
+  // This ensures we have a backup even if user navigated directly to PlannerAI
+  useEffect(() => {
+    if (selectedLayout && selectedLayoutIndex >= 0 && !originalLayout && layouts.length > 0) {
+      console.log('Saving original layout on PlannerAI mount (fallback)', { selectedLayoutIndex, hasLayout: !!selectedLayout });
+      // Use setTimeout to ensure layouts state is fully loaded
+      setTimeout(() => {
+        saveOriginalLayout();
+      }, 100);
+    }
+  }, [selectedLayout, selectedLayoutIndex, originalLayout, layouts.length, saveOriginalLayout]);
+
 
 
   // Get unique categories for filter buttons
@@ -104,6 +204,21 @@ const PlannerAI: React.FC = () => {
     });
     return Array.from(cats);
   }, [guests]);
+
+  // Create group color mapping
+  const groupColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach((group, index) => {
+      map[group] = getGroupColor(index);
+    });
+    return map;
+  }, [categories]);
+
+  // Get color for a guest based on their group
+  const getGuestColor = (guest: Guest): string => {
+    if (!guest.group_id) return '#8A8E75'; // Default primary color for ungrouped guests
+    return groupColorMap[guest.group_id] || '#8A8E75';
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -171,12 +286,21 @@ const PlannerAI: React.FC = () => {
                 <span className="material-icons-round text-[10px]">hourglass_empty</span> Unseated ({unseatedGuests.length})
               </button>
             )}
-            {categories.slice(0, 3).map(cat => (
+            {categories.map((cat, index) => (
               <button
                 key={cat}
                 onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
-                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap ${filterCategory === cat ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
+                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all ${
+                  filterCategory === cat 
+                    ? 'text-white shadow-md' 
+                    : 'text-white hover:opacity-90'
+                }`}
+                style={{
+                  backgroundColor: filterCategory === cat 
+                    ? groupColorMap[cat] || getGroupColor(index)
+                    : groupColorMap[cat] || getGroupColor(index),
+                  opacity: filterCategory === cat ? 1 : 0.8
+                }}
               >
                 {cat}
               </button>
@@ -200,8 +324,10 @@ const PlannerAI: React.FC = () => {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${tableId ? 'bg-primary/20 text-primary' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
-                    }`}>
+                  <div 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${tableId ? '' : 'opacity-50'}`}
+                    style={{ backgroundColor: tableId ? getGuestColor(guest) : '#9ca3af' }}
+                  >
                     {getInitials(guest.name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -233,7 +359,7 @@ const PlannerAI: React.FC = () => {
                     ) : (
                       <p className="text-xs text-primary flex items-center gap-1">
                         <span className="material-icons-round animate-spin text-xs">progress_activity</span>
-                        Generating insight...
+                        <span className="absolute">Generating insight<AnimatedEllipsis /></span>
                       </p>
                     )}
                   </div>
@@ -249,6 +375,23 @@ const PlannerAI: React.FC = () => {
         className="flex-1 bg-background-lighter dark:bg-background-dark pattern-grid relative overflow-auto cursor-default"
         onClick={() => setSelectedGuestId(null)}
       >
+        {/* Restore Recommendation Layout Button */}
+        {selectedLayout && (
+          <button
+            onClick={() => {
+              // Save original layout if not already saved
+              if (!originalLayout) {
+                saveOriginalLayout();
+              }
+              setShowRestoreModal(true);
+            }}
+            className="absolute top-6 right-6 z-40 bg-primary hover:bg-[#777b63] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-200 hover:shadow-xl"
+          >
+            <span className="material-icons-round text-lg">refresh</span>
+            <span className="text-sm font-medium">Recommendation Layout</span>
+          </button>
+        )}
+
         {/* Floating Toolbar */}
         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-secondary/20 dark:border-gray-700 z-30">
           <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 transition-colors" title="Zoom Out">
@@ -274,6 +417,7 @@ const PlannerAI: React.FC = () => {
           </div>
 
 
+
           {/* Venue info */}
           {selectedVenueLayout && (
             <>
@@ -286,6 +430,16 @@ const PlannerAI: React.FC = () => {
           )}
         </div>
 
+        {/* Capacity Error Toast */}
+        {capacityError && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 shadow-lg flex items-center gap-3">
+              <span className="material-icons-round text-red-500 text-xl">error_outline</span>
+              <span className="text-sm text-red-700 dark:text-red-300 font-medium">{capacityError}</span>
+            </div>
+          </div>
+        )}
+
         {/* Canvas Area - Dynamic Tables */}
         <div
           className="w-full min-h-full flex items-start justify-center p-20 pt-32 origin-top transition-transform duration-200 ease-out"
@@ -297,6 +451,7 @@ const PlannerAI: React.FC = () => {
               const isRound = table.constraints?.tableType !== 'rectangular';
               const capacity = table.capacity;
               const tableSize = Math.max(120, 80 + capacity * 8);
+              const isFull = tableGuests.length >= capacity;
 
               return (
                 <div
@@ -304,7 +459,13 @@ const PlannerAI: React.FC = () => {
                   className="relative flex flex-col items-center"
                   onDragOver={(e) => {
                     e.preventDefault();
-                    e.currentTarget.style.transform = 'scale(1.02)';
+                    // Only allow drop if table is not full
+                    if (!isFull) {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.dataTransfer.dropEffect = 'move';
+                    } else {
+                      e.dataTransfer.dropEffect = 'none';
+                    }
                   }}
                   onDragLeave={(e) => {
                     e.currentTarget.style.transform = 'scale(1)';
@@ -313,7 +474,7 @@ const PlannerAI: React.FC = () => {
                     e.preventDefault();
                     e.currentTarget.style.transform = 'scale(1)';
                     const guestId = e.dataTransfer.getData('guestId');
-                    if (guestId) {
+                    if (guestId && !isFull) {
                       handleGuestMove(guestId, table.id);
                     }
                   }}
@@ -321,7 +482,7 @@ const PlannerAI: React.FC = () => {
                   {/* Table */}
                   <div
                     className={`bg-white dark:bg-gray-800 border-4 shadow-lg flex flex-col items-center justify-center relative group ${isRound ? 'rounded-full' : 'rounded-xl'
-                      } ${tableIndex === 0 ? 'border-primary/40 dark:border-primary/20' : 'border-secondary/50 dark:border-gray-600'}`}
+                      } ${tableIndex === 0 ? 'border-primary/40 dark:border-primary/20' : 'border-secondary/50 dark:border-gray-600'} ${isFull ? 'opacity-75' : ''}`}
                     style={{
                       width: tableSize,
                       height: isRound ? tableSize : tableSize * 0.6,
@@ -333,7 +494,7 @@ const PlannerAI: React.FC = () => {
                     {tableIndex === 0 && (
                       <span className="text-xs uppercase tracking-widest text-gray-400">Head Table</span>
                     )}
-                    <span className="text-xs text-gray-400 mt-1">
+                    <span className={`text-xs mt-1 ${isFull ? 'text-red-300 dark:text-red-400' : 'text-gray-400'}`}>
                       {tableGuests.length}/{capacity}
                     </span>
                     {table.zone && (
@@ -355,12 +516,12 @@ const PlannerAI: React.FC = () => {
                           className={`relative cursor-pointer transition-all ${isSelectedGuest ? 'scale-110 z-[100]' : 'hover:scale-105'}`}
                           title={`${guest.name} (${guest.group_id || 'No category'})`}
                         >
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 transition-transform duration-200 ${isSelectedGuest
-                            ? 'bg-primary text-white border-white ring-4 ring-primary/20'
-                            : guest.importance > 0
-                              ? 'bg-accent text-white border-white'
-                              : 'bg-primary/80 text-white border-white/50'
+                          <div 
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 transition-transform duration-200 text-white ${isSelectedGuest
+                              ? 'border-white ring-4 ring-primary/20'
+                              : 'border-white/50'
                             }`}
+                            style={{ backgroundColor: getGuestColor(guest) }}
                             draggable
                             onDragStart={(e) => {
                               if (isSelectedGuest) setSelectedGuestId(null);
@@ -394,9 +555,9 @@ const PlannerAI: React.FC = () => {
                                     {explanations[guest.id]}
                                   </p>
                                 ) : (
-                                  <p className="text-xs text-primary">
-                                    <span className="material-icons-round animate-spin text-sm align-middle mr-1">progress_activity</span>
-                                    Generating insight...
+                                  <p className="text-xs text-primary flex items-center gap-1">
+                                    <span className="material-icons-round animate-spin text-sm">progress_activity</span>
+                                    <span className="absolute">Generating insight<AnimatedEllipsis /></span>
                                   </p>
                                 )}
                               </div>
@@ -418,6 +579,74 @@ const PlannerAI: React.FC = () => {
         </div>
 
 
+
+        {/* Restore Layout Confirmation Modal */}
+        {showRestoreModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-md w-full p-8 relative animate-slide-up">
+              <div className="flex items-center justify-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="material-icons-round text-primary text-3xl">refresh</span>
+                </div>
+              </div>
+              
+              <h3 className="font-display text-2xl text-text-main dark:text-white text-center mb-4">
+                Restore Recommendation Layout
+              </h3>
+              
+              <p className="text-gray-600 dark:text-gray-300 text-center mb-8 leading-relaxed">
+                Your guest layout will be switched back to the SeatHarmony-recommended layout. 
+                Any manual changes you've made will be replaced with the original AI-optimized seating arrangement.
+              </p>
+              
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowRestoreModal(false)}
+                  className="flex-1 px-6 py-3 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Restore button clicked', { 
+                      originalLayout: !!originalLayout, 
+                      selectedLayoutIndex, 
+                      currentLayout: !!selectedLayout,
+                      originalAssignmentsCount: originalLayout ? Object.keys(originalLayout.layout.assignments).length : 0
+                    });
+                    
+                    if (!originalLayout) {
+                      console.warn('No original layout saved');
+                      alert('No original layout found. Please select a layout from the Recommendations page first.');
+                      setShowRestoreModal(false);
+                      return;
+                    }
+                    
+                    // Restore the layout
+                    const success = restoreOriginalLayout();
+                    console.log('Restore result:', success);
+                    
+                    if (success) {
+                      setShowRestoreModal(false);
+                      // Force a small delay to ensure state updates propagate
+                      setTimeout(() => {
+                        fetchExplanationsForTables(tables.map(t => t.id));
+                        // Force React to re-render by updating a dummy state if needed
+                        console.log('Layout restored, refreshing explanations');
+                      }, 300);
+                    } else {
+                      console.error('Failed to restore layout');
+                      alert('Unable to restore the original layout. Please try again.');
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 rounded-xl bg-primary hover:bg-[#777b63] text-white font-medium transition-colors shadow-md"
+                >
+                  Restore Layout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sticky Bottom Bar */}
         <div className="fixed bottom-0 left-80 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up">

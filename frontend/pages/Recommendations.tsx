@@ -16,6 +16,7 @@ const Recommendations: React.FC = () => {
     totParams,
     layouts: cachedLayouts,
     setLayoutsWithCacheKey,
+    setLayouts,
     selectedLayoutIndex,
     setSelectedLayoutIndex,
     setIsLoading,
@@ -23,10 +24,16 @@ const Recommendations: React.FC = () => {
     fetchAllExplanations,
     setExplanations,
     isLayoutsCacheValid,
+    saveOriginalLayout,
+    originalLayout,
+    invalidateLayoutsCache,
   } = useGuests();
 
+  // Track previous venue to detect changes
+  const previousVenueIdRef = React.useRef<string | null>(selectedVenueLayout?.id || null);
+
   // Initialize local layouts from cache if available
-  const [layouts, setLayouts] = useState<TotLayout[]>(() => {
+  const [layouts, setLocalLayouts] = useState<TotLayout[]>(() => {
     // Check if we have valid cached layouts on mount
     return cachedLayouts.length > 0 ? cachedLayouts : [];
   });
@@ -38,6 +45,24 @@ const Recommendations: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   // Track if we've determined whether to fetch (either from cache hit or actual fetch)
   const [hasFetched, setHasFetched] = useState(false);
+
+  // Clear layouts when venue changes
+  useEffect(() => {
+    const currentVenueId = selectedVenueLayout?.id || null;
+    const previousVenueId = previousVenueIdRef.current;
+
+    if (previousVenueId !== null && currentVenueId !== previousVenueId && currentVenueId !== null) {
+      console.log('Venue changed - clearing old recommendations', { previousVenueId, currentVenueId });
+      setLocalLayouts([]);
+      setLayouts([]);
+      setSelectedLayoutIndex(-1);
+      invalidateLayoutsCache();
+      setHasFetched(false);
+      fetchStartedRef.current = false;
+    }
+
+    previousVenueIdRef.current = currentVenueId;
+  }, [selectedVenueLayout?.id, setLayouts, setSelectedLayoutIndex, invalidateLayoutsCache]);
 
   // Strategy display names for loading experience
   const strategyDisplayNames: Record<string, string> = {
@@ -170,7 +195,8 @@ const Recommendations: React.FC = () => {
     // Check if we have valid cached layouts
     if (isLayoutsCacheValid()) {
       console.log('Using cached layouts - cache is valid');
-      setLayouts(cachedLayouts);
+      setLocalLayouts(cachedLayouts);
+      setLayouts(cachedLayouts); // Also update context
       setHasFetched(true);
       return;
     }
@@ -239,10 +265,14 @@ const Recommendations: React.FC = () => {
                 if (event.totalSteps !== undefined) setTotalSteps(event.totalSteps);
               } else if (event.type === 'result') {
                 const fetchedLayouts = event.layouts ?? [];
-                setLayouts(fetchedLayouts);
-                setLayoutsWithCacheKey(fetchedLayouts);
+                setLocalLayouts(fetchedLayouts);
+                setLayoutsWithCacheKey(fetchedLayouts); // This also updates context layouts
                 setHasFetched(true);
                 console.log(`Received ${fetchedLayouts.length} layout recommendations`);
+                // Save the first layout as original when layouts are first generated
+                if (fetchedLayouts.length > 0 && !originalLayout && selectedLayoutIndex >= 0) {
+                  setTimeout(() => saveOriginalLayout(), 100);
+                }
               }
             } catch (e) {
               console.warn('Failed to parse stream line:', line, e);
@@ -549,6 +579,7 @@ const Recommendations: React.FC = () => {
                 key={index}
                 onClick={() => {
                   setSelectedLayoutIndex(index);
+                  // The original layout will be saved automatically in setSelectedLayoutIndex
                 }}
                 className={`group relative bg-white dark:bg-surface-dark rounded-xl transition-all duration-300 overflow-hidden border cursor-pointer h-full flex flex-col scale-95 hover:scale-100
                   border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg`}
