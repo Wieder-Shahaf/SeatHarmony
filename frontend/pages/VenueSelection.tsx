@@ -7,7 +7,16 @@ type CategoryFilter = 'all' | 'indoor' | 'outdoor' | 'banquet' | 'intimate';
 
 const VenueSelection: React.FC = () => {
   const navigate = useNavigate();
-  const { setTables, setVenueConfig, setSelectedVenueLayout, totalGuestCount, selectedVenueLayout: savedVenueLayout } = useGuests();
+  const { 
+    setTables, 
+    setVenueConfig, 
+    setSelectedVenueLayout, 
+    totalGuestCount, 
+    selectedVenueLayout: savedVenueLayout,
+    setLayouts,
+    setSelectedLayoutIndex,
+    invalidateLayoutsCache,
+  } = useGuests();
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(savedVenueLayout?.id || null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +52,17 @@ const VenueSelection: React.FC = () => {
   // Apply selected venue and navigate
   const handleConfirmSelection = () => {
     if (!selectedVenue) return;
+
+    // Check if venue is changing
+    const isVenueChanging = savedVenueLayout?.id !== selectedVenue.id;
+
+    // If venue is changing, clear old recommendations
+    if (isVenueChanging) {
+      console.log('Venue changed - clearing old recommendations');
+      setLayouts([]);
+      setSelectedLayoutIndex(-1);
+      invalidateLayoutsCache();
+    }
 
     // Generate tables from the selected venue layout
     const tables = generateTablesFromVenue(selectedVenue);

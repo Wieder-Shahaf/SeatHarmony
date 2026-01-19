@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   LAYOUTS_CACHE_KEY: 'seatharmony_layouts_cache_key',
   SELECTED_LAYOUT: 'seatharmony_selected_layout',
   EXPLANATIONS: 'seatharmony_explanations',
+  ORIGINAL_LAYOUT: 'seatharmony_original_layout', // Store original recommended layout
 } as const;
 
 // Type for guest explanations cache
@@ -145,6 +146,11 @@ interface GuestContextType {
   layoutsCacheKey: string;
   isLayoutsCacheValid: () => boolean;
   invalidateLayoutsCache: () => void;
+
+  // Original layout restoration
+  originalLayout: TotLayout | null;
+  saveOriginalLayout: () => void;
+  restoreOriginalLayout: () => boolean;
 }
 
 const GuestContext = createContext<GuestContextType | undefined>(undefined);
@@ -181,6 +187,9 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   );
   const [layoutsCacheKey, setLayoutsCacheKeyState] = useState<string>(() =>
     loadFromStorage(STORAGE_KEYS.LAYOUTS_CACHE_KEY, '')
+  );
+  const [originalLayout, setOriginalLayoutState] = useState<TotLayout | null>(() =>
+    loadFromStorage(STORAGE_KEYS.ORIGINAL_LAYOUT, null)
   );
 
   // UI state (not persisted)
@@ -230,6 +239,10 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     saveToStorage(STORAGE_KEYS.LAYOUTS_CACHE_KEY, layoutsCacheKey);
   }, [layoutsCacheKey]);
 
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.ORIGINAL_LAYOUT, originalLayout);
+  }, [originalLayout]);
+
   // Guest management
   const setGuests = useCallback((newGuests: Guest[]) => {
     setGuestsState(newGuests);
@@ -277,8 +290,42 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   }, []);
 
   const setSelectedLayoutIndex = useCallback((index: number) => {
+    const previousIndex = selectedLayoutIndex;
     setSelectedLayoutIndexState(index);
-  }, []);
+    
+    // Clear and save new original layout when selecting a different layout
+    if (index !== previousIndex && index >= 0) {
+      // Use functional update to get latest layouts state
+      setLayoutsState(currentLayouts => {
+        if (currentLayouts[index]) {
+          const currentLayout = currentLayouts[index];
+          // Deep clone the layout
+          const clonedLayout: TotLayout = {
+            value: currentLayout.value,
+            weights: { ...currentLayout.weights },
+            notes: currentLayout.notes,
+            layout: {
+              id: currentLayout.layout.id,
+              assignments: { ...currentLayout.layout.assignments },
+              score: currentLayout.layout.score,
+              objective_breakdown: { ...currentLayout.layout.objective_breakdown },
+              variant_label: currentLayout.layout.variant_label,
+              variant_id: currentLayout.layout.variant_id,
+              summary: currentLayout.layout.summary ? { ...currentLayout.layout.summary } : null,
+            }
+          };
+          setOriginalLayoutState(clonedLayout);
+          console.log('Saved new original layout for index:', index, {
+            assignmentsCount: Object.keys(clonedLayout.layout.assignments).length,
+            layoutId: clonedLayout.layout.id
+          });
+        } else {
+          console.warn('Layout not found at index:', index);
+        }
+        return currentLayouts; // Return unchanged
+      });
+    }
+  }, [selectedLayoutIndex]);
 
   // Clear all data (including localStorage)
   const clearAll = useCallback(() => {
@@ -471,6 +518,83 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     console.log(`Layouts set with cache key: ${newCacheKey}`);
   }, [guests, tables, totParams]);
 
+  // Save original recommended layout
+  const saveOriginalLayout = useCallback(() => {
+    if (selectedLayoutIndex >= 0 && layouts.length > 0 && layouts[selectedLayoutIndex]) {
+      const currentLayout = layouts[selectedLayoutIndex];
+      // Deep clone the layout to avoid reference issues
+      const clonedLayout: TotLayout = {
+        value: currentLayout.value,
+        weights: { ...currentLayout.weights },
+        notes: currentLayout.notes,
+        layout: {
+          id: currentLayout.layout.id,
+          assignments: { ...currentLayout.layout.assignments },
+          score: currentLayout.layout.score,
+          objective_breakdown: { ...currentLayout.layout.objective_breakdown },
+          variant_label: currentLayout.layout.variant_label,
+          variant_id: currentLayout.layout.variant_id,
+          summary: currentLayout.layout.summary ? { ...currentLayout.layout.summary } : null,
+        }
+      };
+      setOriginalLayoutState(clonedLayout);
+      console.log('Original layout saved', { 
+        layoutId: clonedLayout.layout.id,
+        assignmentsCount: Object.keys(clonedLayout.layout.assignments).length,
+        selectedLayoutIndex 
+      });
+    } else {
+      console.warn('Cannot save original layout:', { selectedLayoutIndex, layoutsLength: layouts.length });
+    }
+  }, [layouts, selectedLayoutIndex]);
+
+  // Restore original recommended layout
+  const restoreOriginalLayout = useCallback(() => {
+    if (!originalLayout) {
+      console.warn('Cannot restore: originalLayout is null');
+      return false;
+    }
+    if (selectedLayoutIndex < 0) {
+      console.warn('Cannot restore: invalid selectedLayoutIndex', { selectedLayoutIndex });
+      return false;
+    }
+    
+    // Deep clone the original layout to restore it
+    const restoredLayout: TotLayout = {
+      value: originalLayout.value,
+      weights: { ...originalLayout.weights },
+      notes: originalLayout.notes,
+      layout: {
+        id: originalLayout.layout.id,
+        assignments: { ...originalLayout.layout.assignments },
+        score: originalLayout.layout.score,
+        objective_breakdown: { ...originalLayout.layout.objective_breakdown },
+        variant_label: originalLayout.layout.variant_label,
+        variant_id: originalLayout.layout.variant_id,
+        summary: originalLayout.layout.summary ? { ...originalLayout.layout.summary } : null,
+      }
+    };
+    
+    setLayoutsState(prev => {
+      // Ensure we have enough layouts
+      const newLayouts = [...prev];
+      // Extend array if needed
+      while (newLayouts.length <= selectedLayoutIndex) {
+        newLayouts.push({} as TotLayout);
+      }
+      newLayouts[selectedLayoutIndex] = restoredLayout;
+      console.log('Original layout restored', { 
+        layoutId: restoredLayout.layout.id,
+        assignmentsCount: Object.keys(restoredLayout.layout.assignments).length,
+        selectedLayoutIndex,
+        assignments: Object.keys(restoredLayout.layout.assignments).slice(0, 5) // Log first 5 for debugging
+      });
+      return newLayouts;
+    });
+    
+    return true;
+  }, [originalLayout, selectedLayoutIndex]);
+
   // Initialize from Excel upload
   const initializeFromExcel = useCallback((newGuests: Guest[]) => {
     setGuestsState(newGuests);
@@ -526,6 +650,9 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     layoutsCacheKey,
     isLayoutsCacheValid,
     invalidateLayoutsCache,
+    originalLayout,
+    saveOriginalLayout,
+    restoreOriginalLayout,
   };
 
   return (

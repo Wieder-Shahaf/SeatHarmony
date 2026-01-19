@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import time
 import io
+import requests
 
 # Load .env file early (before any other imports that might use env vars)
 from dotenv import load_dotenv
@@ -28,6 +29,415 @@ from .logger import get_logger, set_request_id, get_request_id
 
 # Initialize logger for this module
 logger = get_logger("api")
+
+
+# =============================================================================
+# GROQ API RATE LIMITER
+# =============================================================================
+
+class GroqRateLimiter:
+    """
+    Rate limiter for Groq API that tracks all rate limits:
+    - RPM: 30 requests per minute
+    - RPD: 1,000 requests per day
+    - TPM: 12,000 tokens per minute
+    - TPD: 100,000 tokens per day
+    
+    Uses safety margins to avoid hitting limits.
+    """
+    def __init__(
+        self,
+        rpm_limit: int = 30,
+        rpd_limit: int = 1000,
+        tpm_limit: int = 12000,
+        tpd_limit: int = 100000,
+        safety_margin: float = 0.1
+    ):
+        # Request limits
+        self.rpm_limit = rpm_limit
+        self.rpd_limit = rpd_limit
+        
+        # Token limits
+        self.tpm_limit = tpm_limit
+        self.tpd_limit = tpd_limit
+        
+        # Apply safety margin (use only 90% of limits)
+        self.available_rpm = int(rpm_limit * (1 - safety_margin))  # 27 requests/min
+        self.available_rpd = int(rpd_limit * (1 - safety_margin))  # 900 requests/day
+        self.available_tpm = int(tpm_limit * (1 - safety_margin))  # 10,800 tokens/min
+        self.available_tpd = int(tpd_limit * (1 - safety_margin))  # 90,000 tokens/day
+        
+        # Per-minute tracking: [(timestamp, tokens), ...]
+        self.token_usage: List[Tuple[float, int]] = []
+        self.request_times: List[float] = []  # Timestamps of requests
+        
+        # Per-day tracking: (date_string, tokens, requests)
+        self.daily_tokens: int = 0
+        self.daily_requests: int = 0
+        self.daily_reset_date: Optional[str] = None
+        
+        # Track rate limit headers from last response
+        self.last_rate_limit_headers: Dict[str, Optional[Any]] = {
+            'remaining_requests': None,
+            'remaining_tokens': None,
+            'limit_requests': None,
+            'limit_tokens': None,
+            'reset_requests_seconds': None,  # Parsed reset time for requests
+            'reset_tokens_seconds': None,     # Parsed reset time for tokens
+        }
+    
+    def _get_date_string(self, timestamp: float) -> str:
+        """Get date string (YYYY-MM-DD) for a timestamp."""
+        import datetime
+        return datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc).strftime('%Y-%m-%d')
+    
+    def _reset_daily_tracking_if_needed(self, current_time: float):
+        """Reset daily counters if we've crossed into a new day."""
+        current_date = self._get_date_string(current_time)
+        if self.daily_reset_date != current_date:
+            logger.info(f"Rate limiter: Daily reset | old_date={self.daily_reset_date} new_date={current_date}")
+            self.daily_tokens = 0
+            self.daily_requests = 0
+            self.daily_reset_date = current_date
+    
+    def _clean_old_entries(self, current_time: float):
+        """Remove token usage and request entries older than 1 minute."""
+        one_minute_ago = current_time - 60.0
+        self.token_usage = [(ts, tokens) for ts, tokens in self.token_usage if ts > one_minute_ago]
+        self.request_times = [ts for ts in self.request_times if ts > one_minute_ago]
+    
+    def get_available_tokens_per_minute(self) -> int:
+        """Get available tokens in the current minute window."""
+        current_time = time.time()
+        self._clean_old_entries(current_time)
+        
+        used_tokens = sum(tokens for _, tokens in self.token_usage)
+        available = max(0, self.available_tpm - used_tokens)
+        return available
+    
+    def get_available_tokens_per_day(self) -> int:
+        """Get available tokens in the current day."""
+        current_time = time.time()
+        self._reset_daily_tracking_if_needed(current_time)
+        return max(0, self.available_tpd - self.daily_tokens)
+    
+    def get_available_requests_per_minute(self) -> int:
+        """Get available requests in the current minute window."""
+        current_time = time.time()
+        self._clean_old_entries(current_time)
+        return max(0, self.available_rpm - len(self.request_times))
+    
+    def get_available_requests_per_day(self) -> int:
+        """Get available requests in the current day."""
+        current_time = time.time()
+        self._reset_daily_tracking_if_needed(current_time)
+        return max(0, self.available_rpd - self.daily_requests)
+    
+    def record_request(self, tokens: int):
+        """Record a request and its token usage for all rate limiting."""
+        current_time = time.time()
+        
+        # Record per-minute usage
+        self.token_usage.append((current_time, tokens))
+        self.request_times.append(current_time)
+        self._clean_old_entries(current_time)
+        
+        # Record per-day usage
+        self._reset_daily_tracking_if_needed(current_time)
+        self.daily_tokens += tokens
+        self.daily_requests += 1
+    
+    def _parse_reset_time(self, reset_str: str) -> Optional[float]:
+        """
+        Parse reset time string from Groq headers.
+        Formats: "5.045s", "1h52m19.2s", "1ms", "2m30s"
+        Returns seconds as float, or None if parsing fails.
+        """
+        import re
+        if not reset_str:
+            return None
+        
+        try:
+            # Handle milliseconds
+            if reset_str.endswith('ms'):
+                ms = float(reset_str[:-2])
+                return ms / 1000.0
+            
+            # Handle seconds only: "5.045s"
+            if reset_str.endswith('s') and 'h' not in reset_str and 'm' not in reset_str:
+                return float(reset_str[:-1])
+            
+            # Handle complex formats: "1h52m19.2s" or "2m30s"
+            total_seconds = 0.0
+            
+            # Extract hours: "1h"
+            hour_match = re.search(r'(\d+(?:\.\d+)?)h', reset_str)
+            if hour_match:
+                total_seconds += float(hour_match.group(1)) * 3600
+            
+            # Extract minutes: "52m" or "2m"
+            min_match = re.search(r'(\d+(?:\.\d+)?)m', reset_str)
+            if min_match:
+                total_seconds += float(min_match.group(1)) * 60
+            
+            # Extract seconds: "19.2s" or "30s"
+            sec_match = re.search(r'(\d+(?:\.\d+)?)s', reset_str)
+            if sec_match:
+                total_seconds += float(sec_match.group(1))
+            
+            return total_seconds if total_seconds > 0 else None
+        except (ValueError, AttributeError):
+            return None
+    
+    def update_from_headers(self, headers: Dict[str, Any]):
+        """
+        Update rate limit tracking from API response headers.
+        Headers: x-ratelimit-remaining-requests, x-ratelimit-remaining-tokens, etc.
+        """
+        # Groq uses standard rate limit headers
+        remaining_requests = headers.get('x-ratelimit-remaining-requests')
+        remaining_tokens = headers.get('x-ratelimit-remaining-tokens')
+        limit_requests = headers.get('x-ratelimit-limit-requests')
+        limit_tokens = headers.get('x-ratelimit-limit-tokens')
+        
+        if remaining_requests is not None:
+            try:
+                self.last_rate_limit_headers['remaining_requests'] = int(remaining_requests)
+            except (ValueError, TypeError):
+                pass
+        
+        if remaining_tokens is not None:
+            try:
+                self.last_rate_limit_headers['remaining_tokens'] = int(remaining_tokens)
+            except (ValueError, TypeError):
+                pass
+        
+        if limit_requests is not None:
+            try:
+                self.last_rate_limit_headers['limit_requests'] = int(limit_requests)
+            except (ValueError, TypeError):
+                pass
+        
+        if limit_tokens is not None:
+            try:
+                self.last_rate_limit_headers['limit_tokens'] = int(limit_tokens)
+            except (ValueError, TypeError):
+                pass
+        
+        reset_requests = headers.get('x-ratelimit-reset-requests')
+        reset_tokens = headers.get('x-ratelimit-reset-tokens')
+        
+        # Parse reset times (these tell us exactly when limits reset)
+        if reset_requests is not None:
+            reset_seconds = self._parse_reset_time(str(reset_requests))
+            if reset_seconds is not None:
+                self.last_rate_limit_headers['reset_requests_seconds'] = reset_seconds
+        
+        if reset_tokens is not None:
+            reset_seconds = self._parse_reset_time(str(reset_tokens))
+            if reset_seconds is not None:
+                self.last_rate_limit_headers['reset_tokens_seconds'] = reset_seconds
+    
+    def wait_if_needed(self, estimated_tokens: int) -> float:
+        """
+        Wait if we don't have enough capacity available (checks all limits).
+        Returns the wait time in seconds.
+        
+        Checks in order:
+        1. Requests per minute (RPM)
+        2. Requests per day (RPD)
+        3. Tokens per minute (TPM)
+        4. Tokens per day (TPD)
+        """
+        current_time = time.time()
+        self._clean_old_entries(current_time)
+        self._reset_daily_tracking_if_needed(current_time)
+        
+        # Check RPM limit
+        available_rpm = self.get_available_requests_per_minute()
+        if available_rpm <= 0:
+            # Need to wait for requests to expire
+            if self.request_times:
+                oldest_request = min(self.request_times)
+                wait_time = 60.0 - (current_time - oldest_request) + 0.5
+                wait_time = max(0, min(wait_time, 60.0))
+                if wait_time > 0:
+                    logger.warning(f"Rate limiter: RPM limit reached ({self.available_rpm}/{self.rpm_limit}), waiting {wait_time:.2f}s")
+                    time.sleep(wait_time)
+                    self._clean_old_entries(time.time())
+                    return wait_time
+        
+        # Check RPD limit
+        available_rpd = self.get_available_requests_per_day()
+        if available_rpd <= 0:
+            # Need to wait until next day
+            wait_time = self._get_seconds_until_midnight(current_time)
+            logger.error(f"Rate limiter: RPD limit reached ({self.daily_requests}/{self.rpd_limit}), must wait {wait_time:.0f}s until reset")
+            if wait_time > 0:
+                time.sleep(min(wait_time, 3600))  # Cap wait at 1 hour
+            return wait_time
+        
+        # Check TPM limit
+        available_tpm = self.get_available_tokens_per_minute()
+        if available_tpm < estimated_tokens:
+            needed_tokens = estimated_tokens - available_tpm
+            
+            if self.token_usage:
+                # Calculate when enough tokens will be available
+                expiring_entries = sorted(
+                    [(ts + 60.0, tokens) for ts, tokens in self.token_usage],
+                    key=lambda x: x[0]
+                )
+                
+                tokens_freed = 0
+                for expire_time, tokens in expiring_entries:
+                    tokens_freed += tokens
+                    if tokens_freed >= needed_tokens:
+                        wait_time = expire_time - current_time + 0.5
+                        wait_time = max(0, min(wait_time, 60.0))
+                        if wait_time > 0:
+                            logger.warning(f"Rate limiter: TPM limit reached (need {estimated_tokens}, have {available_tpm}), waiting {wait_time:.2f}s")
+                            time.sleep(wait_time)
+                            self._clean_old_entries(time.time())
+                            return wait_time
+                
+                # Fallback: wait for oldest entry
+                oldest_entry_time = min(ts for ts, _ in self.token_usage)
+                wait_time = 60.0 - (current_time - oldest_entry_time) + 1.0
+                wait_time = max(0, min(wait_time, 60.0))
+                if wait_time > 0:
+                    logger.warning(f"Rate limiter: TPM limit reached, waiting {wait_time:.2f}s (fallback)")
+                    time.sleep(wait_time)
+                    self._clean_old_entries(time.time())
+                    return wait_time
+        
+        # Check TPD limit
+        available_tpd = self.get_available_tokens_per_day()
+        if available_tpd < estimated_tokens:
+            wait_time = self._get_seconds_until_midnight(current_time)
+            logger.error(f"Rate limiter: TPD limit reached (need {estimated_tokens}, have {available_tpd}/{self.tpd_limit}), must wait {wait_time:.0f}s until reset")
+            if wait_time > 0:
+                time.sleep(min(wait_time, 3600))  # Cap wait at 1 hour
+            return wait_time
+        
+        return 0
+    
+    def _get_seconds_until_midnight(self, current_time: float) -> float:
+        """Calculate seconds until midnight UTC."""
+        import datetime
+        now = datetime.datetime.fromtimestamp(current_time, tz=datetime.timezone.utc)
+        midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        return (midnight - now).total_seconds()
+    
+    def parse_rate_limit_error(self, error_str: str) -> Optional[float]:
+        """
+        Parse Groq rate limit error to extract wait time.
+        Example: "Please try again in 2.865s"
+        """
+        import re
+        # Look for "try again in X.Xs" pattern
+        match = re.search(r'try again in ([\d.]+)s', error_str, re.IGNORECASE)
+        if match:
+            return float(match.group(1))
+        return None
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get current rate limiter status for debugging."""
+        current_time = time.time()
+        self._clean_old_entries(current_time)
+        self._reset_daily_tracking_if_needed(current_time)
+        
+        return {
+            'rpm': {
+                'used': len(self.request_times),
+                'available': self.get_available_requests_per_minute(),
+                'limit': self.rpm_limit,
+            },
+            'rpd': {
+                'used': self.daily_requests,
+                'available': self.get_available_requests_per_day(),
+                'limit': self.rpd_limit,
+            },
+            'tpm': {
+                'used': sum(tokens for _, tokens in self.token_usage),
+                'available': self.get_available_tokens_per_minute(),
+                'limit': self.tpm_limit,
+            },
+            'tpd': {
+                'used': self.daily_tokens,
+                'available': self.get_available_tokens_per_day(),
+                'limit': self.tpd_limit,
+            },
+            'headers': self.last_rate_limit_headers.copy(),
+        }
+
+# Global rate limiter instance
+_groq_rate_limiter = GroqRateLimiter()
+
+
+def _call_groq_with_usage(prompt: str, model: str = "llama-3.3-70b-versatile", temperature: float = 0.4, max_tokens: int = 400) -> Tuple[str, int]:
+    """
+    Call Groq API directly and return both response text and actual token usage.
+    Also updates the rate limiter with response headers.
+    Returns: (response_text, total_tokens)
+    Raises: requests.HTTPError for non-2xx responses (including 429)
+    """
+    groq_api_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_api_key:
+        raise ValueError("GROQ_API_KEY not found in environment")
+    
+    headers = {
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    
+    response = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=60
+    )
+    
+    # Extract rate limit headers before raising for status (important for 429 errors)
+    rate_limit_headers = {}
+    for header_name in response.headers:
+        if 'ratelimit' in header_name.lower():
+            rate_limit_headers[header_name.lower()] = response.headers[header_name]
+    
+    # Update rate limiter with headers (even if request failed - headers are still useful)
+    if rate_limit_headers:
+        _groq_rate_limiter.update_from_headers(rate_limit_headers)
+        logger.debug(f"Rate limit headers updated: {rate_limit_headers}")
+    
+    # Raise for status will throw HTTPError for 4xx/5xx responses
+    # This allows callers to catch and handle 429 specifically
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        # Log rate limit headers if available for debugging
+        if response.status_code == 429 and rate_limit_headers:
+            logger.warning(f"429 Rate limit error | headers={rate_limit_headers}")
+        raise
+    
+    data = response.json()
+    
+    # Extract text and usage
+    text = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    total_tokens = usage.get("total_tokens", 0)
+    
+    # Fallback to estimation if usage not provided
+    if total_tokens == 0:
+        total_tokens = int(len(prompt) * 1.3) + int(len(text) * 1.3)
+    
+    return text, total_tokens
 
 
 class GuestIn(BaseModel):
@@ -592,8 +1002,6 @@ def _explain_guests_batch(
     logger.debug(f"Generating explanations for {table_name} | guests={len(table_guests)}")
     batch_start_time = time.time()
 
-    from tot.models import gpt
-
     # Get human-readable strategy description
     strategy_desc = _get_strategy_description(notes)
 
@@ -743,26 +1151,114 @@ Now write ONE natural sentence for each of the {len(table_guests)} guests:"""
         logger.debug(f"Calling LLM for {table_name} explanations | model=llama-3.3-70b-versatile (Groq) temp=0.4")
         llm_start_time = time.time()
         
+        # Estimate tokens needed (rough estimate: ~1.3 tokens per character)
+        estimated_tokens = int(len(prompt) * 1.3) + 400  # prompt + max response tokens
+        
+        # Wait if needed before making request (proactive rate limiting)
+        _groq_rate_limiter.wait_if_needed(estimated_tokens)
+        
         # Retry logic with exponential backoff for rate limits
-        max_retries = 3
+        max_retries = 5  # Increased retries
         base_delay = 2  # seconds
         response = None
+        actual_tokens = 0
         for attempt in range(max_retries):
             try:
-                response = gpt(prompt, model="gpt-4", temperature=0.4, max_tokens=400, n=1)[0]
+                # Use direct Groq API call to get actual token usage
+                response, actual_tokens = _call_groq_with_usage(
+                    prompt=prompt,
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.4,
+                    max_tokens=400
+                )
                 llm_duration_ms = (time.time() - llm_start_time) * 1000
-                logger.debug(f"LLM response received | {llm_duration_ms:.0f}ms | response_len={len(response)}")
+                
+                # Record request and actual token usage (tracks all limits: RPM, RPD, TPM, TPD)
+                _groq_rate_limiter.record_request(actual_tokens)
+                
+                logger.debug(f"LLM response received | {llm_duration_ms:.0f}ms | response_len={len(response)} | tokens_used={actual_tokens}")
                 break  # Success, exit retry loop
-            except Exception as e:
-                error_str = str(e)
-                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+            except requests.HTTPError as e:
+                # Handle 429 rate limit errors specifically
+                if e.response is not None and e.response.status_code == 429:
+                    error_str = str(e)
+                    
+                    # Priority 1: Use reset time from headers (most accurate)
+                    headers = _groq_rate_limiter.last_rate_limit_headers
+                    wait_time = None
+                    
+                    # Check if we have token reset time (most common limit hit)
+                    if headers.get('reset_tokens_seconds') is not None:
+                        wait_time = headers['reset_tokens_seconds']
+                        # Add small buffer to ensure tokens are available
+                        wait_time = max(wait_time + 0.1, 0.1)
+                    # Fallback to request reset time
+                    elif headers.get('reset_requests_seconds') is not None:
+                        wait_time = headers['reset_requests_seconds']
+                        wait_time = max(wait_time + 0.1, 0.1)
+                    
+                    # Priority 2: Try to parse wait time from error message
+                    if wait_time is None:
+                        wait_time = _groq_rate_limiter.parse_rate_limit_error(error_str)
+                    
+                    # Priority 3: Use exponential backoff as last resort
+                    if wait_time is None:
+                        wait_time = base_delay * (2 ** attempt)
+                    
                     if attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
-                        logger.warning(f"Rate limit hit for {table_name} | attempt {attempt + 1}/{max_retries} | retrying in {delay}s...")
-                        time.sleep(delay)
+                        status = _groq_rate_limiter.get_status()
+                        logger.warning(
+                            f"Rate limit hit for {table_name} | attempt {attempt + 1}/{max_retries} | "
+                            f"waiting {wait_time:.2f}s | "
+                            f"RPM: {status['rpm']['used']}/{status['rpm']['limit']} | "
+                            f"RPD: {status['rpd']['used']}/{status['rpd']['limit']} | "
+                            f"TPM: {status['tpm']['used']}/{status['tpm']['limit']} | "
+                            f"TPD: {status['tpd']['used']}/{status['tpd']['limit']}"
+                        )
+                        time.sleep(wait_time)
+                        # Clean old entries after waiting to free up capacity
+                        _groq_rate_limiter._clean_old_entries(time.time())
                         continue
                     else:
+                        logger.error(f"Rate limit exceeded after {max_retries} attempts for {table_name}")
                         raise  # Re-raise if all retries exhausted
+                else:
+                    # Non-429 HTTP errors - re-raise immediately
+                    raise
+            except Exception as e:
+                error_str = str(e)
+                # Check for other rate limit error patterns (from string representations)
+                if "rate limit" in error_str.lower() or "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "TPM" in error_str:
+                    # Priority 1: Use reset time from headers (most accurate)
+                    headers = _groq_rate_limiter.last_rate_limit_headers
+                    wait_time = None
+                    
+                    # Check if we have token reset time (most common limit hit)
+                    if headers.get('reset_tokens_seconds') is not None:
+                        wait_time = headers['reset_tokens_seconds']
+                        # Add small buffer to ensure tokens are available
+                        wait_time = max(wait_time + 0.1, 0.1)
+                    # Fallback to request reset time
+                    elif headers.get('reset_requests_seconds') is not None:
+                        wait_time = headers['reset_requests_seconds']
+                        wait_time = max(wait_time + 0.1, 0.1)
+                    
+                    # Priority 2: Try to parse wait time from error message
+                    if wait_time is None:
+                        wait_time = _groq_rate_limiter.parse_rate_limit_error(error_str)
+                    
+                    # Priority 3: Use exponential backoff as last resort
+                    if wait_time is None:
+                        wait_time = base_delay * (2 ** attempt)
+                    
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Rate limit error for {table_name} | attempt {attempt + 1}/{max_retries} | waiting {wait_time:.2f}s...")
+                        time.sleep(wait_time)
+                        _groq_rate_limiter._clean_old_entries(time.time())
+                        continue
+                    else:
+                        logger.error(f"Rate limit exceeded after {max_retries} attempts for {table_name}")
+                        raise
                 else:
                     raise  # Re-raise non-rate-limit errors immediately
         
@@ -885,9 +1381,16 @@ def explain_guests_seating(req: ExplainGuestsRequest) -> Dict[str, Any]:
 
         logger.debug(f"Processing table {table_idx + 1}/{len(table_to_guests)} | {table.get('name', table_id)} | {len(table_guests)} guests")
 
-        # Add small delay between requests to avoid rate limits (except for first table)
+        # Add delay between requests to avoid rate limits (except for first table)
         if table_idx > 0:
-            time.sleep(0.5)  # 500ms delay between table requests
+            # Check available tokens and wait if needed before processing next table
+            estimated_next_tokens = 1000  # Conservative estimate for next request
+            wait_time = _groq_rate_limiter.wait_if_needed(estimated_next_tokens)
+            if wait_time == 0:
+                # If no wait needed, still add a small delay to be safe
+                time.sleep(1.0)  # Increased from 0.5s to 1.0s delay between table requests
+            status = _groq_rate_limiter.get_status()
+            logger.debug(f"Rate limiter status | RPM: {status['rpm']['used']}/{status['rpm']['limit']} | RPD: {status['rpd']['used']}/{status['rpd']['limit']} | TPM: {status['tpm']['used']}/{status['tpm']['limit']} | TPD: {status['tpd']['used']}/{status['tpd']['limit']}")
 
         # Generate batch explanation for this table
         table_explanations = _explain_guests_batch(

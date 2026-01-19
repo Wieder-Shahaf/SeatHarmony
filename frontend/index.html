@@ -78,6 +78,18 @@
     .dark .pattern-grid {
       background-image: radial-gradient(#4b5563 1px, transparent 1px);
     }
+
+    /* Bouncing dots animation for loading states */
+    @keyframes bounce-dot {
+      0%, 100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      50% {
+        transform: translateY(-3px);
+        opacity: 0.9;
+      }
+    }
   </style>
 </head>
 
