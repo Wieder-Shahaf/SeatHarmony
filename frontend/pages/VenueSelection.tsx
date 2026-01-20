@@ -7,11 +7,11 @@ type CategoryFilter = 'all' | 'indoor' | 'outdoor' | 'banquet' | 'intimate';
 
 const VenueSelection: React.FC = () => {
   const navigate = useNavigate();
-  const { 
-    setTables, 
-    setVenueConfig, 
-    setSelectedVenueLayout, 
-    totalGuestCount, 
+  const {
+    setTables,
+    setVenueConfig,
+    setSelectedVenueLayout,
+    totalGuestCount,
     selectedVenueLayout: savedVenueLayout,
     setLayouts,
     setSelectedLayoutIndex,
@@ -100,7 +100,7 @@ const VenueSelection: React.FC = () => {
   };
 
   return (
-    <div className="flex-grow max-w-7xl mx-auto px-6 lg:px-8 py-12 w-full">
+    <div className="flex-grow max-w-7xl mx-auto px-6 lg:px-8 py-6 w-full">
       {/* Header */}
       <div className="mb-12 text-center max-w-2xl mx-auto">
         <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">
@@ -287,7 +287,7 @@ const VenueSelection: React.FC = () => {
               <img
                 src={selectedVenue.image}
                 alt={selectedVenue.name}
-                className="w-16 h-16 rounded-lg object-cover"
+                className="w-12 h-12 rounded-lg object-cover"
               />
               <div>
                 <h4 className="font-display text-lg text-text-main dark:text-white">{selectedVenue.name}</h4>

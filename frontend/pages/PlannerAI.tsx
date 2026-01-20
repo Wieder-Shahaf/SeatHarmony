@@ -36,21 +36,21 @@ const getGroupColor = (groupIndex: number): string => {
 const AnimatedEllipsis: React.FC = () => {
   return (
     <span className="inline-flex items-baseline gap-0.5">
-      <span 
+      <span
         className="inline-block"
         style={{
           animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
           animationDelay: '0s'
         }}
       >.</span>
-      <span 
+      <span
         className="inline-block"
         style={{
           animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
           animationDelay: '0.2s'
         }}
       >.</span>
-      <span 
+      <span
         className="inline-block"
         style={{
           animation: 'bounce-dot 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
@@ -84,7 +84,10 @@ const PlannerAI: React.FC = () => {
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [capacityError, setCapacityError] = useState<string | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [holdingGuestId, setHoldingGuestId] = useState<string | null>(null);
+  const [holdingGuestOriginalTableId, setHoldingGuestOriginalTableId] = useState<string | null>(null);
   const guestRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const tableRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
 
 
   // Get the selected layout
@@ -112,6 +115,34 @@ const PlannerAI: React.FC = () => {
     return result;
   }, [guests, tables, assignments]);
 
+  // Find guests seated alone without their group members
+  const lonelyGuests = useMemo(() => {
+    const lonely: Guest[] = [];
+
+    tables.forEach(table => {
+      const tableGuests = guestsByTable[table.id] || [];
+      const guestsByGroup: Record<string, number> = {};
+
+      // Count group members at this table
+      tableGuests.forEach(g => {
+        if (g.group_id) {
+          guestsByGroup[g.group_id] = (guestsByGroup[g.group_id] || 0) + 1;
+        }
+      });
+
+      // Find guests whose group count is 1 (themselves only)
+      tableGuests.forEach(g => {
+        if (g.group_id && guestsByGroup[g.group_id] === 1) {
+          lonely.push(g);
+        }
+      });
+    });
+
+    return lonely;
+  }, [guestsByTable, tables]);
+
+  const [showLonelyGuests, setShowLonelyGuests] = useState(false);
+
   // Get unseated guests
   const unseatedGuests = useMemo(() => {
     return guests.filter(g => !assignments[g.id]);
@@ -138,7 +169,7 @@ const PlannerAI: React.FC = () => {
 
     // Count current guests at the target table
     const currentGuestsAtTable = guestsByTable[newTableId] || [];
-    
+
     // Check if table is already at capacity
     // Note: We don't need to subtract the guest being moved because:
     // - If they're moving FROM another table TO this table, currentGuestsAtTable doesn't include them yet
@@ -181,6 +212,18 @@ const PlannerAI: React.FC = () => {
       });
     }
   }, [selectedGuestId]);
+
+  // Clear holding guest if they get assigned to a table (dropped elsewhere)
+  useEffect(() => {
+    if (holdingGuestId && assignments[holdingGuestId]) {
+      setHoldingGuestId(null);
+      setHoldingGuestOriginalTableId(null);
+    }
+  }, [assignments, holdingGuestId]);
+
+  const holdingGuest = useMemo(() =>
+    holdingGuestId ? guests.find(g => g.id === holdingGuestId) : null
+    , [holdingGuestId, guests]);
 
   // Save original layout when first entering PlannerAI if not already saved
   // This ensures we have a backup even if user navigated directly to PlannerAI
@@ -290,13 +333,12 @@ const PlannerAI: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
-                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all ${
-                  filterCategory === cat 
-                    ? 'text-white shadow-md' 
-                    : 'text-white hover:opacity-90'
-                }`}
+                className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all ${filterCategory === cat
+                  ? 'text-white shadow-md'
+                  : 'text-white hover:opacity-90'
+                  }`}
                 style={{
-                  backgroundColor: filterCategory === cat 
+                  backgroundColor: filterCategory === cat
                     ? groupColorMap[cat] || getGroupColor(index)
                     : groupColorMap[cat] || getGroupColor(index),
                   opacity: filterCategory === cat ? 1 : 0.8
@@ -324,7 +366,7 @@ const PlannerAI: React.FC = () => {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <div 
+                  <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${tableId ? '' : 'opacity-50'}`}
                     style={{ backgroundColor: tableId ? getGuestColor(guest) : '#9ca3af' }}
                   >
@@ -375,22 +417,7 @@ const PlannerAI: React.FC = () => {
         className="flex-1 bg-background-lighter dark:bg-background-dark pattern-grid relative overflow-auto cursor-default"
         onClick={() => setSelectedGuestId(null)}
       >
-        {/* Restore Recommendation Layout Button */}
-        {selectedLayout && (
-          <button
-            onClick={() => {
-              // Save original layout if not already saved
-              if (!originalLayout) {
-                saveOriginalLayout();
-              }
-              setShowRestoreModal(true);
-            }}
-            className="absolute top-6 right-6 z-40 bg-primary hover:bg-[#777b63] text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-all duration-200 hover:shadow-xl"
-          >
-            <span className="material-icons-round text-lg">refresh</span>
-            <span className="text-sm font-medium">Recommendation Layout</span>
-          </button>
-        )}
+
 
         {/* Floating Toolbar */}
         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md px-2 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-secondary/20 dark:border-gray-700 z-30">
@@ -456,6 +483,7 @@ const PlannerAI: React.FC = () => {
               return (
                 <div
                   key={table.id}
+                  ref={el => tableRefs.current[table.id] = el}
                   className="relative flex flex-col items-center"
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -516,11 +544,11 @@ const PlannerAI: React.FC = () => {
                           className={`relative cursor-pointer transition-all ${isSelectedGuest ? 'scale-110 z-[100]' : 'hover:scale-105'}`}
                           title={`${guest.name} (${guest.group_id || 'No category'})`}
                         >
-                          <div 
+                          <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shadow-sm border-2 transition-transform duration-200 text-white ${isSelectedGuest
                               ? 'border-white ring-4 ring-primary/20'
                               : 'border-white/50'
-                            }`}
+                              }`}
                             style={{ backgroundColor: getGuestColor(guest) }}
                             draggable
                             onDragStart={(e) => {
@@ -589,16 +617,16 @@ const PlannerAI: React.FC = () => {
                   <span className="material-icons-round text-primary text-3xl">refresh</span>
                 </div>
               </div>
-              
+
               <h3 className="font-display text-2xl text-text-main dark:text-white text-center mb-4">
                 Restore Recommendation Layout
               </h3>
-              
+
               <p className="text-gray-600 dark:text-gray-300 text-center mb-8 leading-relaxed">
-                Your guest layout will be switched back to the SeatHarmony-recommended layout. 
+                Your guest layout will be switched back to the SeatHarmony-recommended layout.
                 Any manual changes you've made will be replaced with the original AI-optimized seating arrangement.
               </p>
-              
+
               <div className="flex gap-4">
                 <button
                   onClick={() => setShowRestoreModal(false)}
@@ -608,24 +636,24 @@ const PlannerAI: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('Restore button clicked', { 
-                      originalLayout: !!originalLayout, 
-                      selectedLayoutIndex, 
+                    console.log('Restore button clicked', {
+                      originalLayout: !!originalLayout,
+                      selectedLayoutIndex,
                       currentLayout: !!selectedLayout,
                       originalAssignmentsCount: originalLayout ? Object.keys(originalLayout.layout.assignments).length : 0
                     });
-                    
+
                     if (!originalLayout) {
                       console.warn('No original layout saved');
                       alert('No original layout found. Please select a layout from the Recommendations page first.');
                       setShowRestoreModal(false);
                       return;
                     }
-                    
+
                     // Restore the layout
                     const success = restoreOriginalLayout();
                     console.log('Restore result:', success);
-                    
+
                     if (success) {
                       setShowRestoreModal(false);
                       // Force a small delay to ensure state updates propagate
@@ -649,8 +677,52 @@ const PlannerAI: React.FC = () => {
         )}
 
         {/* Sticky Bottom Bar */}
-        <div className="fixed bottom-0 left-80 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        {/* Sticky Bottom Bar */}
+        <div className="fixed bottom-0 left-80 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50 animate-slide-up py-4">
+
+          {/* Layer 1: Ghost Container for Centered Alignment (Buttons) - Spans full screen */}
+          <div className="absolute inset-0 w-screen -ml-80 pointer-events-none flex justify-center">
+            <div className="w-full max-w-7xl px-6 flex items-center justify-end h-full">
+              <div className="flex items-center gap-3 pointer-events-auto">
+                {/* Reset Layout Button */}
+                {selectedLayout && (
+                  <button
+                    onClick={() => {
+                      if (!originalLayout) {
+                        saveOriginalLayout();
+                      }
+                      setShowRestoreModal(true);
+                    }}
+                    className="px-6 h-12 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl font-medium transition-all flex items-center gap-2 shadow-sm"
+                  >
+                    <span className="material-icons-round text-lg">refresh</span>
+                    <span className="text-sm font-medium">Reset Layout</span>
+                  </button>
+                )}
+                {holdingGuestId ? (
+                  <button
+                    disabled
+                    title="Please seat the guest in the holding zone before continuing"
+                    className="px-8 py-3 bg-gray-400 text-white rounded-xl font-medium cursor-not-allowed flex items-center gap-2 shadow-none"
+                  >
+                    <span>Continue to Final Review</span>
+                    <span className="material-icons-round text-sm">arrow_forward</span>
+                  </button>
+                ) : (
+                  <Link
+                    to="/confirmation"
+                    className="px-8 py-3 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                  >
+                    <span>Continue to Final Review</span>
+                    <span className="material-icons-round text-sm">arrow_forward</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Layer 2: Standard Content (Left Side) - Respects sidebar offset */}
+          <div className="h-full px-6 flex items-center">
             <div className="flex items-center gap-4">
               {/* Left side content (optional) */}
               <div className="hidden md:flex items-center gap-2">
@@ -658,18 +730,182 @@ const PlannerAI: React.FC = () => {
                 <span className="text-sm text-gray-600 dark:text-gray-300">
                   Arranging <strong>{guests.length} guests</strong> across <strong>{tables.length} tables</strong>
                 </span>
+
+                {/* Lonely Guests Alert */}
+                {lonelyGuests.length > 0 && (
+                  <div className="relative ml-2">
+                    <button
+                      onClick={() => setShowLonelyGuests(!showLonelyGuests)}
+                      className={`flex items-center gap-2 px-3 h-10 rounded-lg transition-all ${showLonelyGuests
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-amber-600'
+                        }`}
+                      title={`${lonelyGuests.length} guests seated without their group`}
+                    >
+                      <div className="relative">
+                        <span className="material-icons-round text-xl">group_off</span>
+                        <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${showLonelyGuests ? 'bg-amber-600' : 'bg-red-500 animate-pulse'
+                          }`}></span>
+                      </div>
+                    </button>
+
+                    {/* Popover */}
+                    {showLonelyGuests && (
+                      <div className="absolute bottom-full left-0 mb-4 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 p-4 z-50 animate-slide-up origin-bottom-left">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-gray-700">
+                          <span className="font-semibold text-sm text-amber-600 flex items-center gap-2">
+                            <span className="material-icons-round text-sm">warning</span>
+                            Seated Alone
+                          </span>
+                          <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+                            {lonelyGuests.length}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          These guests are seated at a table with no one else from their "{lonelyGuests[0]?.group_id}" group.
+                        </p>
+                        <div className="max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                          {lonelyGuests.map(guest => {
+                            const tableId = assignments[guest.id];
+                            const table = tables.find(t => t.id === tableId);
+
+                            return (
+                              <div
+                                key={guest.id}
+                                className="flex items-center gap-3 mb-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg cursor-pointer transition-colors group"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedGuestId(guest.id);
+                                  setShowLonelyGuests(false);
+
+                                  // Scroll table into view on canvas
+                                  if (tableId && tableRefs.current[tableId]) {
+                                    tableRefs.current[tableId]?.scrollIntoView({
+                                      behavior: 'smooth',
+                                      block: 'center',
+                                      inline: 'center'
+                                    });
+                                  }
+                                }}
+                              >
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                                  style={{ backgroundColor: getGuestColor(guest) }}
+                                >
+                                  {getInitials(guest.name)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate group-hover:text-primary transition-colors">
+                                    {guest.name}
+                                  </p>
+                                  <p className="text-[10px] text-gray-500 truncate">
+                                    {guest.group_id} • {table?.name.replace('Table ', 'T') || 'Unseated'}
+                                  </p>
+                                </div>
+                                <span className="material-icons-round text-gray-300 text-sm group-hover:text-primary group-hover:translate-x-1 transition-all">arrow_forward</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="w-px h-8 bg-gray-300 dark:bg-gray-600 mx-1 hidden md:block"></div>
+
+              {/* Holding Zone */}
+              <div
+                onDragOver={(e) => {
+                  // Only allow drop if zone is empty
+                  if (!holdingGuestId) {
+                    e.preventDefault();
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.dataTransfer.dropEffect = 'move';
+                  }
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.style.transform = 'scale(1)';
+
+                  // Double check constraint
+                  if (holdingGuestId) return;
+
+                  const guestId = e.dataTransfer.getData('guestId');
+                  if (guestId) {
+                    // Capture original table before unseating
+                    const currentTable = assignments[guestId];
+                    if (currentTable) {
+                      setHoldingGuestOriginalTableId(currentTable);
+                    }
+
+                    // Unseat the guest and put them in holding
+                    updateGuestAssignment(guestId, null); // null unassigns them
+                    setHoldingGuestId(guestId);
+                  }
+                }}
+                className={`flex items-center gap-3 px-4 h-12 rounded-xl border-2 border-dashed transition-all duration-200 ${holdingGuest
+                  ? 'bg-primary/10 border-primary border-solid'
+                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                  }`}
+                style={{ minWidth: '200px' }}
+              >
+                {holdingGuest ? (
+                  <>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm cursor-grab active:cursor-grabbing"
+                      style={{ backgroundColor: getGuestColor(holdingGuest) }}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('guestId', holdingGuest.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragEnd={(e) => {
+                        // If dropped on background (cancelled), ensure guest stays in holding
+                        if (e.dataTransfer.dropEffect === 'none') {
+                          // No state change needed, just visual confirmation if needed
+                        }
+                      }}
+                    >
+                      {getInitials(holdingGuest.name)}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-gray-800 dark:text-white">{holdingGuest.name}</span>
+                      <span className="text-[10px] text-primary font-medium">Drag to seat</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Restore to original table if possible
+                        if (holdingGuestOriginalTableId && holdingGuestId) {
+                          updateGuestAssignment(holdingGuestId, holdingGuestOriginalTableId);
+                        }
+                        setHoldingGuestId(null);
+                        setHoldingGuestOriginalTableId(null);
+                      }}
+                      className="ml-auto w-6 h-6 rounded-full hover:bg-black/5 flex items-center justify-center text-gray-400 hover:text-gray-600"
+                      title="Return to original seat"
+                    >
+                      <span className="material-icons-round text-sm">close</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                      <span className="material-icons-round text-gray-400 text-sm">front_hand</span>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                      Drag guest here to hold
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Link
-                to="/confirmation"
-                className="px-8 py-3 bg-primary hover:bg-[#777b63] text-white rounded-xl font-medium transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
-              >
-                <span>Continue to Final Review</span>
-                <span className="material-icons-round text-sm">arrow_forward</span>
-              </Link>
-            </div>
           </div>
         </div>
       </main>

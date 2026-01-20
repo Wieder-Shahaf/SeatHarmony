@@ -323,17 +323,17 @@ const Recommendations: React.FC = () => {
     <div className="flex-grow w-full min-h-screen">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
         {/* Header - Matching Venue Style */}
-        <div className="mb-6 text-center max-w-3xl mx-auto">
-          <h2 className="flex items-center justify-center gap-3 font-display text-4xl text-text-main dark:text-white mb-2">
+        <div className="mb-4 text-center max-w-3xl mx-auto">
+          <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">
             Optimized Seating Plans
           </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-base font-light leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
             {layouts.length <= 1
               ? "We've analyzed your guest list and found the optimal seating arrangement based on your constraints."
               : "We've turned your guest list into a social masterpiece. Explore these AI-curated arrangements, each designed to create a unique atmosphere for your celebration."}
           </p>
           {selectedVenueLayout && (
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 rounded-full text-xs text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 rounded-full text-xs text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
               <span className="material-icons-round text-primary text-xs">{selectedVenueLayout.icon || 'location_on'}</span>
               <span className="font-medium">{selectedVenueLayout.name}</span>
               <span className="text-gray-400">•</span>
@@ -514,7 +514,7 @@ const Recommendations: React.FC = () => {
 
         {/* Optimal Solution Message - Show when only 1 unique layout found */}
         {!loading && !error && layouts.length === 1 && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30 max-w-md mx-auto">
+          <div className="mb-4 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20 rounded-2xl border border-primary/20 dark:border-primary/30 max-w-2xl mx-auto">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
                 <span className="material-icons-round text-primary text-xl">auto_awesome</span>
@@ -523,7 +523,7 @@ const Recommendations: React.FC = () => {
                 <h3 className="font-display text-base text-text-main dark:text-white mb-1">
                   We Found Your Optimal Seating!
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">
+                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                   Based on your guest list and constraints, we've identified the best possible seating arrangement.
                   <span className="block mt-1 font-medium text-primary dark:text-primary-light">
                     Select it below and make any personal adjustments in the Planner.
@@ -536,7 +536,7 @@ const Recommendations: React.FC = () => {
 
         {/* Legend - Explains metrics once for all cards */}
         {!loading && !error && layouts.length > 0 && (
-          <div className="mb-6 max-w-4xl mx-auto">
+          <div className="mb-3 max-w-3xl mx-auto">
             <div className="bg-white/60 dark:bg-surface-dark/60 rounded-xl border border-gray-100 dark:border-gray-700 p-3">
               <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-1.5">
@@ -690,7 +690,7 @@ const Recommendations: React.FC = () => {
         <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10 text-primary flex-shrink-0">
                 <span className="material-icons-round text-2xl">auto_awesome</span>
               </div>
               <div>

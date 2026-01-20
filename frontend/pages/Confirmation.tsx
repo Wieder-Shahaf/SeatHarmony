@@ -83,7 +83,7 @@ const Confirmation: React.FC = () => {
   return (
     <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Header */}
-      <div className="mb-2 text-center max-w-2xl mx-auto pt-8 text-center">
+      <div className="mb-2 text-center max-w-2xl mx-auto pt-6 text-center">
         <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Finalize & Export</h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
           Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
