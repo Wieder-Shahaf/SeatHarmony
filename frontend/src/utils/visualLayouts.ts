@@ -244,7 +244,7 @@ const beachResort: VisualLayoutDef = {
     venueId: 'beach-resort',
     width: 1200,
     height: 1000,
-    danceFloor: { x: 0, y: 90, width: 10, height: 10, shape: 'circle' },
+    danceFloor: { x: 0, y: 90, width: 10, height: 25, shape: 'circle', rotation: 90 },
     tables: [
         // Left Side (2 columns x 6 rows)
         ...createGrid(22, 30, 2, 6, 12, 13, 10),
@@ -256,7 +256,7 @@ const beachResort: VisualLayoutDef = {
         // Zones
         { x: 52, y: -4, width: 120, height: 20, type: 'zone', label: 'Beach', shape: 'rect' },
 
-        { x: 0, y: 60, width: 40, height: 10, type: 'bar', label: 'Main Bar', shape: 'rect', rotation: 90, labelRotation: -90 },
+        { x: 0, y: 51, width: 40, height: 10, type: 'bar', label: 'Main Bar', shape: 'rect', rotation: 90, labelRotation: -90 },
         { x: 100, y: 60, width: 40, height: 10, type: 'buffet', label: 'Buffet', shape: 'rect', rotation: 90, labelRotation: -90 },
         { x: 39, y: 106, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
         { x: 65, y: 106, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
@@ -264,8 +264,6 @@ const beachResort: VisualLayoutDef = {
         { x: 52, y: 16, width: 25, height: 16, type: 'canopy', label: 'Wedding Canopy', shape: 'circle' },
         { x: 98, y: 104, width: 12, height: 12, type: 'lifeguard', label: 'Lifeguard', shape: 'rect' },
         { x: 52, y: 63, width: 16, height: 72, type: 'aisle', label: 'Down the\nAisle walk', shape: 'rect' },
-        { x: 90, y: 76, width: 8, height: 8, type: 'piano', label: 'Piano', shape: 'rect' },
-
     ]
 
 };
