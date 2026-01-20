@@ -307,7 +307,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="flex-grow p-6 md:p-10 max-w-7xl mx-auto w-full">
+    <div className="flex-grow px-6 py-4 md:px-10 md:py-6 max-w-7xl mx-auto w-full">
       {/* Header */}
       {/* Header */}
       <div className="mb-8 text-center max-w-2xl mx-auto">
@@ -731,7 +731,7 @@ const Dashboard: React.FC = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="material-icons-round text-primary text-3xl">people</span>
             </div>
             <div>

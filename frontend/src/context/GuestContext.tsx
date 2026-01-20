@@ -292,7 +292,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
   const setSelectedLayoutIndex = useCallback((index: number) => {
     const previousIndex = selectedLayoutIndex;
     setSelectedLayoutIndexState(index);
-    
+
     // Clear and save new original layout when selecting a different layout
     if (index !== previousIndex && index >= 0) {
       // Use functional update to get latest layouts state
@@ -538,10 +538,10 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
         }
       };
       setOriginalLayoutState(clonedLayout);
-      console.log('Original layout saved', { 
+      console.log('Original layout saved', {
         layoutId: clonedLayout.layout.id,
         assignmentsCount: Object.keys(clonedLayout.layout.assignments).length,
-        selectedLayoutIndex 
+        selectedLayoutIndex
       });
     } else {
       console.warn('Cannot save original layout:', { selectedLayoutIndex, layoutsLength: layouts.length });
@@ -558,7 +558,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
       console.warn('Cannot restore: invalid selectedLayoutIndex', { selectedLayoutIndex });
       return false;
     }
-    
+
     // Deep clone the original layout to restore it
     const restoredLayout: TotLayout = {
       value: originalLayout.value,
@@ -574,7 +574,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
         summary: originalLayout.layout.summary ? { ...originalLayout.layout.summary } : null,
       }
     };
-    
+
     setLayoutsState(prev => {
       // Ensure we have enough layouts
       const newLayouts = [...prev];
@@ -583,7 +583,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
         newLayouts.push({} as TotLayout);
       }
       newLayouts[selectedLayoutIndex] = restoredLayout;
-      console.log('Original layout restored', { 
+      console.log('Original layout restored', {
         layoutId: restoredLayout.layout.id,
         assignmentsCount: Object.keys(restoredLayout.layout.assignments).length,
         selectedLayoutIndex,
@@ -591,7 +591,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
       });
       return newLayouts;
     });
-    
+
     return true;
   }, [originalLayout, selectedLayoutIndex]);
 
