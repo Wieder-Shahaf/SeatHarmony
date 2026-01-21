@@ -16,94 +16,94 @@ interface HalfCircleScaleProps {
 
 const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 120 }) => {
   const [animatedPercentage, setAnimatedPercentage] = useState(0);
-  
+
   // Animate from 0 to target percentage on mount
   useEffect(() => {
     const duration = 1500; // 1.5 seconds
     const startTime = Date.now();
     const startValue = 0;
     const endValue = percentage;
-    
+
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Easing function (ease-out)
       const easedProgress = 1 - Math.pow(1 - progress, 3);
-      
+
       const currentValue = startValue + (endValue - startValue) * easedProgress;
       setAnimatedPercentage(currentValue);
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         setAnimatedPercentage(endValue);
       }
     };
-    
+
     requestAnimationFrame(animate);
   }, [percentage]);
-  
+
   const radius = size / 2;
   const centerX = size / 2;
   const centerY = size / 2; // Center vertically, but arc will be above
   const strokeWidth = 10;
   const innerRadius = radius - strokeWidth / 2;
   const labelRadius = innerRadius + 12; // Position labels slightly outside the arc
-  
+
   // Calculate angle for the dial using animated percentage
   // 0% = left (180°), 50% = top (90°), 100% = right (0°)
   const startAngle = 180; // Left side
   const endAngle = 0; // Right side
   const angle = startAngle - (animatedPercentage / 100) * (startAngle - endAngle);
   const angleRad = (angle * Math.PI) / 180;
-  
+
   // Calculate dial endpoint
   const dialX = centerX + innerRadius * Math.cos(angleRad);
   const dialY = centerY - innerRadius * Math.sin(angleRad);
-  
+
   // Path for the upper half circle
   const pathData = `M ${centerX - innerRadius} ${centerY} A ${innerRadius} ${innerRadius} 0 0 1 ${centerX + innerRadius} ${centerY}`;
-  
+
   // Calculate section boundaries (in degrees)
   const section1End = 120; // 33% = 180 - 60 = 120°
   const section2End = 60;  // 66% = 180 - 120 = 60°
-  
+
   // Monochromatic colors matching UI theme (flipped order)
   const colors = {
     shuffled: '#68604D',  // Dark brown (text-main) - flipped from harmony
     mix: '#8A8E75',      // Medium sage (primary)
     harmony: '#D5C7AD', // Light beige (secondary) - flipped from shuffled
   };
-  
+
   // Determine which section the percentage falls into
   const getSection = (pct: number) => {
     if (pct < 33) return { name: 'Shuffled', color: colors.shuffled };
     if (pct < 66) return { name: 'Mix', color: colors.mix };
     return { name: 'Harmony', color: colors.harmony };
   };
-  
+
   const section = getSection(animatedPercentage);
-  
+
   // Calculate section arc endpoints
   const section1EndRad = (section1End * Math.PI) / 180;
   const section2EndRad = (section2End * Math.PI) / 180;
-  
+
   const section1EndX = centerX + innerRadius * Math.cos(section1EndRad);
   const section1EndY = centerY - innerRadius * Math.sin(section1EndRad);
   const section2EndX = centerX + innerRadius * Math.cos(section2EndRad);
   const section2EndY = centerY - innerRadius * Math.sin(section2EndRad);
-  
+
   // Calculate label positions
   // Shuffled at left edge (180°), Harmony at right edge (0°), Mix in middle
   const shuffledAngle = 180; // Left edge
   const mixAngle = (section1End + section2End) / 2; // Middle of section 2
   const harmonyAngle = 0; // Right edge
-  
+
   const shuffledRad = (shuffledAngle * Math.PI) / 180;
   const mixRad = (mixAngle * Math.PI) / 180;
   const harmonyRad = (harmonyAngle * Math.PI) / 180;
-  
+
   // Adjust positions: Shuffled slightly left, Harmony slightly right
   const shuffledX = centerX + labelRadius * Math.cos(shuffledRad) - 4; // Move left
   const shuffledY = centerY - labelRadius * Math.sin(shuffledRad);
@@ -111,7 +111,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
   const mixY = centerY - labelRadius * Math.sin(mixRad);
   const harmonyX = centerX + labelRadius * Math.cos(harmonyRad) + 4; // Move right
   const harmonyY = centerY - labelRadius * Math.sin(harmonyRad);
-  
+
   return (
     <div className="flex flex-col items-center mt-2">
       <svg width={size} height={size / 2 + 15} className="overflow-visible" viewBox={`0 -5 ${size} ${size / 2 + 20}`}>
@@ -123,7 +123,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
-        
+
         {/* Section 1: Shuffled (0-33%) */}
         <path
           d={`M ${centerX - innerRadius} ${centerY} A ${innerRadius} ${innerRadius} 0 0 1 ${section1EndX} ${section1EndY}`}
@@ -132,7 +132,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
-        
+
         {/* Section 2: Mix (33-66%) */}
         <path
           d={`M ${section1EndX} ${section1EndY} A ${innerRadius} ${innerRadius} 0 0 1 ${section2EndX} ${section2EndY}`}
@@ -141,7 +141,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
-        
+
         {/* Section 3: Harmony (66-100%) */}
         <path
           d={`M ${section2EndX} ${section2EndY} A ${innerRadius} ${innerRadius} 0 0 1 ${centerX + innerRadius} ${centerY}`}
@@ -150,7 +150,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
-        
+
         {/* Dial/Indicator line */}
         <line
           x1={centerX}
@@ -161,7 +161,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           strokeWidth={4}
           strokeLinecap="round"
         />
-        
+
         {/* Dial circle at end */}
         <circle
           cx={dialX}
@@ -171,7 +171,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           stroke="white"
           strokeWidth={2}
         />
-        
+
         {/* Center dot */}
         <circle
           cx={centerX}
@@ -179,7 +179,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
           r={5}
           fill="#9ca3af"
         />
-        
+
         {/* Labels on the arc */}
         <text
           x={shuffledX}
@@ -191,7 +191,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
         >
           Shuffled
         </text>
-        
+
         <text
           x={mixX}
           y={mixY}
@@ -202,7 +202,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
         >
           Mix
         </text>
-        
+
         <text
           x={harmonyX}
           y={harmonyY}
@@ -392,30 +392,30 @@ const ExportDashboard: React.FC = () => {
     try {
       const seatedGuests = guests.filter(g => assignments[g.id]);
       if (seatedGuests.length === 0) return 0;
-      
+
       let guestsWithGroupMajority = 0;
-      
+
       // For each table, check if majority of guests are from the same group
       Object.entries(guestsByTable).forEach(([tableId, tableGuests]: [string, typeof guests]) => {
         if (tableGuests.length === 0) return;
-        
+
         // Count guests by group
         const groupCounts: Record<string, number> = {};
         tableGuests.forEach(guest => {
           const groupId = guest.group_id || 'Uncategorized';
           groupCounts[groupId] = (groupCounts[groupId] || 0) + 1;
         });
-        
+
         // Find the majority group (group with most guests)
         const groupEntries = Object.entries(groupCounts);
         if (groupEntries.length === 0) return; // Skip if no groups found
-        
-        const majorityGroup = groupEntries.reduce((a, b) => 
+
+        const majorityGroup = groupEntries.reduce((a, b) =>
           groupCounts[a[0]] > groupCounts[b[0]] ? a : b
         );
         const majorityCount = majorityGroup[1];
         const isMajority = majorityCount > tableGuests.length / 2;
-        
+
         // Count guests who are in the majority group
         if (isMajority) {
           tableGuests.forEach(guest => {
@@ -426,7 +426,7 @@ const ExportDashboard: React.FC = () => {
           });
         }
       });
-      
+
       return Math.round((guestsWithGroupMajority / seatedGuests.length) * 100);
     } catch (error) {
       console.error('Error calculating harmony percentage:', error);
@@ -514,7 +514,10 @@ const ExportDashboard: React.FC = () => {
                                         feature.type === 'magnets-board' ? 'bg-teal-500/80 border-teal-700 border-2 dark:bg-teal-600/60' :
                                           feature.type === 'emergency-exit' ? 'bg-red-500/80 border-red-700 border-2 dark:bg-red-600/60' :
                                             feature.type === 'piano' ? 'bg-gray-900/90 border-black border-2 dark:bg-black/80' :
-                                              'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                              feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
+                                                feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
+                                                  feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
+                                                    'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
             style={{
               left: `${feature.x}%`,
               top: `${feature.y}%`,
@@ -554,7 +557,7 @@ const ExportDashboard: React.FC = () => {
             borderRadius: visualLayout.danceFloor.shape === 'circle' ? '9999px' : '16px'
           }}
         >
-          {!isSmall && <span className="text-sm text-gray-400 uppercase tracking-widest font-light whitespace-nowrap">Dance Floor</span>}
+          {!isSmall && <span className="text-sm text-gray-400 uppercase tracking-widest font-light whitespace-pre-wrap text-center">{visualLayout.danceFloor.label || 'Dance Floor'}</span>}
         </div>
       )}
 

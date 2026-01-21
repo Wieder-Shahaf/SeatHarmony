@@ -206,7 +206,7 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex-grow flex flex-col items-center px-4 relative overflow-hidden bg-background-light dark:bg-background-dark min-h-screen">
+    <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-light dark:bg-background-dark min-h-screen">
       {/* Background Blobs */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-secondary/20 rounded-full blur-3xl dark:bg-primary/10"></div>
@@ -214,7 +214,7 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Main Content Wrapper */}
-      <div className="flex-grow flex flex-col items-center justify-center w-full max-w-7xl">
+      <div className="flex-grow flex flex-col items-center justify-center w-full max-w-7xl px-4">
         {/* Hero Content */}
         <div className="max-w-4xl w-full text-center mt-20 mb-2 animate-[fadeInUp_1s_ease-out]">
 
@@ -358,8 +358,8 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-8 bg-white/40 dark:bg-black/20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <footer className="w-full border-t border-text-main/10 dark:border-white/10 py-4 bg-white/40 dark:bg-black/20 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 min-h-[48px]">
           <p className="text-sm text-text-main/60 dark:text-text-light/60">
             © 2026 SeatHarmony. All rights reserved.
           </p>

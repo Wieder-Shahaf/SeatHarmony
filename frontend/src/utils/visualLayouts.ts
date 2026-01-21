@@ -12,6 +12,7 @@ export interface DanceFloorConfig {
     height: number;
     shape: 'rect' | 'circle';
     rotation?: number;
+    label?: string;
 }
 
 export interface VisualLayoutDef {
@@ -130,26 +131,29 @@ const modernBanquet: VisualLayoutDef = {
     venueId: 'modern-banquet',
     width: 1200,
     height: 1000,
-    danceFloor: { x: 50, y: 85, width: 40, height: 15, shape: 'rect' },
+    danceFloor: { x: 92, y: 59, width: 24, height: 52, shape: 'rect', rotation: 90 },
     tables: [
         // Row 1 (2 large head tables)
-        ...createGrid(42, 25, 2, 1, 15, 0, 1),
+        ...createGrid(42, 44, 2, 1, 15, 0, 1),
         // Row 2 (4 tables)
-        ...createGrid(38, 32, 5, 1, 15, 0, 3),
+        ...createGrid(30, 0, 5, 1, 15, 0, 3),
         // Row 3 (4 tables)
-        ...createGrid(38, 50, 5, 1, 15, 0, 7),
+        ...createGrid(30, 22, 5, 1, 15, 0, 7),
         // Row 4 (5 tables)
-        ...createGrid(38, 68, 5, 1, 15, 0, 11),
+        ...createGrid(35, 67, 5, 1, 15, 0, 11),
     ],
     features: [
-        { x: 4, y: 2, width: 18, height: 20, type: 'bar', label: 'Main Bar', shape: 'circle' },
-        { x: 96, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
-        { x: 86, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
-        { x: 50, y: 96, width: 16, height: 15, type: 'entrance', label: 'Entrance', shape: 'rect' },
-        { x: 8, y: 50, width: 25, height: 45, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
-        { x: 80, y: 96, width: 16, height: 10, type: 'present-table', label: 'Presents', shape: 'rect' },
-        { x: 25, y: 20, width: 8, height: 8, type: 'cake', label: 'Cake', shape: 'circle' },
-        { x: 80, y: 20, width: 12, height: 8, type: 'buffet', label: 'Desserts', shape: 'rect' },
+        { x: 5, y: 2, width: 22, height: 20, type: 'bar', label: 'Main Bar', shape: 'rect' },
+        { x: 63, y: 94, width: 7, height: 5, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 63, y: 100, width: 7, height: 5, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 37, y: 94, width: 7, height: 5, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 37, y: 100, width: 7, height: 5, type: 'restroom', label: 'WC', shape: 'rect' },
+        { x: 50, y: 97, width: 16, height: 14, type: 'entrance', label: 'Entrance', shape: 'rect' },
+        { x: 5, y: 56, width: 22, height: 55, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
+        { x: 4, y: 97, width: 16, height: 10, type: 'present-table', label: 'Presents', shape: 'rect' },
+        { x: 5, y: 20, width: 22, height: 8, type: 'cake', label: 'Cake & Pastries', shape: 'rect' },
+        { x: 90, y: 97, width: 28, height: 12, type: 'kids-area', label: 'Kids Playing\nArea', shape: 'rect' },
+        { x: 22, y: 97, width: 10, height: 10, type: 'magnets-board', label: 'Magnets Board', shape: 'rect', },
     ]
 };
 
@@ -219,22 +223,25 @@ const intimateChapel: VisualLayoutDef = {
     //danceFloor: { x: 50, y: 20, width: 20, height: 10, shape: 'rect' }, // Altar area as dance floor for visualization
     tables: [
         // Left aisle (6 tables)
-        ...createGrid(30, 40, 2, 3, 10, 15, 1),
+        ...createGrid(19, 24, 2, 3, 16, 24, 1),
         // Right aisle (6 tables)
-        ...createGrid(70, 40, -2, 3, -10, 15, 7),
+        ...createGrid(65, 24, 2, 3, 16, 24, 7),
     ],
 
     features: [
-        { x: 12, y: 28, width: 18, height: 26, type: 'bar', label: 'Wine Bar', shape: 'rect' },
-        { x: 12, y: 78, width: 18, height: 26, type: 'bar', label: 'Beer Bar', shape: 'rect' },
-        { x: 12, y: 100, width: 24, height: 8, type: 'restroom', label: 'Male WC', shape: 'rect' },
-        { x: 90, y: 100, width: 24, height: 8, type: 'restroom', label: 'Female WC', shape: 'rect' },
-        { x: 50, y: 100, width: 16, height: 10, type: 'entrance', label: 'Barn Entrance', shape: 'rect' },
-        { x: 50, y: 0, width: 35, height: 18, type: 'canopy', label: 'Ceramony Stage', shape: 'circle' },
-        { x: 35, y: 100, width: 10, height: 10, type: 'present-table', label: 'Presents', shape: 'rect' },
-        { x: 66, y: 100, width: 10, height: 10, type: 'magnets-board', label: 'Magnets Board', shape: 'rect', },
-        { x: 12, y: 53, width: 10, height: 10, type: 'cake', label: 'Cake', shape: 'circle' },
-        { x: 100, y: 0, width: 10, height: 8, type: 'emergency-exit', label: 'Emergency Exit', shape: 'rect', rotation: 90 }
+        { x: 28, y: 94, width: 26, height: 18, type: 'bar', label: 'Small Bar', shape: 'rect' },
+        { x: 4, y: 94, width: 8, height: 20, type: 'restroom', label: 'Male \n WC', shape: 'rect' },
+        { x: 96, y: 94, width: 8, height: 20, type: 'restroom', label: 'Female \n WC', shape: 'rect' },
+        { x: 50, y: 95, width: 12, height: 20, type: 'entrance', label: 'Chapel Entrance', shape: 'rect' },
+        { x: 50, y: 0, width: 74, height: 18, type: 'canopy', label: 'Altar Ceramony Stage', shape: 'circle' },
+        { x: 67, y: 92, width: 10, height: 15, type: 'present-table', label: 'Presents Table', shape: 'rect' },
+        { x: 4, y: 0, width: 12, height: 10, type: 'magnets-board', label: 'Magnets Board', shape: 'rect', },
+        { x: 82, y: 92, width: 10, height: 15, type: 'cake', label: 'Cake \n & \nPastries', shape: 'rect' },
+        { x: 74.4, y: 103, width: 25.2, height: 4, type: 'emergency-exit', label: 'Emergency Exit', shape: 'rect' },
+        { x: 96, y: 0, width: 12, height: 10, type: 'piano', label: 'Piano', shape: 'rect' },
+        { x: 50, y: 47, width: 12, height: 72, type: 'aisle', label: 'Down the\nAisle walk', shape: 'rect' },
+        { x: 96, y: 46, width: 9, height: 70, type: 'boutique-seating', label: 'Boutique\nSeating', shape: 'rect' },
+        { x: 4, y: 46, width: 9, height: 70, type: 'boutique-seating', label: 'Boutique\nSeating', shape: 'rect' },
     ]
 };
 
@@ -244,7 +251,7 @@ const beachResort: VisualLayoutDef = {
     venueId: 'beach-resort',
     width: 1200,
     height: 1000,
-    danceFloor: { x: 0, y: 90, width: 10, height: 25, shape: 'circle', rotation: 90 },
+    danceFloor: { x: 0, y: 92, width: 10, height: 25, shape: 'circle', rotation: 90, label: 'Dance \n Floor' },
     tables: [
         // Left Side (2 columns x 6 rows)
         ...createGrid(22, 30, 2, 6, 12, 13, 10),
@@ -264,6 +271,7 @@ const beachResort: VisualLayoutDef = {
         { x: 52, y: 16, width: 25, height: 16, type: 'canopy', label: 'Wedding Canopy', shape: 'circle' },
         { x: 98, y: 104, width: 12, height: 12, type: 'lifeguard', label: 'Lifeguard', shape: 'rect' },
         { x: 52, y: 63, width: 16, height: 72, type: 'aisle', label: 'Down the\nAisle walk', shape: 'rect' },
+        { x: 100, y: 20, width: 9, height: 18, type: 'seating-area', label: 'Sitting Lounge', shape: 'circle' },
     ]
 
 };
@@ -298,7 +306,7 @@ export interface VenueFeature {
     y: number;
     width: number;
     height: number;
-    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard' | 'present-table' | 'cake' | 'aisle' | 'resting-area' | 'binoculars' | 'viewing-platform' | 'magnets-board' | 'emergency-exit' | 'piano';
+    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard' | 'present-table' | 'cake' | 'aisle' | 'resting-area' | 'binoculars' | 'viewing-platform' | 'magnets-board' | 'emergency-exit' | 'piano' | 'kids-area' | 'seating-area' | 'boutique-seating';
     label: string;
     rotation?: number;
     labelRotation?: number;
