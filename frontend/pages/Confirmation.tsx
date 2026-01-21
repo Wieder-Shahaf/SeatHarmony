@@ -208,7 +208,10 @@ const Confirmation: React.FC = () => {
                                                   feature.type === 'magnets-board' ? 'bg-teal-500/80 border-teal-700 border-2 dark:bg-teal-600/60' :
                                                     feature.type === 'emergency-exit' ? 'bg-red-500/80 border-red-700 border-2 dark:bg-red-600/60' :
                                                       feature.type === 'piano' ? 'bg-gray-900/90 border-black border-2 dark:bg-black/80' :
-                                                        'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                                        feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
+                                                          feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
+                                                            feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
+                                                              'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
                       style={{
                         left: `${feature.x}%`,
                         top: `${feature.y}%`,
@@ -247,7 +250,7 @@ const Confirmation: React.FC = () => {
                       borderRadius: visualLayout.danceFloor.shape === 'circle' ? '9999px' : '16px'
                     }}
                   >
-                    <span className="text-sm text-indigo-300 dark:text-indigo-400/70 uppercase tracking-widest font-medium whitespace-nowrap">Dance Floor</span>
+                    <span className="text-sm text-indigo-300 dark:text-indigo-400/70 uppercase tracking-widest font-medium whitespace-pre-wrap text-center">{visualLayout.danceFloor.label || 'Dance Floor'}</span>
                   </div>
                 )}
 
