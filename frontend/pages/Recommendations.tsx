@@ -29,6 +29,27 @@ const Recommendations: React.FC = () => {
     invalidateLayoutsCache,
   } = useGuests();
 
+  // Placeholder if no venue selected
+  if (!selectedVenueLayout) {
+    return (
+      <div className="flex-grow flex items-center justify-center min-h-[60vh]">
+        <div className="text-center py-16 px-4">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">storefront</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">Select a Venue</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Layout recommendations depend on the venue you choose.
+          </p>
+          <button
+            onClick={() => navigate('/venues')}
+            className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors shadow-lg shadow-primary/20"
+          >
+            Go to Venue Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Track previous venue to detect changes
   const previousVenueIdRef = React.useRef<string | null>(selectedVenueLayout?.id || null);
 

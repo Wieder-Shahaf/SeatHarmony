@@ -121,7 +121,7 @@ const Layout: React.FC = () => {
         <Outlet />
       </main>
 
-      {!isLanding && location.pathname !== '/planner' && (
+      {!isLanding && (
         <footer className="border-t border-secondary/20 dark:border-gray-700 bg-surface-light dark:bg-surface-dark py-8 mt-auto">
           <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">© 2026 SeatHarmony. All rights reserved.</p>

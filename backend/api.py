@@ -1453,7 +1453,13 @@ def export_excel(req: ExcelExportRequest):
     alt_fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
 
     # Headers
-    headers1 = ["Guest Name", "Table Name", "Table #", "Group/Category", "Dietary Restrictions", "Notes"]
+    include_dietary = req.options.get("include_dietary", True)
+    
+    headers1 = ["Guest Name", "Table Name", "Table #", "Group/Category"]
+    if include_dietary:
+        headers1.append("Dietary Restrictions")
+    headers1.append("Notes")
+
     for col, header in enumerate(headers1, 1):
         cell = ws1.cell(row=1, column=col, value=header)
         cell.font = header_font
@@ -1477,27 +1483,42 @@ def export_excel(req: ExcelExportRequest):
         sorted_guests = sorted(guests_list, key=lambda g: g.name)
 
         for guest in sorted_guests:
-            # Extract dietary from tags
-            dietary = ", ".join([t for t in guest.tags if t.lower() in ["vegetarian", "vegan", "gluten-free", "kosher", "halal", "allergies"]]) if req.options.get("include_dietary", True) else ""
-
-            ws1.cell(row=row_num, column=1, value=guest.name).border = border
-            ws1.cell(row=row_num, column=2, value=table.name).border = border
-            ws1.cell(row=row_num, column=3, value=int(table.name.replace("Table ", "")) if "Table " in table.name else row_num - 1).border = border
-            ws1.cell(row=row_num, column=4, value=guest.group_id or "Uncategorized").border = border
-            ws1.cell(row=row_num, column=5, value=dietary).border = border
-            ws1.cell(row=row_num, column=6, value="").border = border
+            # Build row values dynamically
+            row_values = [
+                guest.name,
+                table.name,
+                int(table.name.replace("Table ", "")) if "Table " in table.name else row_num - 1,
+                guest.group_id or "Uncategorized"
+            ]
+            
+            if include_dietary:
+                dietary = ", ".join([t for t in guest.tags if t.lower() in ["vegetarian", "vegan", "gluten-free", "kosher", "halal", "allergies"]])
+                row_values.append(dietary)
+            
+            row_values.append("") # Notes
+            
+            # Write cells
+            for col, val in enumerate(row_values, 1):
+                ws1.cell(row=row_num, column=col, value=val).border = border
 
             # Alternating row color
             if row_num % 2 == 0:
-                for col in range(1, 7):
+                for col in range(1, len(row_values) + 1):
                     ws1.cell(row=row_num, column=col).fill = alt_fill
 
             row_num += 1
 
     # Auto-adjust column widths
     for col_idx, col in enumerate(ws1.columns, 1):
-        max_length = 0
         column_letter = get_column_letter(col_idx)
+        
+        # Check header value to see if this is the Notes column
+        header_val = col[0].value
+        if header_val == "Notes":
+            ws1.column_dimensions[column_letter].width = 60
+            continue
+
+        max_length = 0
         for cell in col:
             try:
                 if len(str(cell.value)) > max_length:
@@ -1554,11 +1575,11 @@ def export_excel(req: ExcelExportRequest):
                     max_length = len(str(cell_value))
             ws2.column_dimensions[column_letter].width = min(max_length + 2, 50)
 
-    # ============ SHEET 3: Vendor Summary ============
-    if req.options.get("include_vendor_summary", False):
-        ws3 = wb.create_sheet("Vendor Summary")
+    # ============ SHEET 3: Group Analysis ============
+    if req.options.get("include_vendor_summary", False): # Reusing this flag for Group Analysis
+        ws3 = wb.create_sheet("Group Analysis")
 
-        headers3 = ["Category/Group", "Guest Count", "Dietary Notes"]
+        headers3 = ["Group Name", "Guest Name", "Assigned Table", "Table #"]
         for col, header in enumerate(headers3, 1):
             cell = ws3.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -1566,46 +1587,78 @@ def export_excel(req: ExcelExportRequest):
             cell.border = border
             cell.alignment = Alignment(horizontal='center')
 
-        # Aggregate by category
-        category_counts: Dict[str, int] = {}
-        category_dietary: Dict[str, List[str]] = {}
-
+        # Group guests by their category
+        guests_by_group: Dict[str, List[GuestIn]] = {}
         for guest in req.guests:
-            cat = guest.group_id or "Uncategorized"
-            category_counts[cat] = category_counts.get(cat, 0) + 1
-
-            # Collect dietary restrictions
-            dietary_tags = [t for t in guest.tags if t.lower() in ["vegetarian", "vegan", "gluten-free", "kosher", "halal"]]
-            if dietary_tags:
-                if cat not in category_dietary:
-                    category_dietary[cat] = []
-                category_dietary[cat].extend(dietary_tags)
+            group = guest.group_id or "Uncategorized"
+            if group not in guests_by_group:
+                guests_by_group[group] = []
+            guests_by_group[group].append(guest)
 
         row_num = 2
-        for category in sorted(category_counts.keys()):
-            dietary_list = category_dietary.get(category, [])
-            dietary_summary = ", ".join(set(dietary_list)) if dietary_list else ""
+        for group_idx, group in enumerate(sorted(guests_by_group.keys())):
+            # Determine background color for this entire group
+            # Use alt_fill for odd groups, white for even groups
+            is_alt_group = group_idx % 2 != 0
+            group_fill = alt_fill if is_alt_group else PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
-            ws3.cell(row=row_num, column=1, value=category).border = border
-            ws3.cell(row=row_num, column=2, value=category_counts[category]).border = border
-            ws3.cell(row=row_num, column=3, value=dietary_summary).border = border
+            # Sorting guests within group
+            group_guests = sorted(guests_by_group[group], key=lambda g: g.name)
 
-            if row_num % 2 == 0:
-                for col in range(1, 4):
-                    ws3.cell(row=row_num, column=col).fill = alt_fill
+            start_row = row_num
+            for i, guest in enumerate(group_guests):
+                table_id = assignments.get(guest.id)
+                table = tables_dict.get(table_id)
+                table_name = table.name if table else "Unseated"
+                
+                # Parse table number
+                table_num_val = ""
+                if table and "Table " in table.name:
+                    try:
+                        table_num_val = int(table.name.replace("Table ", ""))
+                    except:
+                        pass
+                
+                # Column 1: Group Name
+                group_val = group if i == 0 else ""
+                c1 = ws3.cell(row=row_num, column=1, value=group_val)
+                c1.border = border
+                c1.fill = group_fill # Apply uniform group fill
+                
+                if i == 0:
+                     c1.font = Font(bold=True)
+                     c1.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
-            row_num += 1
+                c2 = ws3.cell(row=row_num, column=2, value=guest.name)
+                c2.border = border
+                c2.fill = group_fill
 
-        # Total row
-        ws3.cell(row=row_num, column=1, value="TOTAL").font = Font(bold=True)
-        ws3.cell(row=row_num, column=2, value=len(req.guests)).font = Font(bold=True)
-        for col in range(1, 4):
-            ws3.cell(row=row_num, column=col).border = border
+                c3 = ws3.cell(row=row_num, column=3, value=table_name)
+                c3.border = border
+                c3.fill = group_fill
+
+                c4 = ws3.cell(row=row_num, column=4, value=table_num_val)
+                c4.border = border
+                c4.fill = group_fill
+
+                row_num += 1
+            
+            # Merge Group Name cells
+            end_row = row_num - 1
+            if end_row > start_row:
+                ws3.merge_cells(start_row=start_row, start_column=1, end_row=end_row, end_column=1)
+            
+            # Add a separator row between groups (optional, or just logic as above is fine)
 
         # Auto-adjust column widths
-        for col_idx in range(1, 4):
+        for col_idx in range(1, 5):
+            max_length = len(headers3[col_idx - 1])
             column_letter = get_column_letter(col_idx)
-            ws3.column_dimensions[column_letter].width = 25
+            for row in range(2, row_num):
+                cell_value = ws3.cell(row=row, column=col_idx).value
+                if cell_value and len(str(cell_value)) > max_length:
+                    max_length = len(str(cell_value))
+            ws3.column_dimensions[column_letter].width = min(max_length + 2, 40)
 
     # Save to BytesIO
     output = io.BytesIO()

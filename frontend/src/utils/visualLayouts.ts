@@ -115,6 +115,7 @@ const gardenPavilion: VisualLayoutDef = {
     ],
     features: [
         { x: 40, y: -4, width: 48, height: 18, type: 'bar', label: 'Main Bar', shape: 'rect' },
+        { x: 81.6, y: 14, width: 8, height: 12, type: 'bar', label: 'Small Bar', shape: 'rect' },
         { x: 0, y: -5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
         { x: 0, y: 5, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
         { x: 0, y: 90, width: 8, height: 8, type: 'restroom', label: 'WC', shape: 'rect' },
@@ -122,6 +123,8 @@ const gardenPavilion: VisualLayoutDef = {
         { x: 1, y: 50, width: 10, height: 18, type: 'entrance', label: 'Entrance', shape: 'rect' },
         { x: 90, y: 50, width: 25, height: 55, type: 'canopy', label: 'Wedding Canopy', shape: 'rect' },
         { x: 90, y: 94, width: 25, height: 25, type: 'resting-area', label: 'Resting\nArea', shape: 'rect' },
+        { x: 90, y: -4, width: 25, height: 18, type: 'kids-area', label: 'Kids Playing\nArea', shape: 'rect' },
+        { x: 95, y: 14, width: 14, height: 12, type: 'kitchen', label: 'Kitchen', shape: 'rect' },
     ]
 };
 
@@ -306,7 +309,7 @@ export interface VenueFeature {
     y: number;
     width: number;
     height: number;
-    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard' | 'present-table' | 'cake' | 'aisle' | 'resting-area' | 'binoculars' | 'viewing-platform' | 'magnets-board' | 'emergency-exit' | 'piano' | 'kids-area' | 'seating-area' | 'boutique-seating';
+    type: 'bar' | 'restroom' | 'entrance' | 'buffet' | 'stage' | 'zone' | 'canopy' | 'lifeguard' | 'present-table' | 'cake' | 'aisle' | 'resting-area' | 'binoculars' | 'viewing-platform' | 'magnets-board' | 'emergency-exit' | 'piano' | 'kids-area' | 'seating-area' | 'boutique-seating' | 'kitchen';
     label: string;
     rotation?: number;
     labelRotation?: number;
