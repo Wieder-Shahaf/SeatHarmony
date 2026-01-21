@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { getVisualLayout } from '../src/utils/visualLayouts';
 import { prepareDataForApi } from '../src/services/api';
@@ -234,6 +235,29 @@ const ExportDashboard: React.FC = () => {
     });
   }, []);
 
+  const navigate = useNavigate();
+  // Redirect if no venue selected
+  // Placeholder if no venue selected
+  if (!selectedVenueLayout) {
+    return (
+      <div className="flex-grow flex items-center justify-center min-h-[60vh]">
+        <div className="text-center py-16 px-4">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">storefront</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">Select a Venue</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Please choose a venue layout before concluding your plan. This ensures your seating chart matches the actual space.
+          </p>
+          <button
+            onClick={() => navigate('/venues')}
+            className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors shadow-lg shadow-primary/20"
+          >
+            Go to Venue Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Export states
   const [isExportingExcel, setIsExportingExcel] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -241,9 +265,10 @@ const ExportDashboard: React.FC = () => {
 
   // Export options state (connected to checkboxes)
   const [exportOptions, setExportOptions] = useState({
-    includeDietary: true,
+    includeDietary: false,
     vendorMealCount: false,
-    highResForPrinting: true,
+    tableSummary: false,
+    highResForPrinting: false,
   });
 
   // Trigger confetti on mount
@@ -292,7 +317,7 @@ const ExportDashboard: React.FC = () => {
           options: {
             include_dietary: exportOptions.includeDietary,
             include_vendor_summary: exportOptions.vendorMealCount,
-            include_table_details: true,
+            include_table_details: exportOptions.tableSummary,
           },
         }),
       });
@@ -328,17 +353,22 @@ const ExportDashboard: React.FC = () => {
       const { default: html2canvas } = await import('html2canvas');
       const { default: jsPDF } = await import('jspdf');
 
-      // Find the preview element
-      const previewElement = document.querySelector('.floor-plan-preview');
+      // Find the dedicated export container
+      const previewElement = document.querySelector('#pdf-export-container');
       if (!previewElement) {
         throw new Error('Preview element not found');
       }
 
       const scale = exportOptions.highResForPrinting ? 2 : 1;
+
+      // Wait for render cycle to display the container
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const canvas = await html2canvas(previewElement as HTMLElement, {
         scale,
         useCORS: true,
         backgroundColor: '#ffffff',
+        logging: false, // cleaner console
       });
 
       const imgWidth = 297; // A4 landscape width in mm
@@ -517,7 +547,8 @@ const ExportDashboard: React.FC = () => {
                                               feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
                                                 feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
                                                   feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
-                                                    'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                                    feature.type === 'kitchen' ? 'bg-[#68604D]/20 border-[#68604D] border-2 dark:bg-[#68604D]/40' :
+                                                      'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
             style={{
               left: `${feature.x}%`,
               top: `${feature.y}%`,
@@ -720,7 +751,7 @@ const ExportDashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Floor Plan Preview Card */}
           <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col group hover:shadow-xl transition-all duration-300">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-center items-center mb-6">
               <h3 className="flex items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200">
                 <div className="text-primary">
                   <span className="material-icons-outlined text-2xl">space_dashboard</span>
@@ -737,10 +768,10 @@ const ExportDashboard: React.FC = () => {
             >
               {renderMap(true)}
 
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-gray-800/90 px-4 py-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-90 group-hover:scale-100 flex items-center gap-2">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-lg border border-white/50 dark:border-gray-700/50 transform transition-all duration-300 group-hover:scale-105 group-hover:bg-white dark:group-hover:bg-gray-800 flex items-center gap-2">
                   <span className="material-icons-outlined text-primary">zoom_in</span>
-                  <span className="text-sm font-medium">Click to Zoom</span>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Zoom to View</span>
                 </div>
               </div>
             </div>
@@ -749,10 +780,10 @@ const ExportDashboard: React.FC = () => {
               <span className="material-icons-outlined text-gray-400 mt-0.5">info</span>
               <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                 {selectedVenueLayout ? (
-                  <>
-                    Previewing <span className="font-semibold text-gray-700 dark:text-gray-300">{selectedVenueLayout.name}</span> layout.
-                    Arranged across <span className="font-semibold">{tables.length} tables</span>.
-                  </>
+                  <div className="flex flex-col">
+                    <span>Previewing <span className="font-semibold text-gray-700 dark:text-gray-300">{selectedVenueLayout.name}</span> layout.</span>
+                    <span>Arranged across <span className="font-semibold">{tables.length} tables</span>.</span>
+                  </div>
                 ) : (
                   <>Custom venue with {tables.length} tables.</>
                 )}
@@ -762,7 +793,7 @@ const ExportDashboard: React.FC = () => {
 
           {/* Export Settings Card */}
           <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col hover:shadow-xl transition-all duration-300">
-            <h3 className="flex items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200 mb-6">
+            <h3 className="flex justify-center items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200 mb-6">
               <div className="text-primary">
                 <span className="material-icons-outlined text-2xl">tune</span>
               </div>
@@ -773,43 +804,65 @@ const ExportDashboard: React.FC = () => {
               {[
                 {
                   id: 'dietary',
-                  label: 'Include Dietary Info',
-                  desc: 'Add columns for allergies & restrictions',
+                  label: 'Dietary Info',
+                  desc: 'Allergies & restrictions',
+                  icon: 'restaurant',
                   checked: exportOptions.includeDietary,
                   setter: (checked: boolean) => setExportOptions(p => ({ ...p, includeDietary: checked }))
                 },
                 {
-                  id: 'vendor',
-                  label: 'Vendor Meal Summary',
-                  desc: 'Separate sheet for catering counts',
+                  id: 'group_analysis',
+                  label: 'Group Analysis',
+                  desc: 'Guest list by group',
+                  icon: 'groups',
                   checked: exportOptions.vendorMealCount,
                   setter: (checked: boolean) => setExportOptions(p => ({ ...p, vendorMealCount: checked }))
                 },
                 {
-                  id: 'print',
-                  label: 'Print-Ready Resolution',
-                  desc: 'Generate high-DPI PDF (slower)',
+                  id: 'table_summary',
+                  label: 'Table Summary',
+                  desc: 'Stats per table',
+                  icon: 'backup_table',
+                  checked: exportOptions.tableSummary,
+                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, tableSummary: checked }))
+                },
+                {
+                  id: 'print_res',
+                  label: 'Print Quality',
+                  desc: 'High-DPI rendering',
+                  icon: 'print',
                   checked: exportOptions.highResForPrinting,
                   setter: (checked: boolean) => setExportOptions(p => ({ ...p, highResForPrinting: checked }))
                 }
               ].map((opt) => (
-                <div key={opt.id} className="group/opt flex items-start p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer" onClick={() => opt.setter(!opt.checked)}>
-                  <div className="flex items-center h-5 mt-1">
-                    <input
-                      id={opt.id}
-                      type="checkbox"
-                      checked={opt.checked}
-                      onChange={(e) => opt.setter(e.target.checked)}
-                      className="focus:ring-primary h-5 w-5 text-primary border-gray-300 rounded cursor-pointer transition-transform group-active/opt:scale-95"
-                    />
+                <div
+                  key={opt.id}
+                  onClick={() => opt.setter(!opt.checked)}
+                  className={`relative p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 flex items-center gap-4 group hover:shadow-md
+                    ${opt.checked
+                      ? 'bg-primary/5 border-primary dark:bg-primary/10 dark:border-primary'
+                      : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-primary/30'}
+                  `}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300
+                    ${opt.checked ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}
+                  `}>
+                    <span className="material-icons-outlined text-2xl">{opt.icon}</span>
                   </div>
-                  <div className="ml-4">
-                    <label htmlFor={opt.id} className="font-medium text-gray-800 dark:text-gray-200 text-lg cursor-pointer">
+
+                  <div className="flex-1">
+                    <h4 className={`font-bold text-base transition-colors duration-300 ${opt.checked ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>
                       {opt.label}
-                    </label>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
                       {opt.desc}
                     </p>
+                  </div>
+
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
+                    ${opt.checked ? 'border-primary bg-primary' : 'border-gray-300 dark:border-gray-600'}
+                  `}>
+                    {opt.checked && <span className="material-icons-round text-white text-[16px]">check</span>}
                   </div>
                 </div>
               ))}
@@ -818,8 +871,8 @@ const ExportDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-center pt-8">
-          <p className="text-sm text-gray-500 dark:text-gray-400 italic font-display">
+        <div className="text-center pt-1">
+          <p className="text-xl text-gray-500 dark:text-gray-400 italic font-display">
             "Love is the master key that opens the gates of happiness."
           </p>
         </div>
@@ -839,8 +892,8 @@ const ExportDashboard: React.FC = () => {
                   <span className="material-icons-outlined text-gray-500 dark:text-gray-400">close</span>
                 </button>
               </div>
-              <div className="flex-grow relative bg-gray-50 dark:bg-gray-900 p-8 overflow-auto flex items-center justify-center">
-                <div className="w-full h-full max-w-4xl max-h-[800px] aspect-[5/4] relative">
+              <div className="flex-grow relative bg-gray-50 dark:bg-gray-900 p-16 overflow-auto flex items-center justify-center">
+                <div className="w-full h-full max-w-4xl max-h-[800px] aspect-[5/4] relative translate-y-4">
                   {renderMap(false)}
                 </div>
               </div>
@@ -875,6 +928,55 @@ const ExportDashboard: React.FC = () => {
           </div>
         )
       }
+      {/* Hidden container for high-res PDF export */}
+      {/* Hidden container for high-res PDF export - Portaled to body to avoid clipping */}
+      {typeof document !== 'undefined' && createPortal(
+        (() => {
+          const baseWidth = visualLayout.width || 1200;
+          const baseHeight = visualLayout.height || 1000;
+          const padding = 200; // Extra space for bleed elements
+
+          return (
+            <div
+              id="pdf-export-container"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: `${baseWidth + (padding * 1.2)}px`,
+                height: `${baseHeight + (padding * 1)}px`,
+                backgroundColor: '#ffffff',
+                zIndex: isExportingPdf ? 9999 : -1,
+                opacity: isExportingPdf ? 1 : 0,
+                pointerEvents: 'none',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                visibility: isExportingPdf ? 'visible' : 'hidden',
+              }}
+            >
+              {/* Inner container with exact layout dimensions */}
+              <div
+                style={{
+                  width: `${baseWidth}px`,
+                  height: `${baseHeight}px`,
+                  position: 'relative'
+                }}
+              >
+                {renderMap(false)}
+
+                {/* Watermark */}
+                <div className="absolute -bottom-16 right-0 text-right">
+                  <div className="text-3xl font-display text-primary font-bold">SeatHarmony</div>
+                  <div className="text-md text-gray-400">{selectedVenueLayout?.name} Seating Plan</div>
+                </div>
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
     </div >
   );
 };

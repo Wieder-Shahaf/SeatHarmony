@@ -607,6 +607,7 @@ export const GuestProvider: React.FC<GuestProviderProps> = ({ children }) => {
     // Clear previous results and cache
     setLayoutsState([]);
     setSelectedLayoutIndexState(-1);
+    setSelectedVenueLayoutState(null);
     setLayoutsCacheKeyState('');
     setError(null);
 

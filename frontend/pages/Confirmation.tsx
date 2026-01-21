@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { Guest, getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/types/models';
 import { getVisualLayout } from '../src/utils/visualLayouts';
@@ -10,6 +9,28 @@ const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 const Confirmation: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
+  const navigate = useNavigate();
+
+  // Placeholder if no venue selected
+  if (!selectedVenueLayout) {
+    return (
+      <div className="flex-grow flex items-center justify-center min-h-[60vh]">
+        <div className="text-center py-16 px-4">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">storefront</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">Select a Venue</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            We need to know your venue layout to display the final confirmation details.
+          </p>
+          <button
+            onClick={() => navigate('/venues')}
+            className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors shadow-lg shadow-primary/20"
+          >
+            Go to Venue Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
   const [zoom, setZoom] = useState(0.9);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
@@ -57,6 +78,12 @@ const Confirmation: React.FC = () => {
 
 
 
+  // Calculate additional stats
+  const vipCount = useMemo(() => guests.filter(g => g.importance > 0).length, [guests]);
+  const totalCapacity = useMemo(() => tables.reduce((acc, t) => acc + t.capacity, 0), [tables]);
+  const utilization = Math.round((guests.length / totalCapacity) * 100);
+  const avgPerTable = (guests.length / tables.length).toFixed(1);
+
   // Get visual layout configuration
   const visualLayout = useMemo(() => {
     return getVisualLayout(selectedVenueLayout?.id, tables.length);
@@ -83,7 +110,7 @@ const Confirmation: React.FC = () => {
   return (
     <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Header */}
-      <div className="mb-2 text-center max-w-2xl mx-auto pt-6 text-center">
+      <div className="mb-2 text-center max-w-4xl mx-auto pt-6 text-center">
         <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Finalize & Export</h2>
         <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
           Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
@@ -97,11 +124,12 @@ const Confirmation: React.FC = () => {
 
           {/* Sidebar Info */}
           <div className="lg:col-span-3 flex flex-col gap-6">
-            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700">
-              <h3 className="flex items-center gap-2 font-display text-lg text-text-main dark:text-secondary mb-4">
-                <span className="material-icons-round text-secondary">map</span> Groups Legend
-              </h3>
-              <div className="space-y-3">
+            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
+                <span className="material-icons-round text-secondary">map</span>
+                <h3 className="font-display text-xl text-text-main dark:text-secondary">Groups Legend</h3>
+              </div>
+              <div className="p-6 space-y-3">
                 {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
                   return (
                     <div key={category} className="flex items-center justify-between">
@@ -116,43 +144,101 @@ const Confirmation: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex-grow flex flex-col">
-              <h3 className="flex items-center gap-2 font-display text-lg text-text-main dark:text-secondary mb-4">
-                <span className="material-icons-round text-secondary">analytics</span> Summary
-              </h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="col-span-2 bg-background-light dark:bg-gray-800 p-4 rounded-xl text-center border border-secondary/10 dark:border-gray-700">
-                  <span className="block text-xl font-display text-text-main dark:text-white mb-1">{selectedVenueLayout?.name}</span>
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Selected Venue</span>
-                </div>
-                <div className="bg-background-light dark:bg-gray-800 p-4 rounded-xl text-center border border-secondary/10 dark:border-gray-700">
-                  <span className="block text-3xl font-display text-primary font-bold lining-nums">{guests.length}</span>
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Guests</span>
-                </div>
-                <div className="bg-background-light dark:bg-gray-800 p-4 rounded-xl text-center border border-secondary/10 dark:border-gray-700">
-                  <span className="block text-3xl font-display text-primary font-bold lining-nums">{tables.length}</span>
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Tables</span>
-                </div>
+            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
+                <span className="material-icons-round text-secondary">analytics</span>
+                <h3 className="font-display text-xl text-text-main dark:text-secondary">Summary</h3>
               </div>
-              <div className="mt-auto">
-                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Unseated Guests</h4>
-                {unseatedCount === 0 ? (
-                  <>
-                    <div className="flex items-center gap-2 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg border-none">
-                      <span className="material-icons-round text-green-800 dark:text-green-300 text-xl">check_circle</span>
-                      <span className="text-sm font-medium text-green-800 dark:text-green-300">Everyone is seated!</span>
+
+              <div className="p-6 flex flex-col gap-6">
+                {/* Venue Section - Cleaner */}
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Selected Venue</span>
+                      <div className="font-display text-xl text-text-main dark:text-white mt-1">{selectedVenueLayout?.name}</div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2 text-center">Great job! Everyone has a seat.</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800/30">
-                      <span className="material-icons-round text-red-400 text-xl">warning</span>
-                      <span className="text-sm text-red-600 dark:text-red-300">{unseatedCount} guests remaining</span>
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                      <span className="material-icons-round">storefront</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2 text-center">Some guests still need seats.</p>
-                  </>
-                )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-gray-500 font-medium">
+                      <span>Capacity Used</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${utilization > 90 ? 'bg-red-400' : 'bg-primary'}`}
+                        style={{ width: `${Math.min(utilization, 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400">
+                      <span>{guests.length} guests</span>
+                      <span>{totalCapacity} max</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Grid - High Contrast Tiles */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Guests */}
+                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Guests</span>
+                    <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
+                  </div>
+
+                  {/* Tables */}
+                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Tables</span>
+                    <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
+                  </div>
+
+                  {/* VIPs */}
+                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">VIPs</span>
+                    <span className="font-display text-3xl text-amber-600 dark:text-amber-400 leading-none">{vipCount}</span>
+                  </div>
+
+                  {/* Density */}
+                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Density</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{avgPerTable}</span>
+                      <span className="text-[10px] text-gray-400 font-bold">/tbl</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Unseated Status */}
+                <div className="border-t border-secondary/10 dark:border-gray-700 pt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</h4>
+                    {unseatedCount === 0 ? (
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full">
+                        <span className="material-icons-round text-[14px]">check_circle</span>
+                        All Seated
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-full">
+                        <span className="material-icons-round text-[14px]">priority_high</span>
+                        Action Needed
+                      </span>
+                    )}
+                  </div>
+
+                  {unseatedCount > 0 ? (
+                    <div className="text-xs text-red-500 dark:text-red-400 font-medium">
+                      You have {unseatedCount} guests who need a seat.
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-400 dark:text-gray-500">
+                      <div>Great job!</div>
+                      <div>Every guest has been assigned a table.</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -211,7 +297,8 @@ const Confirmation: React.FC = () => {
                                                         feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
                                                           feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
                                                             feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
-                                                              'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+                                                              feature.type === 'kitchen' ? 'bg-[#68604D]/20 border-[#68604D] border-2 dark:bg-[#68604D]/40' :
+                                                                'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
                       style={{
                         left: `${feature.x}%`,
                         top: `${feature.y}%`,

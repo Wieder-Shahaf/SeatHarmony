@@ -206,7 +206,7 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-light dark:bg-background-dark min-h-screen">
+    <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Background Blobs */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-secondary/20 rounded-full blur-3xl dark:bg-primary/10"></div>
@@ -326,7 +326,7 @@ const LandingPage: React.FC = () => {
 
         {/* Feature Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-6xl mx-auto mb-4 w-full">
-          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-secondary/30 dark:border-gray-600 hover:shadow-md transition-shadow">
             <div className="w-8 h-8 rounded-full bg-secondary/30 flex items-center justify-center mb-1 text-primary">
               <span className="material-icons-outlined text-lg">psychology</span>
             </div>
@@ -335,7 +335,7 @@ const LandingPage: React.FC = () => {
               Our AI analyzes relationships to ensure everyone sits next to someone they enjoy.
             </p>
           </div>
-          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-secondary/30 dark:border-gray-600 hover:shadow-md transition-shadow">
             <div className="w-8 h-8 rounded-full bg-secondary/30 flex items-center justify-center mb-1 text-primary">
               <span className="material-icons-outlined text-lg">spa</span>
             </div>
@@ -344,7 +344,7 @@ const LandingPage: React.FC = () => {
               Save hours of manual shuffling. Let the algorithm do the heavy lifting for you.
             </p>
           </div>
-          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-white dark:border-gray-700 hover:shadow-md transition-shadow">
+          <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-secondary/30 dark:border-gray-600 hover:shadow-md transition-shadow">
             <div className="w-8 h-8 rounded-full bg-secondary/30 flex items-center justify-center mb-1 text-primary">
               <span className="material-icons-outlined text-lg">table_restaurant</span>
             </div>

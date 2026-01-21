@@ -80,6 +80,27 @@ const PlannerAI: React.FC = () => {
     restoreOriginalLayout,
   } = useGuests();
 
+  // Placeholder if no venue selected
+  if (!selectedVenueLayout) {
+    return (
+      <div className="flex-grow flex items-center justify-center min-h-[60vh]">
+        <div className="text-center py-16 px-4">
+          <span className="material-icons-round text-6xl text-gray-300 dark:text-gray-600 mb-4">storefront</span>
+          <h2 className="font-display text-2xl text-text-main dark:text-white mb-4">Select a Venue</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            The AI Planner needs a venue layout to organize your seating effectively.
+          </p>
+          <button
+            onClick={() => navigate('/venues')}
+            className="px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-[#777b63] transition-colors shadow-lg shadow-primary/20"
+          >
+            Go to Venue Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [zoom, setZoom] = useState(1);
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const [capacityError, setCapacityError] = useState<string | null>(null);
@@ -142,6 +163,26 @@ const PlannerAI: React.FC = () => {
   }, [guestsByTable, tables]);
 
   const [showLonelyGuests, setShowLonelyGuests] = useState(false);
+  const [showLonelyAlertBubble, setShowLonelyAlertBubble] = useState(false);
+
+  // Track if we've already shown the alert to avoid spamming
+  const hasShownLonelyAlertRef = React.useRef(false);
+
+  // Show alert bubble when lonely guests are detected (only once)
+  useEffect(() => {
+    if (lonelyGuests.length > 0 && !hasShownLonelyAlertRef.current) {
+      setShowLonelyAlertBubble(true);
+      hasShownLonelyAlertRef.current = true;
+    }
+  }, [lonelyGuests.length]);
+
+  // Auto-hide alert bubble
+  useEffect(() => {
+    if (showLonelyAlertBubble) {
+      const timer = setTimeout(() => setShowLonelyAlertBubble(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showLonelyAlertBubble]);
 
   // Get unseated guests
   const unseatedGuests = useMemo(() => {
@@ -224,6 +265,20 @@ const PlannerAI: React.FC = () => {
   const holdingGuest = useMemo(() =>
     holdingGuestId ? guests.find(g => g.id === holdingGuestId) : null
     , [holdingGuestId, guests]);
+
+  // Close lonely guests popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Check if click target is inside the popover or the toggle button
+      const target = event.target as HTMLElement;
+      if (showLonelyGuests && !target.closest('.lonely-guests-popover') && !target.closest('.lonely-guests-toggle')) {
+        setShowLonelyGuests(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showLonelyGuests]);
 
   // Save original layout when first entering PlannerAI if not already saved
   // This ensures we have a backup even if user navigated directly to PlannerAI
@@ -736,7 +791,7 @@ const PlannerAI: React.FC = () => {
                   <div className="relative ml-2">
                     <button
                       onClick={() => setShowLonelyGuests(!showLonelyGuests)}
-                      className={`flex items-center gap-2 px-3 h-10 rounded-lg transition-all ${showLonelyGuests
+                      className={`lonely-guests-toggle flex items-center gap-2 px-3 h-10 rounded-lg transition-all ${showLonelyGuests
                         ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-amber-600'
                         }`}
@@ -749,9 +804,18 @@ const PlannerAI: React.FC = () => {
                       </div>
                     </button>
 
+                    {/* Red Cloud Bubble Alert - Temporary */}
+                    {showLonelyAlertBubble && (
+                      <div className="absolute bottom-full left-0 mb-3 bg-red-500 text-white px-4 py-2 rounded-xl shadow-xl z-[60] animate-bounce w-max flex items-center gap-2">
+                        <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-red-500 rotate-45"></div>
+                        <span className="material-icons-round text-sm">priority_high</span>
+                        <span className="text-xs font-bold whitespace-nowrap">Attention: {lonelyGuests.length} guests seated alone</span>
+                      </div>
+                    )}
+
                     {/* Popover */}
                     {showLonelyGuests && (
-                      <div className="absolute bottom-full left-0 mb-4 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 p-4 z-50 animate-slide-up origin-bottom-left">
+                      <div className="lonely-guests-popover absolute bottom-full left-0 mb-4 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 p-4 z-50 animate-slide-up origin-bottom-left">
                         <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100 dark:border-gray-700">
                           <span className="font-semibold text-sm text-amber-600 flex items-center gap-2">
                             <span className="material-icons-round text-sm">warning</span>
