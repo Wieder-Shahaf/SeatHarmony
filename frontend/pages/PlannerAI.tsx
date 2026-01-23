@@ -260,16 +260,16 @@ const PlannerAI: React.FC = () => {
             const containerTop = scrollContainer.scrollTop;
             const containerHeight = scrollContainer.clientHeight;
             const elementHeight = guestElement.offsetHeight;
-            
+
             // Calculate the desired scroll position to center the element
             // Account for header by adding padding from top
             const headerPadding = 20; // Padding to keep header visible
             const targetScroll = elementTop - headerPadding;
-            
+
             // Only scroll if element is not fully visible
             const isAboveView = elementTop < containerTop + headerPadding;
             const isBelowView = elementTop + elementHeight > containerTop + containerHeight;
-            
+
             if (isAboveView || isBelowView) {
               scrollContainer.scrollTo({
                 top: Math.max(0, targetScroll),
@@ -553,7 +553,7 @@ const PlannerAI: React.FC = () => {
 
         {/* Canvas Area - Dynamic Tables */}
         <div
-          className="w-full min-h-full flex items-start justify-center p-20 pt-32 origin-top transition-transform duration-200 ease-out"
+          className="w-full min-h-full flex items-start justify-center px-20 pt-32 pb-24 origin-top transition-transform duration-200 ease-out"
           style={{ transform: `scale(${zoom})` }}
         >
           <div className="flex flex-wrap justify-center gap-8 max-w-6xl">
@@ -1011,7 +1011,7 @@ const PlannerAI: React.FC = () => {
                     </span>
                   </>
                 )}
-                
+
                 {/* Holding Zone Error Popup - Appears above holding zone */}
                 {holdingZoneError && (
                   <div className="absolute bottom-full left-0 mb-3 z-50 animate-slide-up origin-bottom-left">

@@ -267,7 +267,7 @@ const LandingPage: React.FC = () => {
   const suggestedCategories = ALLOWED_CATEGORIES;
 
   return (
-    <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-lighter dark:bg-background-dark min-h-screen">
+    <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-lighter dark:bg-background-dark h-screen max-h-screen">
       {/* Background Blobs */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-secondary/20 rounded-full blur-3xl dark:bg-primary/10"></div>
@@ -277,7 +277,7 @@ const LandingPage: React.FC = () => {
       {/* Main Content Wrapper */}
       <div className="flex-grow flex flex-col items-center justify-center w-full max-w-7xl px-4">
         {/* Hero Content */}
-        <div className="max-w-4xl w-full text-center mt-20 mb-2 animate-[fadeInUp_1s_ease-out]">
+        <div className="max-w-4xl w-full text-center mt-20 mb-6 animate-[fadeInUp_1s_ease-out]">
 
           <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-medium leading-tight text-text-main dark:text-text-light mb-2">
             Create harmonious seating plans <br className="hidden md:block" />
@@ -292,7 +292,7 @@ const LandingPage: React.FC = () => {
               setCategoryWarning(null);
               setShowInstructions(true);
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-secondary text-text-main dark:text-text-light text-sm font-medium hover:bg-secondary/10 transition-all shadow-sm hover:shadow-md"
+            className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-secondary text-text-main dark:text-text-light text-sm font-medium hover:bg-secondary/10 transition-all shadow-sm hover:shadow-md"
           >
             <span className="material-icons-round text-base text-primary">lightbulb</span>
             How it Works
@@ -389,7 +389,7 @@ const LandingPage: React.FC = () => {
         </div>
 
         {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-6xl mx-auto mb-4 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-6xl mx-auto mb-4 w-full mt-6">
           <div className="bg-white/50 dark:bg-surface-dark/50 p-3 rounded-xl border border-secondary/30 dark:border-gray-600 hover:shadow-md transition-shadow">
             <div className="w-8 h-8 rounded-full bg-secondary/30 flex items-center justify-center mb-1 text-primary">
               <span className="material-icons-outlined text-lg">psychology</span>
@@ -475,7 +475,7 @@ const LandingPage: React.FC = () => {
                   setShowInstructions(false);
                   setCategoryWarning(null);
                 }}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-full transition-colors"
               >
                 <span className="material-icons-round text-gray-500 dark:text-gray-400">close</span>
               </button>

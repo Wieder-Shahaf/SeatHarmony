@@ -221,7 +221,7 @@ const HalfCircleScale: React.FC<HalfCircleScaleProps> = ({ percentage, size = 12
 
 const ExportDashboard: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();
-  const [showPreview, setShowPreview] = useState(false);
+
   const iconRef = useRef<HTMLDivElement>(null);
 
   // Debug logging
@@ -263,13 +263,7 @@ const ExportDashboard: React.FC = () => {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  // Export options state (connected to checkboxes)
-  const [exportOptions, setExportOptions] = useState({
-    includeDietary: false,
-    vendorMealCount: false,
-    tableSummary: false,
-    highResForPrinting: false,
-  });
+
 
   // Trigger confetti on mount
   useEffect(() => {
@@ -315,9 +309,9 @@ const ExportDashboard: React.FC = () => {
           ...prepareDataForApi(guests, tables),
           layout: selectedLayout.layout,
           options: {
-            include_dietary: exportOptions.includeDietary,
-            include_vendor_summary: exportOptions.vendorMealCount,
-            include_table_details: exportOptions.tableSummary,
+            include_dietary: true,
+            include_vendor_summary: true,
+            include_table_details: true,
           },
         }),
       });
@@ -359,7 +353,7 @@ const ExportDashboard: React.FC = () => {
         throw new Error('Preview element not found');
       }
 
-      const scale = exportOptions.highResForPrinting ? 2 : 1;
+      const scale = 2;
 
       // Wait for render cycle to display the container
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -514,55 +508,58 @@ const ExportDashboard: React.FC = () => {
   }
 
   // Render Map Helper
-  const renderMap = (isSmall = false) => (
-    <div className="relative w-full h-full">
+  const renderMap = () => (
+    <div className="relative w-full h-full flex items-center justify-center p-8 bg-white dark:bg-gray-800">
       <div className="absolute inset-0 pattern-grid opacity-20 pointer-events-none"></div>
 
-      {/* Visual Features (Bars, Restrooms, etc.) */}
-      {visualLayout.features?.map((feature, i) => {
-        const isZone = feature.type === 'zone';
-        return (
-          <div
-            key={`feat-${i}`}
-            className={`absolute flex justify-center
-            ${isZone
-                ? 'items-end pb-1 border-none' // Bottom aligned for zones
-                : `items-center border-2 shadow-sm ${feature.type === 'canopy' ? '' : 'backdrop-blur-sm'}`}
-            ${feature.type === 'bar' ? 'bg-amber-100/50 border-amber-400 dark:bg-amber-900/30' :
-                feature.type === 'restroom' ? 'bg-blue-100/50 border-blue-400 dark:bg-blue-900/30' :
-                  feature.type === 'zone' && feature.label === 'Garden' ? 'bg-green-50/80 dark:bg-green-900/20' : // Soft natural green
-                    feature.type === 'zone' && feature.label === 'Beach' ? 'bg-sky-400/60 dark:bg-sky-900/50' : // Beachy blue
-                      feature.type === 'zone' && feature.label === 'Indoor Hall' ? 'bg-slate-200/50 dark:bg-slate-800/30' : // Increased opacity
-                        feature.type === 'canopy' ? 'bg-pink-50/20 border-pink-300 border-dashed dark:bg-pink-900/10' :
-                          feature.type === 'lifeguard' ? 'bg-red-100/80 border-red-500 border-2 dark:bg-red-900/40' :
-                            feature.type === 'present-table' ? 'bg-purple-100/80 border-purple-400 border-2 border-dotted dark:bg-purple-900/40' :
-                              feature.type === 'cake' ? 'bg-sky-100/90 border-sky-300/60 border-2 dark:bg-sky-900/40' :
-                                feature.type === 'aisle' ? 'bg-amber-700/20 border-amber-600 border-dashed dark:bg-amber-600/20' :
-                                  feature.type === 'resting-area' ? 'bg-rose-900/10 border-rose-900/30 border-2 dark:bg-rose-500/10 dark:border-rose-400/30' :
-                                    feature.type === 'binoculars' ? 'bg-purple-500/80 border-purple-700 border-2 dark:bg-purple-600/60' :
-                                      feature.type === 'viewing-platform' ? 'bg-rose-900/80 border-rose-950 border-2 dark:bg-rose-800/60' :
-                                        feature.type === 'magnets-board' ? 'bg-teal-500/80 border-teal-700 border-2 dark:bg-teal-600/60' :
-                                          feature.type === 'emergency-exit' ? 'bg-red-500/80 border-red-700 border-2 dark:bg-red-600/60' :
-                                            feature.type === 'piano' ? 'bg-gray-900/90 border-black border-2 dark:bg-black/80' :
-                                              feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
-                                                feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
-                                                  feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
-                                                    feature.type === 'kitchen' ? 'bg-[#68604D]/20 border-[#68604D] border-2 dark:bg-[#68604D]/40' :
-                                                      'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
-            style={{
-              left: `${feature.x}%`,
-              top: `${feature.y}%`,
-              width: `${feature.width}%`,
-              height: `${feature.height}%`,
-              transform: `translate(-50%, -50%) rotate(${feature.rotation || 0}deg)`,
-              borderRadius: feature.shape === 'circle' ? '9999px' : isZone ? '16px' : '8px',
-              zIndex: isZone ? 0 : 5 // Zones are background (0), others are foreground (5)
-            }}
-          >
-            {(!isSmall || isZone) && (
+      <div
+        className="relative w-full"
+        style={{ aspectRatio: `${visualLayout.width || 1200} / ${visualLayout.height || 1000}` }}
+      >
+        {/* Visual Features (Bars, Restrooms, etc.) */}
+        {visualLayout.features?.map((feature, i) => {
+          const isZone = feature.type === 'zone';
+          return (
+            <div
+              key={`feat-${i}`}
+              className={`absolute flex justify-center
+                      ${isZone
+                  ? 'items-end pb-1 border-none' // Bottom aligned for zones
+                  : `items-center border-2 shadow-sm ${feature.type === 'canopy' ? '' : 'backdrop-blur-sm'}`}
+                      ${feature.type === 'bar' ? 'bg-amber-100/50 border-amber-400 dark:bg-amber-900/30' :
+                  feature.type === 'restroom' ? 'bg-blue-100/50 border-blue-400 dark:bg-blue-900/30' :
+                    feature.type === 'zone' && feature.label === 'Garden' ? 'bg-green-50/80 dark:bg-green-900/20' : // Soft natural green
+                      feature.type === 'zone' && feature.label === 'Beach' ? 'bg-sky-400/60 dark:bg-sky-900/50' : // Beachy blue
+                        feature.type === 'zone' && feature.label === 'Indoor Hall' ? 'bg-slate-200/50 dark:bg-slate-800/30' : // Increased opacity
+                          feature.type === 'canopy' ? 'bg-pink-50/20 border-pink-300 border-dashed dark:bg-pink-900/10' :
+                            feature.type === 'lifeguard' ? 'bg-red-100/80 border-red-500 border-2 dark:bg-red-900/40' :
+                              feature.type === 'present-table' ? 'bg-purple-100/80 border-purple-400 border-2 border-dotted dark:bg-purple-900/40' :
+                                feature.type === 'cake' ? 'bg-sky-100/90 border-sky-300/60 border-2 dark:bg-sky-900/40' :
+                                  feature.type === 'aisle' ? 'bg-amber-700/20 border-amber-600 border-dashed dark:bg-amber-600/20' :
+                                    feature.type === 'resting-area' ? 'bg-rose-900/10 border-rose-900/30 border-2 dark:bg-rose-500/10 dark:border-rose-400/30' :
+                                      feature.type === 'binoculars' ? 'bg-purple-500/80 border-purple-700 border-2 dark:bg-purple-600/60' :
+                                        feature.type === 'viewing-platform' ? 'bg-rose-900/80 border-rose-950 border-2 dark:bg-rose-800/60' :
+                                          feature.type === 'magnets-board' ? 'bg-teal-500/80 border-teal-700 border-2 dark:bg-teal-600/60' :
+                                            feature.type === 'emergency-exit' ? 'bg-red-500/80 border-red-700 border-2 dark:bg-red-600/60' :
+                                              feature.type === 'piano' ? 'bg-gray-900/90 border-black border-2 dark:bg-black/80' :
+                                                feature.type === 'kids-area' ? 'bg-lime-200/80 border-lime-400 border-2 border-dashed dark:bg-lime-900/40' :
+                                                  feature.type === 'seating-area' ? 'bg-teal-100/80 border-teal-300 border-2 dark:bg-teal-900/40' :
+                                                    feature.type === 'boutique-seating' ? 'bg-fuchsia-100/80 border-fuchsia-300 border-2 dark:bg-fuchsia-900/40' :
+                                                      feature.type === 'kitchen' ? 'bg-[#68604D]/20 border-[#68604D] border-2 dark:bg-[#68604D]/40' :
+                                                        'bg-gray-100/50 border-gray-400 dark:bg-gray-700/30'}`}
+              style={{
+                left: `${feature.x}%`,
+                top: `${feature.y}%`,
+                width: `${feature.width}%`,
+                height: `${feature.height}%`,
+                transform: `translate(-50%, -50%) rotate(${feature.rotation || 0}deg)`,
+                borderRadius: feature.shape === 'circle' ? '9999px' : isZone ? '16px' : '8px',
+                zIndex: isZone ? 0 : 5 // Zones are background (0), others are foreground (5)
+              }}
+            >
               <span
                 className={`uppercase tracking-wider whitespace-pre-wrap text-center leading-3 px-1 ${isZone
-                  ? isSmall ? 'text-[10px] font-extrabold text-gray-500' : 'text-xs md:text-sm font-extrabold text-gray-600 dark:text-gray-400'
+                  ? 'text-xs md:text-sm font-extrabold text-gray-600 dark:text-gray-400' // Darker and centered
                   : (['binoculars', 'viewing-platform', 'magnets-board', 'emergency-exit', 'piano'].includes(feature.type) ? 'text-[10px] font-bold text-white' : 'text-[10px] font-bold text-gray-700 dark:text-gray-300')}`}
                 style={{
                   display: 'inline-block',
@@ -571,69 +568,76 @@ const ExportDashboard: React.FC = () => {
               >
                 {feature.label}
               </span>
-            )}
-          </div>
-        );
-      })}
-      {/* Visual Dance Floor */}
-      {visualLayout.danceFloor && (
-        <div
-          className="absolute border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center opacity-50"
-          style={{
-            left: `${visualLayout.danceFloor.x}%`,
-            top: `${visualLayout.danceFloor.y}%`,
-            width: `${visualLayout.danceFloor.width}%`,
-            height: `${visualLayout.danceFloor.height}%`,
-            transform: 'translate(-50%, -50%)',
-            borderRadius: visualLayout.danceFloor.shape === 'circle' ? '9999px' : '16px'
-          }}
-        >
-          {!isSmall && <span className="text-sm text-gray-400 uppercase tracking-widest font-light whitespace-pre-wrap text-center">{visualLayout.danceFloor.label || 'Dance Floor'}</span>}
-        </div>
-      )}
+            </div>
+          );
+        })}
 
-      {/* Absolutely Positioned Tables */}
-      {tables.map((table, i) => {
-        const tableGuests = guestsByTable[table.id] || [];
-        const primaryCategory = tableGuests.length > 0
-          ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
-          : 'Empty';
-        const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
-        const bgColor = getTableColor(colorIndex);
-        const borderColor = getTableBorderColor(colorIndex);
-        const isRound = table.constraints?.tableType !== 'rectangular';
-
-        // Get position from visual layout, fallback to grid
-        const position = visualLayout.tables[i] || { x: 50, y: 50, rotation: 0 };
-
-        return (
+        {/* Visual Dance Floor */}
+        {visualLayout.danceFloor && (
           <div
-            key={table.id}
-            className="absolute flex flex-col items-center justify-center"
+            className="absolute border-2 border-dashed border-indigo-200 dark:border-indigo-700/50 bg-indigo-50/30 dark:bg-indigo-900/20 flex items-center justify-center transition-all duration-500"
             style={{
-              left: `${position.x}%`,
-              top: `${position.y}%`,
-              transform: `translate(-50%, -50%) rotate(${position.rotation}deg) scale(${isSmall ? 0.6 : 1})`
+              left: `${visualLayout.danceFloor.x}%`,
+              top: `${visualLayout.danceFloor.y}%`,
+              width: `${visualLayout.danceFloor.width}%`,
+              height: `${visualLayout.danceFloor.height}%`,
+              transform: 'translate(-50%, -50%)',
+              borderRadius: visualLayout.danceFloor.shape === 'circle' ? '9999px' : '16px'
             }}
           >
-            <div className={`
-                 ${isSmall
-                ? (isRound ? 'w-8 h-8' : 'w-10 h-5')
-                : (isRound ? 'w-16 h-16' : 'w-20 h-10')}
-                 ${isRound ? 'rounded-full' : 'rounded-lg'}
-                 ${bgColor}/20 dark:${bgColor}/10
-                 border-2 ${borderColor}
-                 flex items-center justify-center shadow-md relative backdrop-blur-sm
-               `}>
-              {!isSmall && (
-                <span className={`font-bold text-sm ${bgColor.replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
+            <span className="text-sm text-indigo-300 dark:text-indigo-400/70 uppercase tracking-widest font-medium whitespace-pre-wrap text-center">{visualLayout.danceFloor.label || 'Dance Floor'}</span>
+          </div>
+        )}
+
+        {/* Absolutely Positioned Tables */}
+        {tables.map((table, i) => {
+          const tableGuests = guestsByTable[table.id] || [];
+          const primaryCategory = tableGuests.length > 0
+            ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
+            : 'Empty';
+          const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+          const bgColor = getTableColor(colorIndex);
+          const borderColor = getTableBorderColor(colorIndex);
+          const isRound = table.constraints?.tableType !== 'rectangular';
+
+          // Get position from visual layout, fallback to grid if index exceeds defined positions
+          const position = visualLayout.tables[i] || { x: 50, y: 50, rotation: 0 };
+
+          // Dynamic sizing for large venues
+          const isLargeVenue = tables.length > 30;
+          // distinct sizing for rectangular tables
+          const tableSizeClass = isLargeVenue
+            ? (isRound ? 'w-14 h-14' : 'w-16 h-8')
+            : (isRound ? 'w-16 h-16' : 'w-20 h-10');
+
+          const fontSizeClass = isLargeVenue ? 'text-[10px]' : 'text-sm';
+          const badgeSizeClass = isLargeVenue ? 'text-[8px] -bottom-1 -right-1 px-1' : 'text-[9px] -bottom-1 -right-1 px-1';
+
+          return (
+            <div
+              key={table.id}
+              className="absolute flex flex-col items-center"
+              style={{
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+                transform: `translate(-50%, -50%) rotate(${position.rotation}deg)`
+              }}
+            >
+              <div className={`${tableSizeClass} ${isRound ? 'rounded-full' : 'rounded-lg'} ${bgColor}/20 dark:${bgColor}/10 border-2 ${borderColor} flex items-center justify-center shadow-md relative backdrop-blur-sm`}>
+                <span className={`font-bold ${fontSizeClass} ${bgColor.replace('bg-', 'text-').replace('-400', '-500').replace('-300', '-400')}`}>
                   {table.name.replace('Table ', '')}
                 </span>
-              )}
+                <span className={`absolute bg-white dark:bg-gray-700 rounded-full shadow text-gray-500 font-mono ${badgeSizeClass}`}>
+                  {tableGuests.length}
+                </span>
+              </div>
+              <div className={`mt-1 text-center text-[10px] font-medium text-gray-500 dark:text-gray-400 max-w-[80px] truncate bg-white/80 dark:bg-gray-800/80 px-1.5 rounded backdrop-blur-sm shadow-sm ${isLargeVenue ? 'hidden' : ''}`}>
+                {primaryCategory}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 
@@ -662,27 +666,27 @@ const ExportDashboard: React.FC = () => {
 
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
             {/* Guests Seated */}
-            <div className="relative group/stat px-6 py-3.5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-secondary/20 hover:border-primary/30 hover:-translate-y-1">
+            <div className="relative group/stat px-6 py-3.5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-secondary/20 hover:border-primary/30 hover:-translate-y-1 flex flex-col items-center justify-center">
               <div className="absolute top-3.5 right-5 transition-colors">
                 <span className="material-icons-outlined text-xl text-primary opacity-80">groups</span>
               </div>
-              <dt className="text-[12px] font-bold text-gray-400 dark:text-gray-500 text-left uppercase tracking-widest mt-1">
+              <dt className="text-[12px] font-bold text-gray-400 dark:text-gray-500 text-center uppercase tracking-widest mt-1">
                 Guests Seated
               </dt>
-              <dd className="mt-2 text-5xl font-display font-semibold text-text-main dark:text-white text-center leading-tight">
+              <dd className="mt-2 text-5xl font-display font-semibold text-text-main dark:text-white text-center leading-tight lining-nums">
                 {seatedCount}
               </dd>
             </div>
 
             {/* Tables Arranged */}
-            <div className="relative group/stat px-6 py-3.5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-secondary/20 hover:border-primary/30 hover:-translate-y-1">
+            <div className="relative group/stat px-6 py-3.5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-secondary/20 hover:border-primary/30 hover:-translate-y-1 flex flex-col items-center justify-center">
               <div className="absolute top-3.5 right-5 transition-colors">
                 <span className="material-icons-outlined text-xl text-primary opacity-80">table_restaurant</span>
               </div>
-              <dt className="text-[12px] font-bold text-gray-400 dark:text-gray-500 text-left uppercase tracking-widest mt-1">
+              <dt className="text-[12px] font-bold text-gray-400 dark:text-gray-500 text-center uppercase tracking-widest mt-1">
                 Tables Arranged
               </dt>
-              <dd className="mt-2 text-5xl font-display font-semibold text-text-main dark:text-white text-center leading-tight">
+              <dd className="mt-2 text-5xl font-display font-semibold text-text-main dark:text-white text-center leading-tight lining-nums">
                 {tables.length}
               </dd>
             </div>
@@ -748,128 +752,7 @@ const ExportDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Floor Plan Preview Card */}
-          <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col group hover:shadow-xl transition-all duration-300">
-            <div className="flex justify-center items-center mb-6">
-              <h3 className="flex items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200">
-                <div className="text-primary">
-                  <span className="material-icons-outlined text-2xl">space_dashboard</span>
-                </div>
-                Visual Preview
-              </h3>
 
-            </div>
-
-            {/* Functional Map Preview */}
-            <div
-              className="floor-plan-preview bg-gray-50 dark:bg-gray-800 rounded-2xl h-64 w-full relative overflow-hidden cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-all duration-300"
-              onClick={() => setShowPreview(true)}
-            >
-              {renderMap(true)}
-
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-lg border border-white/50 dark:border-gray-700/50 transform transition-all duration-300 group-hover:scale-105 group-hover:bg-white dark:group-hover:bg-gray-800 flex items-center gap-2">
-                  <span className="material-icons-outlined text-primary">zoom_in</span>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Zoom to View</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-              <span className="material-icons-outlined text-gray-400 mt-0.5">info</span>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                {selectedVenueLayout ? (
-                  <div className="flex flex-col">
-                    <span>Previewing <span className="font-semibold text-gray-700 dark:text-gray-300">{selectedVenueLayout.name}</span> layout.</span>
-                    <span>Arranged across <span className="font-semibold">{tables.length} tables</span>.</span>
-                  </div>
-                ) : (
-                  <>Custom venue with {tables.length} tables.</>
-                )}
-              </p>
-            </div>
-          </div>
-
-          {/* Export Settings Card */}
-          <div className="bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md rounded-3xl shadow-lg p-8 border border-white/50 dark:border-gray-700 flex flex-col hover:shadow-xl transition-all duration-300">
-            <h3 className="flex justify-center items-center gap-3 font-display text-2xl text-text-main dark:text-gray-200 mb-6">
-              <div className="text-primary">
-                <span className="material-icons-outlined text-2xl">tune</span>
-              </div>
-              Export Options
-            </h3>
-
-            <div className="space-y-4 flex-grow">
-              {[
-                {
-                  id: 'dietary',
-                  label: 'Dietary Info',
-                  desc: 'Allergies & restrictions',
-                  icon: 'restaurant',
-                  checked: exportOptions.includeDietary,
-                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, includeDietary: checked }))
-                },
-                {
-                  id: 'group_analysis',
-                  label: 'Group Analysis',
-                  desc: 'Guest list by group',
-                  icon: 'groups',
-                  checked: exportOptions.vendorMealCount,
-                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, vendorMealCount: checked }))
-                },
-                {
-                  id: 'table_summary',
-                  label: 'Table Summary',
-                  desc: 'Stats per table',
-                  icon: 'backup_table',
-                  checked: exportOptions.tableSummary,
-                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, tableSummary: checked }))
-                },
-                {
-                  id: 'print_res',
-                  label: 'Print Quality',
-                  desc: 'High-DPI rendering',
-                  icon: 'print',
-                  checked: exportOptions.highResForPrinting,
-                  setter: (checked: boolean) => setExportOptions(p => ({ ...p, highResForPrinting: checked }))
-                }
-              ].map((opt) => (
-                <div
-                  key={opt.id}
-                  onClick={() => opt.setter(!opt.checked)}
-                  className={`relative p-4 rounded-2xl cursor-pointer transition-all duration-300 border-2 flex items-center gap-4 group hover:shadow-md
-                    ${opt.checked
-                      ? 'bg-primary/5 border-primary dark:bg-primary/10 dark:border-primary'
-                      : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-primary/30'}
-                  `}
-                >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300
-                    ${opt.checked ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}
-                  `}>
-                    <span className="material-icons-outlined text-2xl">{opt.icon}</span>
-                  </div>
-
-                  <div className="flex-1">
-                    <h4 className={`font-bold text-base transition-colors duration-300 ${opt.checked ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>
-                      {opt.label}
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
-                      {opt.desc}
-                    </p>
-                  </div>
-
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                    ${opt.checked ? 'border-primary bg-primary' : 'border-gray-300 dark:border-gray-600'}
-                  `}>
-                    {opt.checked && <span className="material-icons-round text-white text-[16px]">check</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </div>
 
         <div className="text-center pt-1">
           <p className="text-xl text-gray-500 dark:text-gray-400 italic font-display">
@@ -879,62 +762,14 @@ const ExportDashboard: React.FC = () => {
       </div>
 
       {/* Full Screen Preview Modal */}
-      {
-        showPreview && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col relative overflow-hidden animate-slide-up">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-display text-2xl text-text-main dark:text-white">Full Floor Plan Preview</h3>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <span className="material-icons-outlined text-gray-500 dark:text-gray-400">close</span>
-                </button>
-              </div>
-              <div className="flex-grow relative bg-gray-50 dark:bg-gray-900 p-16 overflow-auto flex items-center justify-center">
-                <div className="w-full h-full max-w-4xl max-h-[800px] aspect-[5/4] relative translate-y-4">
-                  {renderMap(false)}
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="px-5 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium hover:bg-white dark:hover:bg-gray-700 transition"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => { setShowPreview(false); handlePdfExport(); }}
-                  disabled={isExportingPdf}
-                  className="px-5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-opacity-90 shadow-md transition flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isExportingPdf ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-icons-outlined text-sm">download</span> Download PDF
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      }
+
       {/* Hidden container for high-res PDF export */}
       {/* Hidden container for high-res PDF export - Portaled to body to avoid clipping */}
       {typeof document !== 'undefined' && createPortal(
         (() => {
           const baseWidth = visualLayout.width || 1200;
           const baseHeight = visualLayout.height || 1000;
-          const padding = 200; // Extra space for bleed elements
+          const padding = 0; // Padding handled by container size multiplier
 
           return (
             <div
@@ -943,15 +778,16 @@ const ExportDashboard: React.FC = () => {
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width: `${baseWidth + (padding * 1.2)}px`,
-                height: `${baseHeight + (padding * 1)}px`,
+                width: `${baseWidth * 1.5}px`,
+                height: `${baseHeight * 1.5}px`,
                 backgroundColor: '#ffffff',
                 zIndex: isExportingPdf ? 9999 : -1,
                 opacity: isExportingPdf ? 1 : 0,
                 pointerEvents: 'none',
-                overflow: 'hidden',
+                overflow: 'visible',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
+                paddingTop: '100px',
                 justifyContent: 'center',
                 visibility: isExportingPdf ? 'visible' : 'hidden',
               }}
@@ -964,7 +800,7 @@ const ExportDashboard: React.FC = () => {
                   position: 'relative'
                 }}
               >
-                {renderMap(false)}
+                {renderMap()}
 
                 {/* Watermark */}
                 <div className="absolute -bottom-16 right-0 text-right">
