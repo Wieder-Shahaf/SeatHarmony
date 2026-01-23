@@ -341,31 +341,31 @@ const Recommendations: React.FC = () => {
   }
 
   return (
-    <div className="flex-grow w-full min-h-screen">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
+    <div className="flex-grow flex flex-col w-full min-h-[calc(100vh-180px)]">
+      <div className={`max-w-7xl mx-auto px-6 lg:px-8 py-6 ${loading ? 'flex-grow flex flex-col' : ''}`}>
         {/* Header - Matching Venue Style */}
-        <div className="mb-4 text-center max-w-3xl mx-auto">
+        <div className={`text-center max-w-3xl mx-auto ${loading ? 'mb-1' : 'mb-4'}`}>
           <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">
             Optimized Seating Plans
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
-            {layouts.length <= 1
-              ? "We've analyzed your guest list and found the optimal seating arrangement based on your constraints."
-              : "We've turned your guest list into a social masterpiece. Explore these AI-curated arrangements, each designed to create a unique atmosphere for your celebration."}
+            {layouts.length <= 0
+              ? "We're busy organizing your seats to make sure everyone lands at the right table. Almost there!"
+              : "Your guest list is ready for the big day! We’ve put together a few ways to seat your guests so everyone can enjoy a wonderful time together. Take a look!"}
           </p>
           {selectedVenueLayout && (
-            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 rounded-full text-xs text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700">
-              <span className="material-icons-round text-primary text-xs">{selectedVenueLayout.icon || 'location_on'}</span>
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 transform translate-y-2">
+              <span className="material-icons-round text-primary text-sm">{selectedVenueLayout.icon || 'location_on'}</span>
               <span className="font-medium">{selectedVenueLayout.name}</span>
               <span className="text-gray-400">•</span>
-              <span className="material-icons-outlined text-xs text-gray-500">people</span>
+              <span className="material-icons-outlined text-sm text-gray-500">people</span>
               <span>{guests.length} Guests</span>
             </div>
           )}
         </div>
 
         {loading && (
-          <div className="flex flex-col justify-center items-center py-8 relative overflow-hidden">
+          <div className="flex-grow flex flex-col justify-center items-center py-8 relative overflow-hidden min-h-[60vh] scale-[1.30]">
             <style>
               {`
         @keyframes heartbeat {

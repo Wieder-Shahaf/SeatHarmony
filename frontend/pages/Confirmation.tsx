@@ -31,11 +31,11 @@ const Confirmation: React.FC = () => {
       </div>
     );
   }
-  const [zoom, setZoom] = useState(0.9);
+  const [zoom, setZoom] = useState(0.65);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.1, 2));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.5));
-  const handleFit = () => setZoom(0.9);
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.1, 0.3));
+  const handleFit = () => setZoom(0.65);
 
   const [showAllTables, setShowAllTables] = useState(false);
 
@@ -110,9 +110,9 @@ const Confirmation: React.FC = () => {
   return (
     <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Header */}
-      <div className="mb-2 text-center max-w-4xl mx-auto pt-6 text-center">
-        <h2 className="font-display text-5xl text-text-main dark:text-white mb-4">Finalize & Export</h2>
-        <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
+      <div className="mb-1 text-center max-w-4xl mx-auto pt-4 text-center">
+        <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Finalize & Export</h2>
+        <p className="text-gray-600 dark:text-gray-300 text-base font-light leading-relaxed">
           Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
         </p>
       </div>
@@ -120,16 +120,16 @@ const Confirmation: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
 
         {/* Main Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[max(600px,calc(100vh-250px))]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[500px]">
 
           {/* Sidebar Info */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
-            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
-                <span className="material-icons-round text-secondary">map</span>
-                <h3 className="font-display text-xl text-text-main dark:text-secondary">Groups Legend</h3>
+          <div className="lg:col-span-3 flex flex-col gap-4 h-full">
+            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden flex-[0_0_auto]">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
+                <span className="material-icons-round text-secondary text-lg">map</span>
+                <h3 className="font-display text-lg text-text-main dark:text-secondary">Groups Legend</h3>
               </div>
-              <div className="p-6 space-y-3">
+              <div className="p-4 space-y-2">
                 {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
                   return (
                     <div key={category} className="flex items-center justify-between">
@@ -144,23 +144,23 @@ const Confirmation: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden">
+            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden flex-1 min-h-0">
               {/* Header */}
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
-                <span className="material-icons-round text-secondary">analytics</span>
-                <h3 className="font-display text-xl text-text-main dark:text-secondary">Summary</h3>
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
+                <span className="material-icons-round text-secondary text-lg">analytics</span>
+                <h3 className="font-display text-lg text-text-main dark:text-secondary">Summary</h3>
               </div>
 
-              <div className="p-6 flex flex-col gap-6">
+              <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto">
                 {/* Venue Section - Cleaner */}
                 <div>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div>
-                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Selected Venue</span>
-                      <div className="font-display text-xl text-text-main dark:text-white mt-1">{selectedVenueLayout?.name}</div>
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Selected Venue</span>
+                      <div className="font-display text-lg text-text-main dark:text-white mt-0.5">{selectedVenueLayout?.name}</div>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                      <span className="material-icons-round">storefront</span>
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                      <span className="material-icons-round text-lg">storefront</span>
                     </div>
                   </div>
 
@@ -182,38 +182,38 @@ const Confirmation: React.FC = () => {
                 </div>
 
                 {/* Stats Grid - High Contrast Tiles */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {/* Guests */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Guests</span>
-                    <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
+                  <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</span>
+                    <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
                   </div>
 
                   {/* Tables */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Tables</span>
-                    <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
+                  <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Tables</span>
+                    <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
                   </div>
 
                   {/* VIPs */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">VIPs</span>
-                    <span className="font-display text-3xl text-amber-600 dark:text-amber-400 leading-none">{vipCount}</span>
-                  </div>
+                  {/* <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">VIPs</span>
+                    <span className="font-display text-2xl text-amber-600 dark:text-amber-400 leading-none">{vipCount}</span>
+                  </div> */}
 
                   {/* Density */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-0.5">Density</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-display text-3xl text-gray-800 dark:text-white leading-none">{avgPerTable}</span>
-                      <span className="text-[10px] text-gray-400 font-bold">/tbl</span>
+                  {/* <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Density</span>
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{avgPerTable}</span>
+                      <span className="text-[9px] text-gray-400 font-bold">/tbl</span>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Unseated Status */}
-                <div className="border-t border-secondary/10 dark:border-gray-700 pt-4">
-                  <div className="flex justify-between items-center mb-2">
+                <div className="border-t border-secondary/10 dark:border-gray-700 pt-3">
+                  <div className="flex justify-between items-center mb-1">
                     <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Status</h4>
                     {unseatedCount === 0 ? (
                       <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full">
@@ -244,7 +244,7 @@ const Confirmation: React.FC = () => {
           </div>
 
           {/* Large Map View */}
-          <div ref={layoutRef} className="lg:col-span-9 bg-white dark:bg-gray-800 rounded-3xl shadow-inner border border-secondary/20 dark:border-gray-700 relative overflow-hidden flex items-center justify-center">
+          <div ref={layoutRef} className="lg:col-span-9 bg-white dark:bg-gray-800 rounded-3xl shadow-inner border border-secondary/20 dark:border-gray-700 relative overflow-hidden flex items-center justify-center h-full">
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
               <button onClick={handleZoomIn} className="bg-white dark:bg-gray-700 p-2 rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition" title="Zoom In">
                 <span className="material-icons-round">add</span>
@@ -259,15 +259,14 @@ const Confirmation: React.FC = () => {
 
             {/* Visual Layout Container */}
             <div
-              className="w-full h-full relative transition-transform duration-200 overflow-visible origin-center p-12 flex items-center justify-center"
+              className="w-half h-full relative transition-transform duration-200 overflow-visible origin-center p-4 flex items-center justify-center"
               style={{
-                transform: `scale(${zoom}) translateX(-2%) translateY(2%)`,
+                transform: `scale(${zoom})`,
                 width: '100%',
-                height: '100%',
-                minHeight: '800px'
+                height: '100%'
               }}
             >
-              <div className="relative w-full max-w-[1200px] aspect-[6/5]">
+              <div className="relative w-full max-w-[1000px] aspect-[5/4]">
                 {/* Visual Features (Bars, Restrooms, etc.) */}
                 {visualLayout.features?.map((feature, i) => {
                   const isZone = feature.type === 'zone';

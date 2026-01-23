@@ -4,6 +4,25 @@ import * as XLSX from 'xlsx';
 import { useGuests } from '../src/context/GuestContext';
 import { Guest, createGuestFromExcel } from '../src/types/models';
 
+// Canonical list of allowed category values used throughout the app/template
+const ALLOWED_CATEGORIES = [
+  "Groom's Family",
+  "Bride's Family",
+  "Groom's Extended Family",
+  "Bride's Extended Family",
+  "Groom's Side",
+  "Bride's Side",
+  "Groom's Work Colleagues",
+  "Bride's Work Colleagues",
+  "Groom's Uni Friends",
+  "Bride's Uni Friends",
+  "Groom's Friends",
+  "Bride's Friends",
+  "Mutual Friends",
+  "Family Friends",
+  "Other",
+];
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { initializeFromExcel, setIsLoading, setError } = useGuests();
@@ -11,6 +30,7 @@ const LandingPage: React.FC = () => {
   const [showInstructions, setShowInstructions] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [categoryWarning, setCategoryWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -32,8 +52,10 @@ const LandingPage: React.FC = () => {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      setPendingFile(file);
-      setShowInstructions(true);
+      // For drag & drop, behave like a direct file selection:
+      // immediately validate and process the file instead of opening "How it Works".
+      setPendingFile(null);
+      validateAndProcessFile(file);
     }
   };
 
@@ -75,38 +97,82 @@ const LandingPage: React.FC = () => {
           console.log('Detected columns:', columns);
 
           // Find column indices
-          const nameIndex = columns.findIndex(c => c === 'proper names' || c === 'name' || c === 'full guest name');
-          const categoryIndex = columns.findIndex(c => c === 'category');
+          const nameIndex = columns.findIndex(
+            (c) => c === 'proper names' || c === 'name' || c === 'full guest name'
+          );
+          const categoryIndex = columns.findIndex((c) => c === 'category');
 
           if (nameIndex === -1 || categoryIndex === -1) {
-            const missing = [];
-            if (nameIndex === -1) missing.push('"Full Guest Name", "Proper Names", or "Name"');
-            if (categoryIndex === -1) missing.push('"Category"');
+            const messages: string[] = [];
 
-            reject(new Error(`Missing required column(s): ${missing.join(' and ')}. Please ensure your spreadsheet has the required columns.`));
+            if (nameIndex === -1) {
+              messages.push(
+                'We could not find your guest name column. Please name it "Full Guest Name" (or use "Proper Names" / "Name") exactly as shown in the template.'
+              );
+            }
+
+            if (categoryIndex === -1) {
+              messages.push(
+                'We could not find your "Category" column. Please add or rename it to match the template exactly.'
+              );
+            }
+
+            reject(new Error(messages.join(' ')));
             return;
           }
 
           // Check if there are any data rows
-          if (rows.length < 2) {
+          const dataRows = rows.slice(1);
+          if (dataRows.length === 0) {
             reject(new Error('The spreadsheet appears to be empty (only headers found).'));
             return;
           }
 
-          // Parse guests from data rows
-          const guests: Guest[] = rows.slice(1)
-            .filter(row => {
-              // Ensure row has data in the name column
-              const val = row[nameIndex];
-              return val && String(val).trim() !== '';
+          // Validate that all category values match our predefined template categories
+          const allowedCategoriesSet = new Set(
+            ALLOWED_CATEGORIES.map((cat) => cat.toLowerCase())
+          );
+          const invalidCategoriesSet = new Set<string>();
+
+          // Parse guests from data rows while collecting any invalid categories
+          const guests: Guest[] = dataRows
+            .filter((row) => {
+              const nameVal = row[nameIndex];
+              return nameVal && String(nameVal).trim() !== '';
             })
             .map((row, index) => {
               const name = String(row[nameIndex]).trim();
-              const category = row[categoryIndex] ? String(row[categoryIndex]).trim() : '';
-              const id = `guest-${index + 1}-${name.toLowerCase().replace(/\s+/g, '-')}`;
+              const rawCategory = row[categoryIndex];
+              const category = rawCategory ? String(rawCategory).trim() : '';
 
+              // Track any category that does not match our template values
+              if (
+                !category ||
+                !allowedCategoriesSet.has(category.toLowerCase())
+              ) {
+                if (category) {
+                  invalidCategoriesSet.add(category);
+                }
+              }
+
+              const id = `guest-${index + 1}-${name.toLowerCase().replace(/\s+/g, '-')}`;
               return createGuestFromExcel(id, name, category);
             });
+
+          // If any categories are invalid, surface a clear error and open the template window
+          if (invalidCategoriesSet.size > 0) {
+            const examples = Array.from(invalidCategoriesSet).slice(0, 3).join(', ');
+            const message =
+              invalidCategoriesSet.size === 1
+                ? `Some guests use a category name that doesn't match our preset list (for example: ${examples}). Please use only the category names from the template.`
+                : `Some guests use category names that don't match our preset list (for example: ${examples}). Please use only the category names from the template.`;
+
+            // Show the template/instructions modal to guide the user
+            setShowInstructions(true);
+            setCategoryWarning(message);
+            reject(new Error(message));
+            return;
+          }
 
           if (guests.length === 0) {
             reject(new Error('The spreadsheet appears to be empty (no valid guests found).'));
@@ -114,6 +180,7 @@ const LandingPage: React.FC = () => {
           }
 
           console.log(`Successfully parsed ${guests.length} guests from ${file.name}`);
+          setCategoryWarning(null);
           resolve(guests);
         } catch (error) {
           console.error('Error parsing Excel file:', error);
@@ -196,14 +263,8 @@ const LandingPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const suggestedCategories = [
-    "Groom's Parents", "Bride's Parents", "Groom's Siblings", "Bride's Siblings",
-    "Grandparents", "Groom's Extended Family", "Bride's Extended Family",
-    "Mutual Friends", "Groom's College Friends", "Bride's College Friends",
-    "Groom's Childhood Friends", "Bride's Childhood Friends",
-    "Groom's Work Colleagues", "Bride's Work Colleagues",
-    "Neighbors", "Wedding Party", "Officiant"
-  ];
+  // Reuse the same canonical category list for the UI
+  const suggestedCategories = ALLOWED_CATEGORIES;
 
   return (
     <div className="flex-grow flex flex-col items-center relative overflow-hidden bg-background-lighter dark:bg-background-dark min-h-screen">
@@ -227,7 +288,10 @@ const LandingPage: React.FC = () => {
           </p>
 
           <button
-            onClick={() => setShowInstructions(true)}
+            onClick={() => {
+              setCategoryWarning(null);
+              setShowInstructions(true);
+            }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-secondary text-text-main dark:text-text-light text-sm font-medium hover:bg-secondary/10 transition-all shadow-sm hover:shadow-md"
           >
             <span className="material-icons-round text-base text-primary">lightbulb</span>
@@ -374,22 +438,51 @@ const LandingPage: React.FC = () => {
       {/* Instructions Modal */}
       {showInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-          <div className="bg-white dark:bg-surface-dark w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-[zoomIn_0.3s_ease-out] relative">
+          <div className="bg-white dark:bg-surface-dark w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-[zoomIn_0.3s_ease-out] relative">
+            {/* Category warning overlay - centered, blurs underlying content */}
+            {categoryWarning && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="max-w-xl w-full bg-amber-50 dark:bg-amber-900/95 border border-amber-200 dark:border-amber-700 rounded-2xl shadow-2xl px-6 py-5 flex items-start gap-3">
+                  <span className="material-icons-round text-amber-500 mt-0.5">warning_amber</span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-amber-900 dark:text-amber-50 mb-1">
+                      Update your category names
+                    </p>
+                    <p className="text-xs text-amber-900/90 dark:text-amber-50/90 mb-1">
+                      Some of your guest categories don&apos;t match SeatHarmony&apos;s preset list. Please download the template and update the values in your <span className="font-mono px-1 rounded bg-amber-100/70 dark:bg-amber-800/70">Category</span> column to use only the suggested names.
+                    </p>
+                    <p className="text-[11px] text-amber-900/80 dark:text-amber-100/80">
+                      Details: {categoryWarning}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCategoryWarning(null)}
+                    className="ml-2 p-1.5 rounded-full hover:bg-amber-100 dark:hover:bg-amber-800 transition-colors flex-shrink-0"
+                    aria-label="Dismiss category warning"
+                  >
+                    <span className="material-icons-round text-amber-700 dark:text-amber-50 text-sm">close</span>
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Modal Header */}
             <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-black/20">
               <h2 className="flex items-center gap-2 font-display text-2xl md:text-3xl text-text-main dark:text-white">
                 <span className="material-icons-round text-primary">edit_note</span> Prepare Your Guest List
               </h2>
               <button
-                onClick={() => setShowInstructions(false)}
+                onClick={() => {
+                  setShowInstructions(false);
+                  setCategoryWarning(null);
+                }}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="material-icons-round text-gray-500 dark:text-gray-400">close</span>
               </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="p-6 md:p-10 overflow-y-auto custom-scrollbar bg-white dark:bg-surface-dark">
+            {/* Modal Content */}
+            <div className="p-6 md:p-10 bg-white dark:bg-surface-dark">
               <div className="text-center mb-10">
                 <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
                   For the best results, please format your spreadsheet exactly as shown below. Our AI uses these specific categories to find optimal seating arrangements.
@@ -452,11 +545,6 @@ const LandingPage: React.FC = () => {
                         </tr>
                       </tbody>
                     </table>
-                  </div>
-
-                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30 rounded-lg flex gap-3 items-start">
-                    <span className="material-icons-round text-amber-500 text-lg mt-0.5">lightbulb</span>
-                    <p className="text-xs text-amber-800 dark:text-amber-200"><strong>Tip:</strong> Ensure your column headers are exactly "Full Guest Name" and "Category" to prevent upload errors.</p>
                   </div>
                 </div>
 

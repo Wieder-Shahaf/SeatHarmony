@@ -15,9 +15,9 @@ const GROUP_COLORS = [
   { bg: '#7A8B8B', name: 'Slate Blue' },        // Muted blue-grey
   { bg: '#B8A082', name: 'Warm Taupe' },        // Warm taupe
   { bg: '#8B9A7A', name: 'Olive Green' },        // Olive green
-  { bg: '#9B8B7A', name: 'Muted Terracotta' },   // Muted terracotta
+  { bg: '#769597', name: 'Muted Terracotta' },   // Muted terracotta
   { bg: '#7B8A9B', name: 'Steel Blue' },        // Steel blue
-  { bg: '#C4A88A', name: 'Sandy Beige' },       // Sandy beige
+  { bg: '#664d51', name: 'Sandy Beige' },       // Sandy beige
   { bg: '#6B7A6B', name: 'Forest Green' },       // Forest green
   { bg: '#A89B8C', name: 'Warm Grey' },         // Warm grey
   { bg: '#8B7A9B', name: 'Lavender Grey' },      // Lavender grey
@@ -107,8 +107,10 @@ const PlannerAI: React.FC = () => {
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [holdingGuestId, setHoldingGuestId] = useState<string | null>(null);
   const [holdingGuestOriginalTableId, setHoldingGuestOriginalTableId] = useState<string | null>(null);
+  const [holdingZoneError, setHoldingZoneError] = useState<string | null>(null);
   const guestRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
   const tableRefs = React.useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const holdingZoneRef = React.useRef<HTMLDivElement | null>(null);
 
 
   // Get the selected layout
@@ -247,10 +249,36 @@ const PlannerAI: React.FC = () => {
   // Scroll to guest in sidebar when selected
   useEffect(() => {
     if (selectedGuestId && guestRefs.current[selectedGuestId]) {
-      guestRefs.current[selectedGuestId]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      // Use setTimeout to ensure the explanation has rendered before scrolling
+      setTimeout(() => {
+        const guestElement = guestRefs.current[selectedGuestId];
+        if (guestElement) {
+          const scrollContainer = guestElement.parentElement;
+          if (scrollContainer) {
+            // Get the position of the element relative to the scroll container
+            const elementTop = guestElement.offsetTop;
+            const containerTop = scrollContainer.scrollTop;
+            const containerHeight = scrollContainer.clientHeight;
+            const elementHeight = guestElement.offsetHeight;
+            
+            // Calculate the desired scroll position to center the element
+            // Account for header by adding padding from top
+            const headerPadding = 20; // Padding to keep header visible
+            const targetScroll = elementTop - headerPadding;
+            
+            // Only scroll if element is not fully visible
+            const isAboveView = elementTop < containerTop + headerPadding;
+            const isBelowView = elementTop + elementHeight > containerTop + containerHeight;
+            
+            if (isAboveView || isBelowView) {
+              scrollContainer.scrollTo({
+                top: Math.max(0, targetScroll),
+                behavior: 'smooth',
+              });
+            }
+          }
+        }
+      }, 100); // Small delay to allow explanation to render
     }
   }, [selectedGuestId]);
 
@@ -354,10 +382,10 @@ const PlannerAI: React.FC = () => {
   }
 
   return (
-    <div className="flex-grow flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="fixed inset-0 top-[64px] flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-80 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft">
-        <div className="p-5 border-b border-gray-100 dark:border-gray-700">
+      <aside className="w-80 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft overflow-hidden">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
           <h2 className="flex items-center gap-2 font-display text-2xl font-light tracking-wide text-text-main dark:text-secondary mb-6">
             <span className="material-icons-round text-primary/80">list_alt</span> Guest List
           </h2>
@@ -404,7 +432,7 @@ const PlannerAI: React.FC = () => {
             ))}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 min-h-0">
           {filteredGuests.map(guest => {
             const tableId = assignments[guest.id];
             const table = tables.find(t => t.id === tableId);
@@ -522,6 +550,7 @@ const PlannerAI: React.FC = () => {
           </div>
         )}
 
+
         {/* Canvas Area - Dynamic Tables */}
         <div
           className="w-full min-h-full flex items-start justify-center p-20 pt-32 origin-top transition-transform duration-200 ease-out"
@@ -535,11 +564,13 @@ const PlannerAI: React.FC = () => {
               const tableSize = Math.max(120, 80 + capacity * 8);
               const isFull = tableGuests.length >= capacity;
 
+              const hasSelectedGuest = tableGuests.some(g => g.id === selectedGuestId);
+
               return (
                 <div
                   key={table.id}
                   ref={el => tableRefs.current[table.id] = el}
-                  className="relative flex flex-col items-center"
+                  className={`relative flex flex-col items-center ${hasSelectedGuest ? 'z-[1000]' : ''}`}
                   onDragOver={(e) => {
                     e.preventDefault();
                     // Only allow drop if table is not full
@@ -882,6 +913,7 @@ const PlannerAI: React.FC = () => {
 
               {/* Holding Zone */}
               <div
+                ref={holdingZoneRef}
                 onDragOver={(e) => {
                   // Only allow drop if zone is empty
                   if (!holdingGuestId) {
@@ -913,7 +945,7 @@ const PlannerAI: React.FC = () => {
                     setHoldingGuestId(guestId);
                   }
                 }}
-                className={`flex items-center gap-3 px-4 h-12 rounded-xl border-2 border-dashed transition-all duration-200 ${holdingGuest
+                className={`relative flex items-center gap-3 px-4 h-12 rounded-xl border-2 border-dashed transition-all duration-200 ${holdingGuest
                   ? 'bg-primary/10 border-primary border-solid'
                   : 'bg-gray-50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 hover:border-primary/50'
                   }`}
@@ -944,9 +976,21 @@ const PlannerAI: React.FC = () => {
                     </div>
                     <button
                       onClick={() => {
-                        // Restore to original table if possible
+                        // Check if original table is full before restoring
                         if (holdingGuestOriginalTableId && holdingGuestId) {
-                          updateGuestAssignment(holdingGuestId, holdingGuestOriginalTableId);
+                          const originalTable = tables.find(t => t.id === holdingGuestOriginalTableId);
+                          if (originalTable) {
+                            const currentGuestsAtTable = guestsByTable[holdingGuestOriginalTableId] || [];
+                            // Check if table is full (excluding the holding guest)
+                            if (currentGuestsAtTable.length >= originalTable.capacity) {
+                              // Show error popup - original table is full
+                              setHoldingZoneError(`Original table is full. Drag this guest to a table with available seats.`);
+                              setTimeout(() => setHoldingZoneError(null), 6000); // Clear after 4 seconds
+                              return; // Don't clear holding state
+                            }
+                            // Table has space, restore guest
+                            updateGuestAssignment(holdingGuestId, holdingGuestOriginalTableId);
+                          }
                         }
                         setHoldingGuestId(null);
                         setHoldingGuestOriginalTableId(null);
@@ -966,6 +1010,18 @@ const PlannerAI: React.FC = () => {
                       Drag guest here to hold
                     </span>
                   </>
+                )}
+                
+                {/* Holding Zone Error Popup - Appears above holding zone */}
+                {holdingZoneError && (
+                  <div className="absolute bottom-full left-0 mb-3 z-50 animate-slide-up origin-bottom-left">
+                    <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 max-w-xs relative">
+                      {/* Arrow pointing down to holding zone */}
+                      <div className="absolute -bottom-1.5 left-6 w-3 h-3 bg-amber-50 dark:bg-amber-900/30 border-b border-r border-amber-200 dark:border-amber-800 rotate-45"></div>
+                      <span className="material-icons-round text-amber-500 text-lg">info</span>
+                      <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">{holdingZoneError}</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
