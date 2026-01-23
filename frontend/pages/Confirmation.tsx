@@ -38,6 +38,8 @@ const Confirmation: React.FC = () => {
   const handleFit = () => setZoom(0.65);
 
   const [showAllTables, setShowAllTables] = useState(false);
+  const [showLegendInfo, setShowLegendInfo] = useState(false);
+  const [hoveredTooltip, setHoveredTooltip] = useState<{ text: string, x: number, y: number } | null>(null);
 
   const layoutRef = useRef<HTMLDivElement>(null);
 
@@ -109,15 +111,14 @@ const Confirmation: React.FC = () => {
 
   return (
     <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
-      {/* Header */}
-      <div className="mb-1 text-center max-w-4xl mx-auto pt-2 text-center">
-        <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Finalize & Export</h2>
-        <p className="text-gray-600 dark:text-gray-300 text-base font-light leading-relaxed">
-          Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
-        </p>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="mb-4 text-center max-w-5xl mx-auto">
+          <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">Finalize</h2>
+          <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
+            Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
+          </p>
+        </div>
 
         {/* Main Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-280px)] min-h-[400px]">
@@ -125,9 +126,37 @@ const Confirmation: React.FC = () => {
           {/* Sidebar Info */}
           <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
             <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden flex-shrink-0 max-h-[45%]">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
+              <div className="relative px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
                 <span className="material-icons-round text-secondary text-lg">map</span>
                 <h3 className="font-display text-lg text-text-main dark:text-secondary">Groups Legend</h3>
+                <button
+                  onClick={() => setShowLegendInfo(!showLegendInfo)}
+                  className="material-icons-round text-gray-400/70 hover:text-primary text-lg cursor-pointer transition-colors focus:outline-none mt-0.5"
+                  title="Click for more info"
+                >
+                  info
+                </button>
+
+                {/* Info Tooltip Popover */}
+                {showLegendInfo && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowLegendInfo(false)}></div>
+                    <div className="absolute top-10 left-4 right-4 z-20 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 animate-fade-in-down">
+                      <div className="flex items-start gap-2">
+                        <span className="material-icons-round text-primary text-sm mt-0.5">info</span>
+                        <div>
+                          <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
+                            Table colors represent the <span className="text-primary font-bold">majority group</span> seated at that table.
+                          </p>
+                        </div>
+                        <button onClick={() => setShowLegendInfo(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                          <span className="material-icons-round text-sm">close</span>
+                        </button>
+                      </div>
+                      <div className="absolute -top-1.5 left-28 w-3 h-3 bg-white dark:bg-gray-800 border-t border-l border-gray-200 dark:border-gray-700 transform rotate-45"></div>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="p-4 space-y-2 overflow-y-auto">
                 {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
@@ -186,13 +215,13 @@ const Confirmation: React.FC = () => {
                   {/* Guests */}
                   <div className="bg-white/80 dark:bg-gray-800 p-1.5 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
                     <span className="text-[8px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</span>
-                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
+                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none lining-nums">{guests.length}</span>
                   </div>
 
                   {/* Tables */}
                   <div className="bg-white/80 dark:bg-gray-800 p-1.5 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
                     <span className="text-[8px] font-extrabold text-gray-500 uppercase tracking-widest">Tables</span>
-                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
+                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none lining-nums">{tables.length}</span>
                   </div>
                 </div>
 
@@ -227,7 +256,7 @@ const Confirmation: React.FC = () => {
                 <span className="material-icons-round">remove</span>
               </button>
               <button onClick={handleFit} className="bg-white dark:bg-gray-700 p-2 rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition" title="Fit to Screen">
-                <span className="material-icons-round">aspect_ratio</span>
+                <span className="material-icons-round">restart_alt</span>
               </button>
             </div>
 
@@ -458,9 +487,18 @@ const Confirmation: React.FC = () => {
                             const bulletColor = getTableColor(Math.max(0, groupColorIndex) % TABLE_COLORS.length);
 
                             return (
-                              <li key={guest.id} className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${guest.importance > 0 ? 'font-bold' : ''}`} title={guestGroup}>
+                              <li
+                                key={guest.id}
+                                className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${guest.importance > 0 ? 'font-bold' : ''} cursor-default`}
+                                onMouseEnter={(e) => {
+                                  const textSpan = e.currentTarget.querySelector('span.truncate');
+                                  const rect = textSpan ? textSpan.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+                                  setHoveredTooltip({ text: guestGroup, x: rect.right, y: rect.top + (rect.height / 2) });
+                                }}
+                                onMouseLeave={() => setHoveredTooltip(null)}
+                              >
                                 <div className={`w-2 h-2 rounded-full ${bulletColor} ${guest.importance > 0 ? 'ring-1 ring-secondary' : ''}`}></div>
-                                <span className="truncate cursor-default">{guest.name}</span>
+                                <span className="truncate">{guest.name}</span>
                               </li>
                             );
                           });
@@ -523,6 +561,17 @@ const Confirmation: React.FC = () => {
         </div>
       </div>
       <div className="h-24"></div> {/* Spacer for bottom bar */}
+
+      {/* Global Tooltip for Guest Groups */}
+      {hoveredTooltip && (
+        <div
+          className="fixed z-[100] px-2 py-1 bg-gray-800 text-white text-xs font-medium rounded shadow-lg pointer-events-none transform -translate-y-1/2 ml-2 whitespace-nowrap"
+          style={{ left: hoveredTooltip.x, top: hoveredTooltip.y }}
+        >
+          {hoveredTooltip.text}
+          <div className="absolute top-1/2 right-full -mt-1 border-4 border-transparent border-r-gray-800"></div>
+        </div>
+      )}
     </div>
   );
 };
