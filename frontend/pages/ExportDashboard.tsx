@@ -287,6 +287,18 @@ const ExportDashboard: React.FC = () => {
     }
   }, []);
 
+  // Disable page scroll during PDF export
+  useEffect(() => {
+    if (isExportingPdf) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isExportingPdf]);
+
   // Format date for filename
   const formatDate = () => {
     const now = new Date();
@@ -776,20 +788,18 @@ const ExportDashboard: React.FC = () => {
               id="pdf-export-container"
               style={{
                 position: 'absolute',
-                left: 0,
+                left: isExportingPdf ? 0 : -9999,
                 top: 0,
                 width: `${baseWidth * 1.5}px`,
                 height: `${baseHeight * 1.5}px`,
                 backgroundColor: '#ffffff',
-                zIndex: isExportingPdf ? 9999 : -1,
-                opacity: isExportingPdf ? 1 : 0,
+                zIndex: -1,
                 pointerEvents: 'none',
                 overflow: 'visible',
                 display: 'flex',
                 alignItems: 'flex-start',
                 paddingTop: '100px',
                 justifyContent: 'center',
-                visibility: isExportingPdf ? 'visible' : 'hidden',
               }}
             >
               {/* Inner container with exact layout dimensions */}

@@ -110,26 +110,26 @@ const Confirmation: React.FC = () => {
   return (
     <div className="flex-grow w-full bg-background-lighter dark:bg-background-dark min-h-screen">
       {/* Header */}
-      <div className="mb-1 text-center max-w-4xl mx-auto pt-4 text-center">
+      <div className="mb-1 text-center max-w-4xl mx-auto pt-2 text-center">
         <h2 className="font-display text-4xl text-text-main dark:text-white mb-2">Finalize & Export</h2>
         <p className="text-gray-600 dark:text-gray-300 text-base font-light leading-relaxed">
           Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1">
 
         {/* Main Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[500px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-280px)] min-h-[400px]">
 
           {/* Sidebar Info */}
-          <div className="lg:col-span-3 flex flex-col gap-4 h-full">
-            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden flex-[0_0_auto]">
+          <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-hidden">
+            <div className="bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md rounded-2xl shadow-sm border border-secondary/20 dark:border-gray-700 flex flex-col overflow-hidden flex-shrink-0 max-h-[45%]">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 bg-white/50 dark:bg-white/5">
                 <span className="material-icons-round text-secondary text-lg">map</span>
                 <h3 className="font-display text-lg text-text-main dark:text-secondary">Groups Legend</h3>
               </div>
-              <div className="p-4 space-y-2">
+              <div className="p-4 space-y-2 overflow-y-auto">
                 {Object.entries(categoryStats).slice(0, 6).map(([category, count], i) => {
                   return (
                     <div key={category} className="flex items-center justify-between">
@@ -151,12 +151,12 @@ const Confirmation: React.FC = () => {
                 <h3 className="font-display text-lg text-text-main dark:text-secondary">Summary</h3>
               </div>
 
-              <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto">
+              <div className="p-4 flex flex-col gap-3 flex-1 overflow-hidden min-h-0">
                 {/* Venue Section - Cleaner */}
                 <div>
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Selected Venue</span>
+                      {/* <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Selected Venue</span> */}
                       <div className="font-display text-lg text-text-main dark:text-white mt-0.5">{selectedVenueLayout?.name}</div>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -182,33 +182,18 @@ const Confirmation: React.FC = () => {
                 </div>
 
                 {/* Stats Grid - High Contrast Tiles */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   {/* Guests */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</span>
-                    <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
+                  <div className="bg-white/80 dark:bg-gray-800 p-1.5 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[8px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</span>
+                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none">{guests.length}</span>
                   </div>
 
                   {/* Tables */}
-                  <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Tables</span>
-                    <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
+                  <div className="bg-white/80 dark:bg-gray-800 p-1.5 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
+                    <span className="text-[8px] font-extrabold text-gray-500 uppercase tracking-widest">Tables</span>
+                    <span className="font-display text-xl text-gray-800 dark:text-white leading-none">{tables.length}</span>
                   </div>
-
-                  {/* VIPs */}
-                  {/* <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">VIPs</span>
-                    <span className="font-display text-2xl text-amber-600 dark:text-amber-400 leading-none">{vipCount}</span>
-                  </div> */}
-
-                  {/* Density */}
-                  {/* <div className="bg-white/80 dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700 flex flex-col items-center justify-center hover:bg-white transition-colors">
-                    <span className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Density</span>
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="font-display text-2xl text-gray-800 dark:text-white leading-none">{avgPerTable}</span>
-                      <span className="text-[9px] text-gray-400 font-bold">/tbl</span>
-                    </div>
-                  </div> */}
                 </div>
 
                 {/* Unseated Status */}
@@ -227,17 +212,6 @@ const Confirmation: React.FC = () => {
                       </span>
                     )}
                   </div>
-
-                  {unseatedCount > 0 ? (
-                    <div className="text-xs text-red-500 dark:text-red-400 font-medium">
-                      You have {unseatedCount} guests who need a seat.
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-400 dark:text-gray-500">
-                      <div>Great job!</div>
-                      <div>Every guest has been assigned a table.</div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -343,10 +317,24 @@ const Confirmation: React.FC = () => {
                 {/* Absolutely Positioned Tables */}
                 {tables.map((table, i) => {
                   const tableGuests = guestsByTable[table.id] || [];
-                  const primaryCategory = tableGuests.length > 0
-                    ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
-                    : 'Empty';
-                  const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+
+                  // Find majority category at this table
+                  let primaryCategory = 'Empty';
+                  if (tableGuests.length > 0) {
+                    const categoryCounts: Record<string, number> = {};
+                    tableGuests.forEach((g: Guest) => {
+                      const cat = g.group_id || 'Mixed';
+                      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                    });
+                    const counts = Object.values(categoryCounts);
+                    if (counts.length > 0) {
+                      const maxCount = Math.max(...counts);
+                      const topCategories = Object.keys(categoryCounts).filter(cat => categoryCounts[cat] === maxCount);
+                      primaryCategory = topCategories.length > 0 ? topCategories[i % topCategories.length] : 'Mixed';
+                    }
+                  }
+
+                  const colorIndex = Math.max(0, Object.keys(categoryStats).indexOf(primaryCategory)) % TABLE_COLORS.length;
                   const bgColor = getTableColor(colorIndex);
                   const borderColor = getTableBorderColor(colorIndex);
                   const isRound = table.constraints?.tableType !== 'rectangular';
@@ -391,20 +379,53 @@ const Confirmation: React.FC = () => {
                 })}
               </div>
             </div>
+
           </div>
         </div>
 
+        {/* Scroll CTA - Elegant Arrow */}
+        <div className="flex justify-center mt-2">
+          <button
+            onClick={() => {
+              const el = document.getElementById('table-details');
+              if (el) {
+                const top = el.getBoundingClientRect().top + window.scrollY;
+                window.scrollTo({ top: top - 82, behavior: 'smooth' });
+              }
+            }}
+            className="group flex items-center gap-2 text-gray-400 hover:text-primary transition-colors duration-300 cursor-pointer"
+          >
+            <span className="material-icons-round text-xl animate-bounce group-hover:animate-none">keyboard_arrow_down</span>
+            <span className="text-sm font-medium tracking-wide">Table Details</span>
+            <span className="material-icons-round text-xl animate-bounce group-hover:animate-none">keyboard_arrow_down</span>
+          </button>
+        </div>
+
         {/* Detail Rows */}
-        <div className="mt-8">
+        <div id="table-details" className="mt-8">
           <h2 className="font-display text-2xl text-text-main dark:text-secondary mb-4">Table Details</h2>
           <div className="max-h-[800px] overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-2">
-              {(showAllTables ? tables : tables.slice(0, 8)).map((table, i) => {
+              {(showAllTables ? tables : tables.slice(0, 8)).map((table, idx) => {
                 const tableGuests = guestsByTable[table.id] || [];
-                const primaryCategory = tableGuests.length > 0
-                  ? (tableGuests.find(g => g.group_id)?.group_id || 'Mixed')
-                  : 'Empty';
-                const colorIndex = Object.keys(categoryStats).indexOf(primaryCategory) % TABLE_COLORS.length;
+
+                // Find majority category at this table
+                let primaryCategory = 'Empty';
+                if (tableGuests.length > 0) {
+                  const categoryCounts: Record<string, number> = {};
+                  tableGuests.forEach((g: Guest) => {
+                    const cat = g.group_id || 'Mixed';
+                    categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                  });
+                  const counts = Object.values(categoryCounts);
+                  if (counts.length > 0) {
+                    const maxCount = Math.max(...counts);
+                    const topCategories = Object.keys(categoryCounts).filter(cat => categoryCounts[cat] === maxCount);
+                    primaryCategory = topCategories.length > 0 ? topCategories[idx % topCategories.length] : 'Mixed';
+                  }
+                }
+
+                const colorIndex = Math.max(0, Object.keys(categoryStats).indexOf(primaryCategory)) % TABLE_COLORS.length;
                 const tableBgColor = getTableColor(colorIndex);
                 const isRound = table.constraints?.tableType !== 'rectangular';
 
@@ -423,12 +444,27 @@ const Confirmation: React.FC = () => {
                         {table.zone && ` • ${table.zone}`}
                       </p>
                       <ul className="space-y-1 max-h-48 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-600">
-                        {tableGuests.map((guest) => (
-                          <li key={guest.id} className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${guest.importance > 0 ? 'font-bold' : ''}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${guest.importance > 0 ? 'bg-secondary' : 'bg-gray-300'}`}></div>
-                            <span className="truncate">{guest.name}</span>
-                          </li>
-                        ))}
+                        {(() => {
+                          // Sort guests by group
+                          const sortedGuests = [...tableGuests].sort((a: Guest, b: Guest) => {
+                            const groupA = a.group_id || 'Other';
+                            const groupB = b.group_id || 'Other';
+                            return groupA.localeCompare(groupB);
+                          });
+
+                          return sortedGuests.map((guest: Guest) => {
+                            const guestGroup = guest.group_id || 'Other';
+                            const groupColorIndex = Object.keys(categoryStats).indexOf(guestGroup);
+                            const bulletColor = getTableColor(Math.max(0, groupColorIndex) % TABLE_COLORS.length);
+
+                            return (
+                              <li key={guest.id} className={`text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 ${guest.importance > 0 ? 'font-bold' : ''}`} title={guestGroup}>
+                                <div className={`w-2 h-2 rounded-full ${bulletColor} ${guest.importance > 0 ? 'ring-1 ring-secondary' : ''}`}></div>
+                                <span className="truncate cursor-default">{guest.name}</span>
+                              </li>
+                            );
+                          });
+                        })()}
                       </ul>
                     </div>
                   </div>
