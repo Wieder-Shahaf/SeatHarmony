@@ -41,7 +41,34 @@ const Confirmation: React.FC = () => {
   const [showLegendInfo, setShowLegendInfo] = useState(false);
   const [hoveredTooltip, setHoveredTooltip] = useState<{ text: string, x: number, y: number } | null>(null);
 
+  // Panning state
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
   const layoutRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
 
   // Get selected layout
   const selectedLayout = layouts[selectedLayoutIndex] || null;
@@ -247,7 +274,14 @@ const Confirmation: React.FC = () => {
           </div>
 
           {/* Large Map View */}
-          <div ref={layoutRef} className="lg:col-span-9 bg-white dark:bg-gray-800 rounded-3xl shadow-inner border border-secondary/20 dark:border-gray-700 relative overflow-hidden flex items-center justify-center h-full">
+          <div
+            ref={layoutRef}
+            className={`lg:col-span-9 bg-white dark:bg-gray-800 rounded-3xl shadow-inner border border-secondary/20 dark:border-gray-700 relative overflow-hidden flex items-center justify-center h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
+          >
             <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
               <button onClick={handleZoomIn} className="bg-white dark:bg-gray-700 p-2 rounded-lg shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition" title="Zoom In">
                 <span className="material-icons-round">add</span>
@@ -260,11 +294,10 @@ const Confirmation: React.FC = () => {
               </button>
             </div>
 
-            {/* Visual Layout Container */}
             <div
-              className="w-half h-full relative transition-transform duration-200 overflow-visible origin-center p-4 flex items-center justify-center"
+              className="w-half h-full relative transition-transform duration-75 overflow-visible origin-center p-4 flex items-center justify-center"
               style={{
-                transform: `scale(${zoom})`,
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 width: '100%',
                 height: '100%'
               }}

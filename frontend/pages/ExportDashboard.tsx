@@ -766,7 +766,7 @@ const ExportDashboard: React.FC = () => {
 
 
 
-        <div className="text-center pt-1">
+        <div className="text-center pt-1 translate-y-2">
           <p className="text-xl text-gray-500 dark:text-gray-400 italic font-display">
             "Love is the master key that opens the gates of happiness."
           </p>
