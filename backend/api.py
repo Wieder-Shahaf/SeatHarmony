@@ -1440,6 +1440,7 @@ def export_excel(req: ExcelExportRequest):
     # ============ SHEET 1: Seating Plan ============
     ws1 = wb.active
     ws1.title = "Seating Plan"
+    ws1.sheet_properties.tabColor = "8A8E75"
 
     # Styles
     header_font = Font(bold=True, color="FFFFFF")
@@ -1530,6 +1531,7 @@ def export_excel(req: ExcelExportRequest):
     # ============ SHEET 2: Table Summary ============
     if req.options.get("include_table_details", True):
         ws2 = wb.create_sheet("Table Summary")
+        ws2.sheet_properties.tabColor = "68604D"
 
         headers2 = ["Table Name", "Capacity", "Guests Seated", "Group Distribution", "Zone"]
         for col, header in enumerate(headers2, 1):
@@ -1578,6 +1580,7 @@ def export_excel(req: ExcelExportRequest):
     # ============ SHEET 3: Group Analysis ============
     if req.options.get("include_vendor_summary", False): # Reusing this flag for Group Analysis
         ws3 = wb.create_sheet("Group Analysis")
+        ws3.sheet_properties.tabColor = "D5C7AD"
 
         headers3 = ["Group Name", "Guest Name", "Assigned Table", "Table #"]
         for col, header in enumerate(headers3, 1):

@@ -354,7 +354,7 @@ const Recommendations: React.FC = () => {
               : "Your guest list is ready for the big day! We’ve put together a few ways to seat your guests so everyone can enjoy a wonderful time together. Take a look!"}
           </p>
           {selectedVenueLayout && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 transform translate-y-2">
+            <div className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-black/20 rounded-full text-sm text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700 transform translate-y-2">
               <span className="material-icons-round text-primary text-sm">{selectedVenueLayout.icon || 'location_on'}</span>
               <span className="font-medium">{selectedVenueLayout.name}</span>
               <span className="text-gray-400">•</span>
@@ -557,7 +557,7 @@ const Recommendations: React.FC = () => {
 
         {/* Legend - Explains metrics once for all cards */}
         {!loading && !error && layouts.length > 0 && (
-          <div className="mb-3 max-w-3xl mx-auto">
+          <div className="mb-3 max-w-3xl mx-auto mt-6">
             <div className="bg-white/60 dark:bg-surface-dark/60 rounded-xl border border-gray-100 dark:border-gray-700 p-3">
               <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-gray-600 dark:text-gray-400">
                 <div className="flex items-center gap-1.5">
@@ -698,8 +698,8 @@ const Recommendations: React.FC = () => {
         {/* Helpful note */}
         {!loading && layouts.length > 0 && (
           <div className="mt-6 text-center pb-24">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              <span className="material-icons-round text-[10px] align-middle mr-1">info</span>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="material-icons-round text-sm align-middle mr-1">info</span>
               You can always come back here to try a different arrangement
             </p>
           </div>
