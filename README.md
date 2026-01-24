@@ -30,7 +30,7 @@ The system combines:
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
@@ -174,7 +174,7 @@ Navigate to **http://localhost:3000**
 
 ---
 
-## 📱 Using the Application
+## Using the Application
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -190,7 +190,7 @@ Navigate to **http://localhost:3000**
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 SeatHarmony/
@@ -210,7 +210,7 @@ SeatHarmony/
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 <details>
 <summary><b>Module not found errors</b></summary>
