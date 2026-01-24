@@ -114,6 +114,9 @@ const Dashboard: React.FC = () => {
   const [flippedGroupIds, setFlippedGroupIds] = useState<Set<string>>(new Set());
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
 
+  const uncategorizedCardRef = useRef<HTMLDivElement>(null);
+  const [scrollToUncategorized, setScrollToUncategorized] = useState(false);
+
   // Drag-and-drop state
   const [draggedGuest, setDraggedGuest] = useState<GuestItem | null>(null);
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null>(null);
@@ -294,6 +297,37 @@ const Dashboard: React.FC = () => {
     return uncategorizedGroup ? uncategorizedGroup.guestCount : 0;
   }, [groupsData]);
 
+  const handleUncategorizedClick = () => {
+    setSelectedFilters([]);
+    setFilterSearch('');
+    setScrollToUncategorized(true);
+  };
+
+  useEffect(() => {
+    if (scrollToUncategorized) {
+      const timer = setTimeout(() => {
+        if (uncategorizedCardRef.current) {
+          uncategorizedCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          setTimeout(() => {
+            const uncategorizedGroup = groupsData.find(g => g.name === 'Uncategorized');
+            if (uncategorizedGroup) {
+              setFlippedGroupIds(prev => {
+                const newSet = new Set(prev);
+                newSet.add(uncategorizedGroup.id);
+                return newSet;
+              });
+            }
+            setScrollToUncategorized(false);
+          }, 800);
+        } else {
+          setScrollToUncategorized(false);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollToUncategorized, groupsData]);
+
   // Show loading state if no data yet
   if (guests.length === 0) {
     return (
@@ -461,7 +495,10 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl shadow-sm border border-secondary/20 flex flex-col">
-          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2">
+          <span 
+            onClick={handleUncategorizedClick}
+            className="flex items-center gap-1 text-gray-500 dark:text-gray-300 text-sm font-medium uppercase tracking-wider mb-2 cursor-pointer hover:text-primary transition-colors"
+          >
             <span className="material-icons-round text-md">person_search</span> Uncategorized
           </span>
           <div className="flex items-center gap-2">
@@ -511,6 +548,7 @@ const Dashboard: React.FC = () => {
           return (
             <div
               key={group.id}
+              ref={group.name === 'Uncategorized' ? uncategorizedCardRef : null}
               className="relative h-96 w-full perspective-[1000px] group"
             >
               <div
