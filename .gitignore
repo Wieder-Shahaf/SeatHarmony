@@ -27,4 +27,6 @@ dist-ssr
 .env.local
 .venv
 
+# Claude Code
 /.claude
+CLAUDE.md
