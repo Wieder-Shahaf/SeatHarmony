@@ -19,14 +19,14 @@
 
 ---
 
-## 🎯 What is SeatHarmony?
+## What is SeatHarmony?
 
 SeatHarmony helps plan optimal table assignments for weddings and events. Upload your guest list, define tables and venue layout, and let AI generate seating arrangements that respect relationships, guest importance, and preferences.
 
 The system combines:
-- **🧮 Gurobi Constraint Optimization** — Mathematical optimization for optimal seat assignments
-- **🌳 Tree-of-Thoughts Search** — AI technique exploring different objective weightings
-- **🦙 Llama 3.3 70B (via Groq)** — Generates human-readable explanations for seating decisions
+- ** Gurobi Constraint Optimization** — Mathematical optimization for optimal seat assignments
+- ** Tree-of-Thoughts Search** — AI technique exploring different objective weightings
+- ** Llama 3.3 70B (via Groq)** — Generates human-readable explanations for seating decisions
 
 ---
 
@@ -34,16 +34,16 @@ The system combines:
 
 | Feature | Description |
 |---------|-------------|
-| 👥 **Guest Management** | Import guests via Excel/CSV or add manually |
-| 🏛️ **Venue Selection** | Choose from multiple venue layouts with visual previews |
-| 🤖 **AI-Powered Seating** | Generate optimized arrangements using Gurobi + Llama 70B |
-| 🎨 **Interactive Planner** | Drag-and-drop interface for manual adjustments |
-| 🗺️ **Visual Floor Plan** | See your seating on an interactive venue map |
-| 📄 **Export Options** | Download PDF floor plans and Excel guest lists |
+|  **Guest Management** | Import guests via Excel/CSV or add manually |
+|  **Venue Selection** | Choose from multiple venue layouts with visual previews |
+|  **AI-Powered Seating** | Generate optimized arrangements using Gurobi + Llama 70B |
+|  **Interactive Planner** | Drag-and-drop interface for manual adjustments |
+|  **Visual Floor Plan** | See your seating on an interactive venue map |
+|  **Export Options** | Download PDF floor plans and Excel guest lists |
 
 ---
 
-## 🎬 Demo
+## Demo
 
 <div align="center">
 
@@ -75,7 +75,7 @@ The system combines:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
