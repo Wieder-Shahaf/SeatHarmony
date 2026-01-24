@@ -1,137 +1,251 @@
-# SeatHarmony
+<div align="center">
 
-AI-powered wedding seating planner that creates harmonious seating arrangements based on guest relationships, preferences, and venue constraints.
+# 💒 SeatHarmony
 
----
+**AI-powered wedding seating planner that creates harmonious arrangements**
 
-## Project Overview
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 
-SeatHarmony helps plan optimal table assignments for weddings and events. Users upload their guest list, define tables and venue layout, and the system generates seating arrangements that respect relationships (who should sit together or apart), guest importance, and other preferences.
+[![Gurobi](https://img.shields.io/badge/Gurobi-Optimizer-EE3124?style=for-the-badge)](https://www.gurobi.com/)
+[![Groq](https://img.shields.io/badge/Groq-Llama_70B-F55036?style=for-the-badge)](https://groq.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-The system combines **constraint optimization** (Gurobi-based) with **Tree-of-Thoughts search** — an AI technique that explores different objective weightings to find well-balanced, socially harmonious layouts. An LLM (Gemini or OpenAI) powers the ToT search and generates human-readable explanations for the seating decisions.
+[Features](#-features) • [Demo](#-demo) • [Getting Started](#-getting-started) • [Usage](#-using-the-application) • [Contributing](#-contributing)
 
----
-
-## Components
-
-### Frontend (`frontend/`)
-
-React/Vite application with a multi-step workflow:
-
-- **Landing** — Introduction and entry point
-- **Dashboard** — Guest management and overview
-- **Venue Selection** — Configure tables, capacity, and zones
-- **Recommendations** — View AI-generated seating suggestions
-- **Planner AI** — Interactive layout generation and refinement
-- **Confirmation & Export** — Finalize and export the seating plan
-
-### Backend (`backend/`)
-
-Python service providing:
-
-- **FastAPI API** — Endpoints for layout generation (`/api/layouts/generate`) and explanations (`/api/layouts/explain`)
-- **Optimizer** — Gurobi-backed constraint solver with heuristic fallback (if Gurobi is unavailable)
-- **SeatHarmonyTask** — Tree-of-Thoughts-compatible task that explores objective variants
-- **Streamlit Debug UI** — Interactive tool for testing and inspecting ToT search
-
-### Tree-of-Thought-LLM (`tree-of-thought-llm/`)
-
-The [Tree-of-Thought-LLM](https://github.com/princeton-nlp/tree-of-thought-llm) library (included as a subfolder) provides the ToT search framework. It is installed from source into the backend environment.
+</div>
 
 ---
 
-## Prerequisites
+## 🎯 What is SeatHarmony?
 
-- **Node.js** (LTS) — for the frontend
-- **Python 3.10+** — for the backend
-- **LLM API key** — Gemini (`GEMINI_API_KEY`) or OpenAI (`OPENAI_API_KEY`) for AI-powered search and explanations
+SeatHarmony helps plan optimal table assignments for weddings and events. Upload your guest list, define tables and venue layout, and let AI generate seating arrangements that respect relationships, guest importance, and preferences.
 
-> **Note:** Gurobi is optional. The optimizer falls back to a heuristic if Gurobi is not installed or licensed. See `backend/setup_gurobi_license.sh` if you have Gurobi.
+The system combines:
+- **🧮 Gurobi Constraint Optimization** — Mathematical optimization for optimal seat assignments
+- **🌳 Tree-of-Thoughts Search** — AI technique exploring different objective weightings
+- **🦙 Llama 3.3 70B (via Groq)** — Generates human-readable explanations for seating decisions
 
 ---
 
-## How to Run
+## ✨ Features
 
-### 1. Backend Setup (first time)
+| Feature | Description |
+|---------|-------------|
+| 👥 **Guest Management** | Import guests via Excel/CSV or add manually |
+| 💕 **Relationship Mapping** | Define who should sit together or apart |
+| 🏛️ **Venue Selection** | Choose from multiple venue layouts with visual previews |
+| 🤖 **AI-Powered Seating** | Generate optimized arrangements using Gurobi + Llama 70B |
+| 🎨 **Interactive Planner** | Drag-and-drop interface for manual adjustments |
+| 🗺️ **Visual Floor Plan** | See your seating on an interactive venue map |
+| 📄 **Export Options** | Download PDF floor plans and Excel guest lists |
+
+---
+
+## 🎬 Demo
+
+<!-- Add screenshots or GIF here -->
+<div align="center">
+
+*Screenshots coming soon...*
+
+<!-- Example:
+![Dashboard](docs/screenshots/dashboard.png)
+![Seating Planner](docs/screenshots/planner.png)
+-->
+
+</div>
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+| Requirement | Version | Installation |
+|-------------|---------|--------------|
+| ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white) | 18+ | [nodejs.org](https://nodejs.org/) |
+| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white) | 3.10+ | [python.org](https://www.python.org/downloads/) |
+| ![Gurobi](https://img.shields.io/badge/Gurobi-10+-EE3124) | 10+ | [gurobi.com](https://www.gurobi.com/downloads/) |
+
+### API Keys Required
+
+| Service | Purpose | Get Key |
+|---------|---------|---------|
+| **Groq** | AI explanations (Llama 70B) | [console.groq.com](https://console.groq.com/keys) (Free) |
+| **Gurobi** | Optimization solver | [gurobi.com/academia](https://www.gurobi.com/academia/) (Free for academics) |
+
+---
+
+### Installation
+
+#### 1️⃣ Clone the Repository
 
 ```bash
-# From project root
+git clone https://github.com/your-username/SeatHarmony.git
+cd SeatHarmony
+```
+
+#### 2️⃣ Backend Setup
+
+```bash
+# Create virtual environment
 cd backend
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Install Tree-of-Thought-LLM (from the bundled tree-of-thought-llm/ folder)
+# Install Tree-of-Thought library
 cd ../tree-of-thought-llm
 pip install -r requirements.txt
 pip install -e .
 cd ..
 ```
 
-### 2. Configure API Key
-
-Create a `.env` file in the **project root**:
-
-```bash
-# Project root
-echo "GEMINI_API_KEY=your_key_here" > .env
-# OR: echo "OPENAI_API_KEY=your_key_here" > .env
-```
-
-### 3. Frontend Setup (first time)
+#### 3️⃣ Frontend Setup
 
 ```bash
 cd frontend
 npm install
-
-# Optional: create .env.local to override API URL (default: http://127.0.0.1:8000)
-echo "VITE_API_BASE=http://127.0.0.1:8000" > .env.local
 ```
 
-### 4. Start the Application
+#### 4️⃣ Configure Environment
+
+Create a `.env` file in the project root:
+
+```env
+# Required: Groq API Key
+GROQ_API_KEY=your_groq_api_key_here
+
+# Gurobi WLS License (if not using local license)
+GRB_WLSACCESSID=your-access-id
+GRB_WLSSECRET=your-secret
+GRB_LICENSEID=your-license-id
+```
+
+#### 5️⃣ Run the Application
 
 **Terminal 1 — Backend:**
-
 ```bash
-# From project root
 source backend/.venv/bin/activate
 uvicorn backend.api:app --reload
 ```
 
-API runs at `http://127.0.0.1:8000`
-
 **Terminal 2 — Frontend:**
-
 ```bash
 cd frontend
 npm run dev
 ```
 
-App runs at `http://localhost:5173`
+#### 6️⃣ Open in Browser
+
+Navigate to **http://localhost:3000**
 
 ---
 
-## Optional: Streamlit ToT Debugger
+## 📱 Using the Application
 
-For debugging and inspecting the Tree-of-Thoughts search:
-
-```bash
-source backend/.venv/bin/activate
-streamlit run backend/streamlit_tot_debug.py
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Landing Page    →  Click "Get Started"                  │
+│  2. Dashboard       →  Add guests (manual or Excel import)  │
+│  3. Venues          →  Select venue & configure tables      │
+│  4. Recommendations →  Generate AI seating suggestions      │
+│  5. Planner AI      →  Fine-tune with drag-and-drop         │
+│  6. Final Review    →  Review complete seating chart        │
+│  7. Export          →  Download PDF or Excel                │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Opens at `http://localhost:8501`
-
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 SeatHarmony/
-├── frontend/          # React/Vite UI
-├── backend/           # Python API, optimizer, ToT task
-├── tree-of-thought-llm/   # ToT library (install from source)
-└── .env               # API keys (create this)
+├── 🎨 frontend/                 # React/Vite frontend
+│   ├── src/                     # Source code
+│   ├── pages/                   # Page components
+│   └── components/              # Reusable UI components
+│
+├── ⚙️ backend/                  # Python FastAPI backend
+│   ├── api.py                   # API endpoints
+│   ├── optimizer.py             # Gurobi optimization
+│   └── seat_harmony_task.py     # Tree-of-Thoughts task
+│
+├── 🌳 tree-of-thought-llm/      # ToT library
+│
+└── 📄 .env                      # API keys (create this)
 ```
 
-See `backend/README.md` for detailed backend documentation.
+---
+
+## 🔧 Troubleshooting
+
+<details>
+<summary><b>Module not found errors</b></summary>
+
+Make sure your virtual environment is activated:
+```bash
+source backend/.venv/bin/activate
+```
+</details>
+
+<details>
+<summary><b>CORS error in browser</b></summary>
+
+Ensure backend is running on port 8000:
+```bash
+uvicorn backend.api:app --reload --port 8000
+```
+</details>
+
+<details>
+<summary><b>Cannot connect to server</b></summary>
+
+1. Check backend is running in Terminal 1
+2. Verify it's on http://127.0.0.1:8000
+3. Check for error messages in backend terminal
+</details>
+
+<details>
+<summary><b>Gurobi license not found</b></summary>
+
+1. Verify installation: `gurobi_cl --version`
+2. Check license: `gurobi_cl --license`
+3. For WLS: verify `.env` credentials
+</details>
+
+<details>
+<summary><b>Port already in use</b></summary>
+
+```bash
+lsof -i :8000
+kill -9 <PID>
+```
+</details>
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+---
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Made with ❤️ for couples planning their perfect day**
+
+</div>

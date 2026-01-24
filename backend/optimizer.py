@@ -230,37 +230,6 @@ def _greedy_initial_assignment(
     return assignments
 
 
-def _dummy_layout(guests: List[Guest], venue: VenueConfig) -> Tuple[Layout, ConstraintSummary]:
-    """
-    Fallback layout generator when optimization fails.
-    Seats guests round-robin across tables without considering constraints.
-    """
-    logger.warning(f"Using dummy layout fallback | guests={len(guests)} tables={len(venue.tables)}")
-
-    assignments: Dict[str, str] = {}
-    table_ids = [t.id for t in venue.tables] or ["default"]
-    for i, g in enumerate(guests):
-        assignments[g.id] = table_ids[i % len(table_ids)]
-
-    summary = ConstraintSummary(
-        satisfied_soft={},
-        violated_soft={},
-        hard_violations=[],
-    )
-    layout = Layout(
-        id="dummy",
-        assignments=assignments,
-        score=0.0,
-        objective_breakdown={},
-        variant_label=None,
-        variant_id=None,
-        summary=summary,
-    )
-
-    logger.debug(f"Dummy layout created | score=0.0")
-    return layout, summary
-
-
 # =============================================================================
 # HIERARCHICAL OPTIMIZATION HELPER FUNCTIONS
 # =============================================================================
@@ -810,8 +779,8 @@ def generate_hierarchical_layout(
 
     # Edge case handling
     if not guests or not venue.tables:
-        logger.warning("Empty guests or tables - returning dummy layout")
-        return _dummy_layout(guests, venue)
+        logger.error("Empty guests or tables - cannot generate layout")
+        raise ValueError("Cannot generate layout: guests and tables are required")
 
     tables = venue.tables
     table_ids = [t.id for t in tables]
@@ -954,8 +923,8 @@ def generate_layout_for_weights(
     logger.debug(f"Weights: family={weights.get('family_cohesion', 0):.2f} social={weights.get('social_group_cohesion', 0):.2f} mixing={weights.get('side_mixing', 0):.2f}")
 
     if not guests or not venue.tables:
-        logger.warning("Empty guests or tables - returning dummy layout")
-        return _dummy_layout(guests, venue)
+        logger.error("Empty guests or tables - cannot generate layout")
+        raise ValueError("Cannot generate layout: guests and tables are required")
 
     tables: List[Table] = venue.tables
     guest_ids = [g.id for g in guests]
@@ -1238,8 +1207,8 @@ def generate_layout_for_weights(
         logger.debug(f"Gurobi finished | status={status_str} solutions={model.SolCount} | {solve_duration_ms:.0f}ms")
 
         if model.SolCount == 0:
-            logger.warning(f"No solution found | status={status_str}")
-            return _dummy_layout(guests, venue)
+            logger.error(f"No solution found | status={status_str}")
+            raise RuntimeError(f"Gurobi optimization failed: no solution found (status={status_str})")
         
         # ===========================================
         # EXTRACT SOLUTION
@@ -1307,7 +1276,7 @@ def generate_layout_for_weights(
         logger.error(f"Optimization failed | error={type(e).__name__}: {e} | {opt_duration_ms:.0f}ms")
         import traceback
         logger.error(traceback.format_exc())
-        return _dummy_layout(guests, venue)
+        raise RuntimeError(f"Gurobi optimization failed: {type(e).__name__}: {e}")
 
     summary = ConstraintSummary(
         satisfied_soft={},

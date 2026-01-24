@@ -5,15 +5,13 @@ This folder contains the **Python backend** for SeatHarmony:
 - A Gurobi-backed optimizer for seating layouts.
 - A Tree-of-Thoughts-style search task (`SeatHarmonyTask`) that explores objective variants.
 - A FastAPI HTTP API for the React frontend.
-- A Streamlit debug UI to inspect candidate layouts and scores.
 
 ### Folder structure
 
 - `models.py` – dataclasses for `Guest`, `Table`, `VenueConfig`, `Layout`, and constraint summaries.
-- `optimizer.py` – Gurobi (or heuristic) optimization to turn weights into concrete layouts.
+- `optimizer.py` – Gurobi optimization to turn weights into concrete layouts.
 - `seat_harmony_task.py` – ToT-compatible `SeatHarmonyTask` and `SeatHarmonyState`.
 - `api.py` – FastAPI app exposing `/api/layouts/generate` and `/api/layouts/explain`.
-- `streamlit_tot_debug.py` – Streamlit app to run ToT search interactively for debugging.
 - `requirements.txt` – Python dependencies for the backend.
 
 ### Virtual environment
@@ -32,9 +30,9 @@ To install the backend dependencies:
 pip install -r requirements.txt
 ```
 
-### Gurobi License Setup
+### Gurobi License Setup (Required)
 
-The optimizer uses **Gurobi** for solving the seating optimization problem. You have two options:
+The optimizer uses **Gurobi** for solving the seating optimization problem.
 
 #### Option 1: WLS (Web License Service) - Recommended for Teams
 
@@ -46,7 +44,6 @@ WLS allows multiple users to share a single cloud-based license. No local Gurobi
 2. Create a `.env` file in the **project root** (or `backend/` directory):
 
 ```bash
-# Create .env in project root
 touch .env
 ```
 
@@ -57,13 +54,13 @@ GRB_WLSACCESSID=your-access-id-here
 GRB_WLSSECRET=your-secret-key-here
 GRB_LICENSEID=123456
 
-# Also add your Google API key for AI explanations
-GOOGLE_API_KEY=your-google-api-key
+# Groq API key for AI explanations
+GROQ_API_KEY=your-groq-api-key
 ```
 
 You can find these values in your downloaded `gurobi.lic` file:
 - `WLSACCESSID` → `GRB_WLSACCESSID`
-- `WLSSECRET` → `GRB_WLSSECRET`  
+- `WLSSECRET` → `GRB_WLSSECRET`
 - `LICENSEID` → `GRB_LICENSEID`
 
 4. The backend will automatically detect and use WLS credentials.
@@ -74,9 +71,16 @@ You can find these values in your downloaded `gurobi.lic` file:
 2. Get a license (free for academics at https://www.gurobi.com/academia/)
 3. Run `grbgetkey xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` to activate
 
-#### Option 3: No Gurobi
+### Groq API Key (Required for AI Features)
 
-If you don't have Gurobi, remove `gurobipy` from `requirements.txt`. The backend will fall back to a heuristic seating algorithm (less optimal but functional).
+The backend uses **Groq's Llama 3.3 70B** for AI-powered explanations.
+
+1. Get a free API key at [console.groq.com](https://console.groq.com/keys)
+2. Add it to your `.env` file:
+
+```
+GROQ_API_KEY=your-groq-api-key
+```
 
 ### Installing Tree-of-Thought-LLM (`tot`)
 
@@ -105,23 +109,5 @@ source backend/.venv/bin/activate
 uvicorn backend.api:app --reload
 ```
 
-By default this will listen on `http://127.0.0.1:8000`.  
+By default this will listen on `http://127.0.0.1:8000`.
 Set `VITE_API_BASE` in your front-end environment (e.g. `.env.local`) to point to this URL if needed.
-
-### Running the Streamlit ToT debug UI
-
-With the same virtual environment:
-
-```bash
-cd backend
-source .venv/bin/activate  # if not already active
-streamlit run streamlit_tot_debug.py
-```
-
-This opens a local page at `http://localhost:8501` where you can:
-
-- Use a demo configuration or upload your own `JSON` with `guests`, `tables`, and `settings`.
-- Adjust Tree-of-Thoughts hyperparameters (depth, branching, etc.).
-- Inspect candidate states, their objective weights, and layouts.
-
-
