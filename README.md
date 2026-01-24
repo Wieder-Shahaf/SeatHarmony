@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💒 SeatHarmony
+# SeatHarmony
 
 **AI-powered wedding seating planner that creates harmonious arrangements**
 
@@ -35,7 +35,6 @@ The system combines:
 | Feature | Description |
 |---------|-------------|
 | 👥 **Guest Management** | Import guests via Excel/CSV or add manually |
-| 💕 **Relationship Mapping** | Define who should sit together or apart |
 | 🏛️ **Venue Selection** | Choose from multiple venue layouts with visual previews |
 | 🤖 **AI-Powered Seating** | Generate optimized arrangements using Gurobi + Llama 70B |
 | 🎨 **Interactive Planner** | Drag-and-drop interface for manual adjustments |
@@ -115,23 +114,34 @@ npm install
 ```
 
 #### 4️⃣ Configure Environment
+#### <b><u>For Academic Staff:</u></b>
+Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/g/personal/bofek_campus_technion_ac_il/IQD7bxvB1E7DTrNGlRGlyAxwAQYKU23i283nEtOSC6AhY4M?email=shahaf200019%40gmail.com&e=CFh1Nn)  <br> 
+Paste the file in the backend folder.
 
-Create a `.env` file in the project root:
+#### <b><u>For all other users:</u></b>
+Create a `.env` file in the backend folder:
+```bash
+cd ..
+cd backend
+touch .env 
+```
 
-```env
+Open the .env file to edit:
+```bash
+nano .env   # or: code .env (VS Code) 
 # Required: Groq API Key
-GROQ_API_KEY=your_groq_api_key_here
-
+echo "GROQ_API_KEY=your_key_here"
 # Gurobi WLS License (if not using local license)
-GRB_WLSACCESSID=your-access-id
-GRB_WLSSECRET=your-secret
-GRB_LICENSEID=your-license-id
+echo GRB_WLSACCESSID=your-access-id
+echo GRB_WLSSECRET=your-secret
+echo GRB_LICENSEID=your-license-id
 ```
 
 #### 5️⃣ Run the Application
 
 **Terminal 1 — Backend:**
 ```bash
+cd ..
 source backend/.venv/bin/activate
 uvicorn backend.api:app --reload
 ```
@@ -151,15 +161,15 @@ Navigate to **http://localhost:3000**
 ## 📱 Using the Application
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  1. Landing Page    →  Click "Get Started"                  │
-│  2. Dashboard       →  Add guests (manual or Excel import)  │
-│  3. Venues          →  Select venue & configure tables      │
-│  4. Recommendations →  Generate AI seating suggestions      │
-│  5. Planner AI      →  Fine-tune with drag-and-drop         │
-│  6. Final Review    →  Review complete seating chart        │
-│  7. Export          →  Download PDF or Excel                │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  1. Landing Page    →  Click "Get Started", upload your guest list       │
+│  2. Dashboard       →  Verify guest list and grouping                    │
+│  3. Venues          →  Select venue                                      │
+│  4. Recommendations →  Generate AI seating suggestions                   │
+│  5. Planner AI      →  Guest seating explanations and fine-tune seating  │
+│  6. Final Review    →  Review complete seating chart                     │
+│  7. Export          →  Download PDF or Excel                             │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -168,19 +178,18 @@ Navigate to **http://localhost:3000**
 
 ```
 SeatHarmony/
-├── 🎨 frontend/                 # React/Vite frontend
+├── frontend/                 # React/Vite frontend
 │   ├── src/                     # Source code
 │   ├── pages/                   # Page components
 │   └── components/              # Reusable UI components
 │
-├── ⚙️ backend/                  # Python FastAPI backend
+├── backend/                  # Python FastAPI backend
 │   ├── api.py                   # API endpoints
 │   ├── optimizer.py             # Gurobi optimization
-│   └── seat_harmony_task.py     # Tree-of-Thoughts task
+│   ├── seat_harmony_task.py     # Tree-of-Thoughts task
+|   └── .env                     # API keys (create this)
 │
-├── 🌳 tree-of-thought-llm/      # ToT library
-│
-└── 📄 .env                      # API keys (create this)
+└── tree-of-thought-llm/      # ToT library
 ```
 
 ---
@@ -229,18 +238,6 @@ lsof -i :8000
 kill -9 <PID>
 ```
 </details>
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
----
-
-## 📄 License
-
-MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
