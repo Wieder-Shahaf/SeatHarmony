@@ -45,15 +45,31 @@ The system combines:
 
 ## 🎬 Demo
 
-<!-- Add screenshots or GIF here -->
 <div align="center">
 
-*Screenshots coming soon...*
+### Landing Page
+<img src="docs/screenshots/landing-page.jpeg" width="700" alt="Landing Page">
 
-<!-- Example:
-![Dashboard](docs/screenshots/dashboard.png)
-![Seating Planner](docs/screenshots/planner.png)
--->
+### Venue Selection
+<img src="docs/screenshots/venues.jpeg" width="700" alt="Venue Selection">
+
+### AI Recommendations
+<img src="docs/screenshots/recommendations.jpeg" width="700" alt="AI Recommendations">
+
+### Planner AI - Guest Details & AI Insights
+<p>
+<img src="docs/screenshots/planner-guest-detail.jpeg" width="400" alt="Guest Details">
+<img src="docs/screenshots/planner-ai-insight.jpeg" width="400" alt="AI Insights">
+</p>
+
+### Final Review - Table Details & Floor Map
+<p>
+<img src="docs/screenshots/final-review-table.jpeg" width="400" alt="Table Details">
+<img src="docs/screenshots/final-review-map.jpeg" width="400" alt="Floor Map">
+</p>
+
+### Export Page
+<img src="docs/screenshots/export.jpeg" width="700" alt="Export Page">
 
 </div>
 
