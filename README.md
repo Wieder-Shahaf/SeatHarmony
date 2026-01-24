@@ -24,9 +24,9 @@
 SeatHarmony helps plan optimal table assignments for weddings and events. Upload your guest list, define tables and venue layout, and let AI generate seating arrangements that respect relationships, guest importance, and preferences.
 
 The system combines:
-- ** Gurobi Constraint Optimization** — Mathematical optimization for optimal seat assignments
-- ** Tree-of-Thoughts Search** — AI technique exploring different objective weightings
-- ** Llama 3.3 70B (via Groq)** — Generates human-readable explanations for seating decisions
+- **Gurobi Constraint Optimization** — Mathematical optimization for optimal seat assignments
+- **Tree-of-Thoughts Search** — AI technique exploring different objective weightings
+- **Llama 3.3 70B (via Groq)** — Generates human-readable explanations for seating decisions
 
 ---
 
