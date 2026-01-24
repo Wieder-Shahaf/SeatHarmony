@@ -256,19 +256,19 @@ const PlannerAI: React.FC = () => {
           const scrollContainer = guestElement.parentElement;
           if (scrollContainer) {
             // Get the position of the element relative to the scroll container
-            const elementTop = guestElement.offsetTop;
-            const containerTop = scrollContainer.scrollTop;
-            const containerHeight = scrollContainer.clientHeight;
-            const elementHeight = guestElement.offsetHeight;
+            // We use getBoundingClientRect to avoid issues with offsetParent (if container isn't positioned)
+            const guestRect = guestElement.getBoundingClientRect();
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const relativeTop = guestRect.top - containerRect.top;
+            const currentScroll = scrollContainer.scrollTop;
 
-            // Calculate the desired scroll position to center the element
-            // Account for header by adding padding from top
-            const headerPadding = 20; // Padding to keep header visible
-            const targetScroll = elementTop - headerPadding;
+            // Calculate target scroll position (aim for 20px from top)
+            const headerPadding = 20;
+            const targetScroll = currentScroll + relativeTop - headerPadding;
 
-            // Only scroll if element is not fully visible
-            const isAboveView = elementTop < containerTop + headerPadding;
-            const isBelowView = elementTop + elementHeight > containerTop + containerHeight;
+            // Check visibility
+            const isAboveView = relativeTop < headerPadding;
+            const isBelowView = relativeTop + guestRect.height > containerRect.height;
 
             if (isAboveView || isBelowView) {
               scrollContainer.scrollTo({
@@ -386,7 +386,7 @@ const PlannerAI: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-80 bg-white/60 dark:bg-surface-dark/60 backdrop-blur-md border-r border-secondary/30 dark:border-gray-700 flex flex-col z-10 shadow-soft overflow-hidden">
         <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-          <h2 className="flex items-center gap-2 font-display text-2xl font-light tracking-wide text-text-main dark:text-secondary mb-6">
+          <h2 className="flex items-center gap-2 mt-2 font-display text-2xl font-light tracking-wide text-text-main dark:text-secondary mb-6">
             <span className="material-icons-round text-primary/80">list_alt</span> Guest List
           </h2>
           <div className="relative">
