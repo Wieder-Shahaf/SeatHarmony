@@ -188,6 +188,18 @@ Navigate to **http://localhost:3000**
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
+### Example Data for Testing
+
+We provide sample guest lists to help you test the system. Find them in the [`docs/data`](docs/data) folder:
+
+| File | Guests | Description |
+|------|--------|-------------|
+| `Example_Small_85_Guests.csv` | 85 | Quick testing & demos |
+| `Example_Medium_200_Guests.csv` | 200 | Typical wedding size |
+| `Example_Large_495_Guests.csv` | 495 | Stress testing large events |
+
+**To use:** On the Landing Page, click "Get Started" and upload one of these CSV files.
+
 ---
 
 ## Project Structure
