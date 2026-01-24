@@ -141,7 +141,7 @@ const Confirmation: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="mb-4 text-center max-w-5xl mx-auto">
-          <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">Finalize</h2>
+          <h2 className="flex items-center justify-center gap-3 font-display text-5xl text-text-main dark:text-white mb-4">Final Review</h2>
           <p className="text-gray-600 dark:text-gray-300 text-lg font-light leading-relaxed">
             Review your final seating arrangement below. When you're ready, export the plan for printing or distribution.
           </p>

@@ -1,13 +1,10 @@
 fastapi
 uvicorn
-streamlit
 pydantic
 gurobipy
 numpy
 pandas
 openpyxl
-google-genai
 python-dotenv
 jspdf
 urllib3<2.0.0
-

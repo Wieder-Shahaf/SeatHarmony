@@ -517,16 +517,13 @@ async def startup_event():
     logger.info("=" * 60)
 
     # .env is already loaded at module import time (above)
-    # Just verify the key is available
-    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
+    # Just verify the Groq key is available
+    groq_key = os.getenv("GROQ_API_KEY")
 
-    if gemini_key:
-        logger.info("GEMINI_API_KEY found in environment")
-    elif openai_key:
-        logger.info("OPENAI_API_KEY found in environment")
+    if groq_key:
+        logger.info("GROQ_API_KEY found in environment - using Llama 3.3 70B")
     else:
-        logger.warning("No API key found. Set GEMINI_API_KEY or OPENAI_API_KEY in .env file")
+        logger.warning("GROQ_API_KEY not found. Set GROQ_API_KEY in .env file for AI features")
         logger.warning(f"Looked for .env at: {env_file} or {Path(__file__).parent / '.env'}")
 
     logger.info("API startup complete - ready to receive requests")
