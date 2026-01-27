@@ -168,6 +168,8 @@ uvicorn backend.api:app --reload
 
 **Terminal 2 — Frontend:**
 ```bash
+cd seatharmony
+source .venv/bin/activate
 cd frontend
 npm run dev
 ```
