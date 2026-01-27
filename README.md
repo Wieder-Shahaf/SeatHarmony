@@ -83,14 +83,15 @@ The system combines:
 |-------------|---------|--------------|
 | ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white) | 18+ | [nodejs.org](https://nodejs.org/) |
 | ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white) | 3.10+ | [python.org](https://www.python.org/downloads/) |
-| ![Gurobi](https://img.shields.io/badge/Gurobi-10+-EE3124) | 10+ | [gurobi.com](https://www.gurobi.com/downloads/) |
+
+> **Note:** Gurobi software installation is **not required**. The project uses Gurobi's Web License Service (WLS), which works via `pip install gurobipy` and cloud authentication.
 
 ### API Keys Required
 
 | Service | Purpose | Get Key |
 |---------|---------|---------|
 | **Groq** | AI explanations (Llama 70B) | [console.groq.com](https://console.groq.com/keys) (Free) |
-| **Gurobi** | Optimization solver | [gurobi.com/academia](https://www.gurobi.com/academia/) (Free for academics) |
+| **Gurobi WLS** | Optimization solver (cloud license) | [gurobi.com/academia](https://www.gurobi.com/academia/) (Free for academics) |
 
 ---
 
@@ -131,26 +132,29 @@ npm install
 
 #### 4️⃣ Configure Environment
 #### <b><u>For Academic Staff:</u></b>
-Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/r/personal/bofek_campus_technion_ac_il/Documents/Technion/%D7%A9%D7%A0%D7%94%20%D7%93%D7%B3/%D7%A1%D7%9E%D7%A1%D7%98%D7%A8%20%D7%97%D7%95%D7%A8%D7%A3/%D7%9E%D7%A2%D7%A8%D7%9B%D7%95%D7%AA%20%D7%A0%D7%91%D7%95%D7%A0%D7%95%D7%AA%20%D7%90%D7%99%D7%A0%D7%98%D7%A8%D7%90%D7%A7%D7%98%D7%99%D7%91%D7%99%D7%95%D7%AA/Milestone%204/env?csf=1&web=1&e=AaTjbJ)  <br> 
+Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/r/personal/bofek_campus_technion_ac_il/Documents/Technion/%D7%A9%D7%A0%D7%94%20%D7%93%D7%B3/%D7%A1%D7%9E%D7%A1%D7%98%D7%A8%20%D7%97%D7%95%D7%A8%D7%A3/%D7%9E%D7%A2%D7%A8%D7%9B%D7%95%D7%AA%20%D7%A0%D7%91%D7%95%D7%A0%D7%95%D7%AA%20%D7%90%D7%99%D7%A0%D7%98%D7%A8%D7%90%D7%A7%D7%98%D7%99%D7%91%D7%99%D7%95%D7%AA/Milestone%204/env?csf=1&web=1&e=AaTjbJ)  <br>
 Paste the file into the backend folder, then continue to step 5.
+
+> **No Gurobi installation needed!** The `.env` file contains WLS (Web License Service) credentials that authenticate via the cloud. The `pip install` in step 2 is all you need.
 
 #### <b><u>For all other users:</u></b>
 Create a `.env` file in the backend folder:
 ```bash
 cd ..
 cd backend
-touch .env 
+touch .env
 ```
 
-Open the .env file to edit:
+Add the following to your `.env` file:
 ```bash
-nano .env   # or: code .env (VS Code) 
-# Required: Groq API Key
-echo "GROQ_API_KEY=your_key_here"
-# Gurobi WLS License (if not using local license)
-echo GRB_WLSACCESSID=your-access-id
-echo GRB_WLSSECRET=your-secret
-echo GRB_LICENSEID=your-license-id
+# Required: Groq API Key (get free at https://console.groq.com/keys)
+GROQ_API_KEY=your_key_here
+
+# Required: Gurobi WLS License (get free academic license at https://www.gurobi.com/academia/)
+# No Gurobi software installation needed - WLS authenticates via the cloud
+GRB_WLSACCESSID=your-access-id
+GRB_WLSSECRET=your-secret
+GRB_LICENSEID=your-license-id
 ```
 
 #### 5️⃣ Run the Application
@@ -253,9 +257,14 @@ uvicorn backend.api:app --reload --port 8000
 <details>
 <summary><b>Gurobi license not found</b></summary>
 
-1. Verify installation: `gurobi_cl --version`
-2. Check license: `gurobi_cl --license`
-3. For WLS: verify `.env` credentials
+This project uses WLS (Web License Service) - no local Gurobi installation needed.
+
+1. Verify your `.env` file contains all three WLS credentials:
+   - `GRB_WLSACCESSID`
+   - `GRB_WLSSECRET`
+   - `GRB_LICENSEID`
+2. Ensure the `.env` file is in the `backend/` folder
+3. Check your internet connection (WLS requires cloud authentication)
 </details>
 
 <details>
