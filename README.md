@@ -116,7 +116,7 @@ The system combines:
 
 > **Optimal Screen Size Experience:**
 > 
-> For the best possible visual and functional experience, we recommend using a screen size of **16-18 inches** (or equivalent display resolution). This screen size provides:
+> For the best possible visual and functional experience, we recommend using a screen size of **16-18 inches** (or equivalent display resolution).
 > While the application is functional on smaller screens, the recommended screen size ensures all features are displayed at their intended scale and usability.
 
 ---
