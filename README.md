@@ -15,7 +15,7 @@
 
 [Features](#-features) • [Demo](#-demo) • [Getting Started](#-getting-started) • [Usage](#-using-the-application) • [Contributing](#-contributing)
 
-</div>
+</div> 
 
 ---
 
@@ -95,6 +95,32 @@ The system combines:
 
 ---
 
+### API Usage Disclosure
+
+</div>
+
+> **Statement of Intent:**
+> 
+> This project utilizes **free-tier API services** (specifically Groq's free tier) to power the AI features in the **Planner AI** section. As such, please be aware that:
+> 
+> - **Response Times:** AI-generated explanations and insights may experience variable response times due to free-tier rate limits and server availability
+> - **Rate Limits:** The number of requests per minute/hour may be subject to free-tier restrictions
+> - **Performance Expectations:** While we strive for optimal performance, response speed in the Planner AI feature is subject to the limitations and availability of the free API tier
+> 
+> This disclosure is intended to manage user expectations regarding the speed and responsiveness of AI-powered features. For production deployments or high-volume usage, consider upgrading to paid API tiers.
+
+---
+
+### Viewing Recommendations
+</div>
+
+> **Optimal Screen Size Experience:**
+> 
+> For the best possible visual and functional experience, we recommend using a screen size of **16-18 inches** (or equivalent display resolution). This screen size provides:
+> While the application is functional on smaller screens, the recommended screen size ensures all features are displayed at their intended scale and usability.
+
+---
+
 ### Installation
 
 #### 1️⃣ Clone the Repository
@@ -131,11 +157,25 @@ npm install
 ```
 
 #### 4️⃣ Configure Environment
-#### <b><u>For Academic Staff:</u></b>
-Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/r/personal/bofek_campus_technion_ac_il/Documents/Technion/%D7%A9%D7%A0%D7%94%20%D7%93%D7%B3/%D7%A1%D7%9E%D7%A1%D7%98%D7%A8%20%D7%97%D7%95%D7%A8%D7%A3/%D7%9E%D7%A2%D7%A8%D7%9B%D7%95%D7%AA%20%D7%A0%D7%91%D7%95%D7%A0%D7%95%D7%AA%20%D7%90%D7%99%D7%A0%D7%98%D7%A8%D7%90%D7%A7%D7%98%D7%99%D7%91%D7%99%D7%95%D7%AA/Milestone%204/env?csf=1&web=1&e=AaTjbJ)  <br>
-Paste the file into the backend folder, <b>rename it to ".env"</b>, and continue to step 5.
 
-> **No Gurobi installation needed!** The `.env` file contains WLS (Web License Service) credentials that authenticate via the cloud. The `pip install` in step 2 is all you need.
+---
+
+<div align="center">
+
+### **FOR ACADEMIC STAFF** 
+
+</div>
+
+> **Quick Setup Instructions:**
+> 
+> 1. Copy the `.env` file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/r/personal/bofek_campus_technion_ac_il/Documents/Technion/%D7%A9%D7%A0%D7%94%20%D7%93%D7%B3/%D7%A1%D7%9E%D7%A1%D7%98%D7%A8%20%D7%97%D7%95%D7%A8%D7%A3/%D7%9E%D7%A2%D7%A8%D7%9B%D7%95%D7%AA%20%D7%A0%D7%91%D7%95%D7%A0%D7%95%D7%AA%20%D7%90%D7%99%D7%A0%D7%98%D7%A8%D7%90%D7%A7%D7%98%D7%99%D7%91%D7%99%D7%95%D7%AA/Milestone%204/env?csf=1&web=1&e=AaTjbJ)
+> 2. Paste the file into the `backend` folder
+> 3. **Rename it to `.env`** (important!)
+> 4. Continue to step 5 below
+
+> 💡 **Note:** No Gurobi installation needed! The `.env` file contains WLS (Web License Service) credentials that authenticate via the cloud. The `pip install` in step 2 is all you need.
+
+---
 
 #### <b><u>For all other users:</u></b>
 Create a `.env` file in the backend folder:
