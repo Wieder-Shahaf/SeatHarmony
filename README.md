@@ -100,7 +100,7 @@ The system combines:
 #### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/SeatHarmony.git
+git clone https://github.com/Wieder-Shahaf/SeatHarmony.git
 cd SeatHarmony
 ```
 
