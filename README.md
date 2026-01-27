@@ -131,7 +131,7 @@ npm install
 
 #### 4️⃣ Configure Environment
 #### <b><u>For Academic Staff:</u></b>
-Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/g/personal/bofek_campus_technion_ac_il/IQD7bxvB1E7DTrNGlRGlyAxwAQYKU23i283nEtOSC6AhY4M?email=shahaf200019%40gmail.com&e=CFh1Nn)  <br> 
+Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/g/personal/bofek_campus_technion_ac_il/IQD7bxvB1E7DTrNGlRGlyAxwAQYKU23i283nEtOSC6AhY4M?e=I2z5Rn)  <br> 
 Paste the file in the backend folder.
 
 #### <b><u>For all other users:</u></b>
