@@ -131,7 +131,7 @@ npm install
 
 #### 4️⃣ Configure Environment
 #### <b><u>For Academic Staff:</u></b>
-Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/g/personal/bofek_campus_technion_ac_il/IQD7bxvB1E7DTrNGlRGlyAxwAQYKU23i283nEtOSC6AhY4M?e=I2z5Rn)  <br> 
+Copy the .env file from the following link: [.env Link](https://technionmail-my.sharepoint.com/:u:/r/personal/bofek_campus_technion_ac_il/Documents/Technion/%D7%A9%D7%A0%D7%94%20%D7%93%D7%B3/%D7%A1%D7%9E%D7%A1%D7%98%D7%A8%20%D7%97%D7%95%D7%A8%D7%A3/%D7%9E%D7%A2%D7%A8%D7%9B%D7%95%D7%AA%20%D7%A0%D7%91%D7%95%D7%A0%D7%95%D7%AA%20%D7%90%D7%99%D7%A0%D7%98%D7%A8%D7%90%D7%A7%D7%98%D7%99%D7%91%D7%99%D7%95%D7%AA/Milestone%204/env?csf=1&web=1&e=AaTjbJ)  <br> 
 Paste the file in the backend folder.
 
 #### <b><u>For all other users:</u></b>
