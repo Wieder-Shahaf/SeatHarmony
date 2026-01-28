@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+gurobipy
+numpy
+pandas
+openpyxl
+python-dotenv
+requests
+urllib3<2.0.0
