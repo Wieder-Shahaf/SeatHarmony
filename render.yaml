@@ -19,28 +19,18 @@ services:
         sync: false
       - key: LICENSEID
         sync: false
-    healthCheckPath: /api/layouts/generate
 
   # Frontend Static Site (React + Vite)
-  - type: web
+  - type: static
     name: seatharmony-frontend
-    runtime: node
     buildCommand: "cd frontend && npm install && npm run build"
     staticPublishPath: ./frontend/dist
     envVars:
-      - key: NODE_VERSION
-        value: 18.17.0
-      - key: VITE_API_BASE
-        fromService:
-          type: web
-          name: seatharmony-api
-          property: host
+      - key: VITE_API_BASE_URL
+        value: https://seatharmony-api.onrender.com
       - key: GEMINI_API_KEY
         sync: false
     routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://seatharmony-api.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
