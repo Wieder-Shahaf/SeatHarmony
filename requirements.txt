@@ -1,0 +1,12 @@
+# Root requirements file for Vercel deployment
+# All Python dependencies needed for serverless functions
+fastapi
+uvicorn
+pydantic
+gurobipy
+numpy
+pandas
+openpyxl
+python-dotenv
+requests
+urllib3<2.0.0

@@ -27,6 +27,24 @@ dist-ssr
 .env.local
 .venv
 
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Python virtual environment
+.venv
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
 # Claude Code
 /.claude
 CLAUDE.md
+
+# Vercel
+.vercel
