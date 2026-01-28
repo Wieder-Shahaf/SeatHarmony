@@ -25,32 +25,24 @@ Complete guide for deploying both frontend and backend to Render.
 
 ## Deployment Methods
 
-### Method 1: Blueprint Deployment (Recommended)
+### Method 1: Hybrid Deployment (Recommended)
 
-Uses the `render.yaml` file to deploy both services automatically.
+Deploy backend via Blueprint, frontend manually.
 
-#### Step 1: Connect Repository
+#### Part A: Deploy Backend (Blueprint)
 
 1. Go to [Render Dashboard](https://dashboard.render.com/)
 2. Click **"New"** → **"Blueprint"**
 3. Connect your GitHub account if not already connected
 4. Select the `SeatHarmony` repository
 5. Branch: `render-version` (or `main` if you've merged)
+6. Click **"Apply"**
 
-#### Step 2: Configure Services
-
-Render will detect the `render.yaml` file. You'll see:
+Render will detect the `render.yaml` file and create:
 - **seatharmony-api** (Web Service - Backend)
-- **seatharmony-frontend** (Static Site - Frontend)
 
-Click **"Apply"** to create both services.
-
-#### Step 3: Set Environment Variables
-
-After services are created, add environment variables:
-
-**For `seatharmony-api` service:**
-1. Go to service → Environment
+**Set Backend Environment Variables:**
+1. Go to `seatharmony-api` service → Environment
 2. Add these variables:
    ```
    GROQ_API_KEY=your_groq_key
@@ -59,19 +51,30 @@ After services are created, add environment variables:
    LICENSEID=your_license_id
    ```
 
-**For `seatharmony-frontend` service:**
-1. Go to service → Environment
-2. Add:
-   ```
-   VITE_API_BASE_URL=https://seatharmony-api.onrender.com
-   GEMINI_API_KEY=your_gemini_key (optional)
-   ```
+Backend will build automatically (~3-5 minutes). **Note the backend URL** (e.g., `https://seatharmony-api.onrender.com`) - you'll need it for the frontend.
 
-#### Step 4: Deploy
+#### Part B: Deploy Frontend (Manual Static Site)
 
-Both services will build and deploy automatically. Monitor the logs:
-- Backend build: ~3-5 minutes (installing Python packages)
-- Frontend build: ~2-3 minutes (npm install + build)
+1. In Render Dashboard, click **"New"** → **"Static Site"**
+2. Connect repository: `SeatHarmony`
+3. Branch: `render-version`
+
+**Configure:**
+```
+Name: seatharmony-frontend
+Build Command: cd frontend && npm install && npm run build
+Publish Directory: frontend/dist
+```
+
+**Environment Variables:**
+```
+VITE_API_BASE_URL=https://seatharmony-api.onrender.com
+GEMINI_API_KEY=your_gemini_key (optional)
+```
+
+4. Click **"Create Static Site"**
+
+Frontend will build (~2-3 minutes) and deploy automatically.
 
 ---
 
