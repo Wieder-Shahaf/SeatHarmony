@@ -7,6 +7,7 @@ services:
   - type: web
     name: seatharmony-api
     runtime: python
+    plan: free
     buildCommand: "pip install -r backend/requirements.txt && pip install -r tree-of-thought-llm/requirements.txt && cd tree-of-thought-llm && pip install -e ."
     startCommand: "uvicorn backend.api:app --host 0.0.0.0 --port $PORT"
     envVars:
