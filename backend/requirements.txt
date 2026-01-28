@@ -6,5 +6,5 @@ numpy
 pandas
 openpyxl
 python-dotenv
-jspdf
+requests
 urllib3<2.0.0
