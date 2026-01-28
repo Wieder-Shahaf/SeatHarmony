@@ -7,7 +7,7 @@ import { prepareDataForApi } from '../src/services/api';
 import { getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/types/models';
 import confetti from 'canvas-confetti';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 // Half-circle scale component
 interface HalfCircleScaleProps {

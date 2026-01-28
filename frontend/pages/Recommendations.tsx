@@ -4,7 +4,7 @@ import { useGuests } from '../src/context/GuestContext';
 import { TotLayout, LayoutRequest } from '../src/types/models';
 import { prepareDataForApi } from '../src/services/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const Recommendations: React.FC = () => {
   const navigate = useNavigate();

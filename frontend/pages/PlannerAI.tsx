@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useGuests } from '../src/context/GuestContext';
 import { Guest, Table } from '../src/types/models';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 // Color palette for groups (elegant, sophisticated colors that complement the UI theme)
 const GROUP_COLORS = [

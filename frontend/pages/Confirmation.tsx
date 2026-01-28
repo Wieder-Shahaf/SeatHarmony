@@ -5,7 +5,7 @@ import { Guest, getTableColor, getTableBorderColor, TABLE_COLORS } from '../src/
 import { getVisualLayout } from '../src/utils/visualLayouts';
 import { prepareDataForApi } from '../src/services/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 const Confirmation: React.FC = () => {
   const { guests, tables, layouts, selectedLayoutIndex, selectedVenueLayout } = useGuests();

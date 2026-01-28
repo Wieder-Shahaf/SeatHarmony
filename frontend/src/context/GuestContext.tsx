@@ -30,7 +30,7 @@ const STORAGE_KEYS = {
 // Type for guest explanations cache
 export type ExplanationCache = Record<string, string>;
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 // Helper functions for localStorage
 function saveToStorage<T>(key: string, data: T): void {
