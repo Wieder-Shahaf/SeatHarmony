@@ -1,0 +1,3 @@
+# Root requirements file for Vercel deployment
+# This ensures Vercel installs Python dependencies
+-r backend/requirements.txt
