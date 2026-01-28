@@ -4,8 +4,6 @@
 
 **AI-powered wedding seating planner that creates harmonious arrangements**
 
-🌐 **[Try Live Demo](https://your-app-url.vercel.app)** | 💻 **[Local Setup](#getting-started)** | 🚀 **[Deploy Guide](DEPLOYMENT.md)**
-
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -78,20 +76,6 @@ The system combines:
 ---
 
 ## Getting Started
-
-### Two Ways to Use SeatHarmony
-
-**1. 🌐 Use the Deployed Version** (No installation required)
-   - Visit our live deployment: **[https://your-app-url.vercel.app](https://your-app-url.vercel.app)**
-   - Ready to use immediately
-   - No setup or API keys needed for basic features
-
-**2. 💻 Run Locally** (Full control & development)
-   - Follow the installation steps below
-   - Requires your own API keys
-   - Ideal for development or customization
-
----
 
 ### Prerequisites
 
@@ -333,14 +317,6 @@ lsof -i :8000
 kill -9 <PID>
 ```
 </details>
-
----
-
-## Production Deployment
-
-Want to deploy your own instance? See the comprehensive deployment guide:
-
-📖 **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete Vercel deployment instructions
 
 ---
 
