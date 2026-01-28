@@ -4,13 +4,17 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+
+  // Use VITE_API_BASE_URL for production, default to localhost for dev
+  const apiTarget = env.VITE_API_BASE_URL || 'http://localhost:8000';
+
   return {
     server: {
       port: 3000,
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://localhost:8000',
+          target: apiTarget,
           changeOrigin: true,
           secure: false,
         },
@@ -24,6 +28,18 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      },
+    },
+    build: {
+      outDir: 'dist',
+      sourcemap: false,
+      minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          },
+        },
       },
     },
   };

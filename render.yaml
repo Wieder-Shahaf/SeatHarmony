@@ -1,0 +1,46 @@
+# Render Blueprint - Deploy both backend and frontend
+# This file defines all services for the SeatHarmony application
+
+services:
+  # Backend API Service (FastAPI)
+  - type: web
+    name: seatharmony-api
+    runtime: python
+    buildCommand: "pip install -r backend/requirements.txt && pip install -r tree-of-thought-llm/requirements.txt && cd tree-of-thought-llm && pip install -e ."
+    startCommand: "uvicorn backend.api:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: GROQ_API_KEY
+        sync: false
+      - key: WLSACCESSID
+        sync: false
+      - key: WLSSECRET
+        sync: false
+      - key: LICENSEID
+        sync: false
+    healthCheckPath: /api/layouts/generate
+
+  # Frontend Static Site (React + Vite)
+  - type: web
+    name: seatharmony-frontend
+    runtime: node
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: seatharmony-api
+          property: host
+      - key: GEMINI_API_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://seatharmony-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
